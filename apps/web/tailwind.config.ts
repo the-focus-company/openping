@@ -7,6 +7,7 @@ const config: Config = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./lib/**/*.{ts,tsx}",
   ],
   theme: {
     container: {
@@ -52,6 +53,10 @@ const config: Config = {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "monospace"],
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
@@ -75,4 +80,5 @@ const config: Config = {
   },
   plugins: [tailwindcssAnimate],
 };
+
 export default config;
