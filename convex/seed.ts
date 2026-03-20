@@ -38,6 +38,7 @@ export const seedDefaultData = internalMutation({
       createdBy: systemUserId,
       isDefault: true,
       isArchived: false,
+      type: "public",
     });
 
     await ctx.db.insert("channels", {
@@ -47,6 +48,7 @@ export const seedDefaultData = internalMutation({
       createdBy: systemUserId,
       isDefault: true,
       isArchived: false,
+      type: "public",
     });
 
     // Add system user to channels

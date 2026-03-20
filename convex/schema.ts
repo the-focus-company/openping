@@ -15,6 +15,9 @@ export default defineSchema({
       v.literal("deactivated"),
     ),
     lastSeenAt: v.optional(v.number()),
+    presenceStatus: v.optional(v.union(v.literal("online"), v.literal("away"), v.literal("offline"))),
+    statusMessage: v.optional(v.string()),
+    statusEmoji: v.optional(v.string()),
   })
     .index("by_workos_id", ["workosUserId"])
     .index("by_email", ["email"])
@@ -37,9 +40,11 @@ export default defineSchema({
     createdBy: v.id("users"),
     isDefault: v.boolean(),
     isArchived: v.boolean(),
+    type: v.optional(v.union(v.literal("public"), v.literal("dm"), v.literal("group"))),
   })
     .index("by_workspace", ["workspaceId"])
-    .index("by_workspace_name", ["workspaceId", "name"]),
+    .index("by_workspace_name", ["workspaceId", "name"])
+    .index("by_workspace_type", ["workspaceId", "type"]),
 
   channelMembers: defineTable({
     channelId: v.id("channels"),
@@ -190,4 +195,20 @@ export default defineSchema({
   })
     .index("by_session_id", ["workosSessionId"])
     .index("by_user", ["userId"]),
+
+  reactions: defineTable({
+    messageId: v.id("messages"),
+    userId: v.id("users"),
+    emoji: v.string(),
+  })
+    .index("by_message", ["messageId"])
+    .index("by_message_user", ["messageId", "userId"]),
+
+  typingIndicators: defineTable({
+    channelId: v.id("channels"),
+    userId: v.id("users"),
+    expiresAt: v.number(),
+  })
+    .index("by_channel", ["channelId"])
+    .index("by_channel_user", ["channelId", "userId"]),
 });

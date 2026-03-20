@@ -33,4 +33,16 @@ crons.interval(
   internal.proactive.expireStaleAlerts,
 );
 
+crons.interval(
+  "cleanup-expired-typing",
+  { minutes: 1 },
+  internal.typing.cleanupExpired,
+);
+
+crons.interval(
+  "decay-presence",
+  { minutes: 2 },
+  internal.presence.decayPresence,
+);
+
 export default crons;
