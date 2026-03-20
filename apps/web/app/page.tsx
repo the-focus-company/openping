@@ -1,5 +1,7 @@
-import { redirect } from "next/navigation";
-
 export default function Home() {
-  redirect("/inbox");
+  return (
+    <main className="flex min-h-screen items-center justify-center">
+      <h1 className="text-2xl font-bold text-foreground">PING</h1>
+    </main>
+  );
 }

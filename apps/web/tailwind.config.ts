@@ -52,10 +52,22 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // PING custom tokens
+        "accent-primary": "#6366F1",
+        "accent-hover": "#818CF8",
+        "text-tertiary": "#5C5C5F",
+        "bg-elevated": "#222226",
+        status: {
+          online: "#22C55E",
+          danger: "#EF4444",
+          warning: "#F59E0B",
+          info: "#3B82F6",
+          merged: "#A855F7",
+        },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "monospace"],
       },
       borderRadius: {
         lg: "var(--radius)",
