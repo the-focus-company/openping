@@ -21,4 +21,10 @@ crons.interval(
   internal.proactiveAlerts.scanCrossTeamSync,
 );
 
+crons.interval(
+  "email-sync",
+  { minutes: 5 },
+  internal.emailSync.syncAllAccounts,
+);
+
 export default crons;
