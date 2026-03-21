@@ -5,6 +5,7 @@ import { Send, Bot, Paperclip, AtSign, ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CitationRow, type Citation } from "@/components/bot/CitationPill";
+import { StatusDot } from "@/components/ui/status-dot";
 import { cn } from "@/lib/utils";
 
 export interface Message {
@@ -111,6 +112,7 @@ interface MessageListProps {
   messages: Message[];
   onSend?: (content: string) => void;
   memberCount?: number;
+  onlineCount?: number;
   isLoading?: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void;
@@ -123,6 +125,7 @@ export function MessageList({
   messages,
   onSend,
   memberCount,
+  onlineCount,
   isLoading,
   hasMore,
   onLoadMore,
@@ -199,6 +202,12 @@ export function MessageList({
         {memberCount !== undefined && (
           <span className="rounded bg-surface-3 px-1.5 py-px text-2xs text-muted-foreground">
             {memberCount} member{memberCount !== 1 ? "s" : ""}
+          </span>
+        )}
+        {onlineCount !== undefined && onlineCount > 0 && (
+          <span className="flex items-center gap-1">
+            <StatusDot variant="online" size="xs" />
+            <span className="text-2xs text-muted-foreground">{onlineCount} online</span>
           </span>
         )}
       </div>

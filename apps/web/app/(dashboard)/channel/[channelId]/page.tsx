@@ -34,6 +34,7 @@ export default function ChannelPage({ params }: Props) {
   const sendMessage = useMutation(api.messages.send);
   const markRead = useMutation(api.channels.markRead);
   const memberCount = useQuery(api.channels.memberCount, isAuthenticated ? { channelId: typedChannelId } : "skip");
+  const onlineUsers = useQuery(api.presence.getOnlineUsers, isAuthenticated ? {} : "skip");
   const alerts = useQuery(api.proactiveAlerts.listPending, isAuthenticated ? {} : "skip");
   const dismissAlert = useMutation(api.proactiveAlerts.dismiss);
 
@@ -75,6 +76,7 @@ export default function ChannelPage({ params }: Props) {
         messages={messages}
         onSend={handleSend}
         memberCount={memberCount ?? undefined}
+        onlineCount={onlineUsers?.length}
         isLoading={status === "LoadingFirstPage"}
         hasMore={status === "CanLoadMore"}
         onLoadMore={loadMore}

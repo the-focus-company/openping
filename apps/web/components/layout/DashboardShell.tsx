@@ -7,6 +7,7 @@ import { TopBar } from "./TopBar";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
 import { SIDEBAR_WIDTH } from "@/lib/constants";
+import { usePresenceHeartbeat } from "@/hooks/usePresenceHeartbeat";
 
 function isEditableTarget(e: KeyboardEvent): boolean {
   const tag = (e.target as HTMLElement)?.tagName;
@@ -16,6 +17,7 @@ function isEditableTarget(e: KeyboardEvent): boolean {
 }
 
 export function DashboardShell({ children }: { children: ReactNode }) {
+  usePresenceHeartbeat();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
