@@ -1,6 +1,66 @@
 ---
 title: Introduction
-description: An overview of PING and what it offers.
+description: What is PING and why it exists — the AI-native workspace communication platform for engineering teams.
+sidebar:
+  order: 1
 ---
 
-Content coming soon.
+import { Aside, Card, CardGrid } from "@astrojs/starlight/components";
+
+## What is PING?
+
+PING is an **AI-native workspace communication platform** built for engineering and product teams. Where tools like Slack and Microsoft Teams were designed as chat apps with bolted-on integrations, PING is built from the ground up with AI at its core — treating every message, thread, and notification as structured data that an intelligent system can reason about.
+
+PING is free and open-source. You own your data entirely.
+
+## The Problem
+
+Modern engineering teams are drowning in communication noise:
+
+- **Context-switching tax** — Engineers jump between Slack, GitHub, Linear, and docs just to understand basic project status.
+- **Information overload** — Chat apps are "dumb pipes" that treat all messages equally, forcing humans to act as routers and prioritizers.
+- **Ephemeral knowledge** — Critical architecture decisions and context get buried in unsearchable threads, lost within days.
+- **No proactive help** — Existing tools wait passively for you to notice problems instead of surfacing them.
+
+Slack was built for humans in an era before LLMs. PING is the communication protocol for the AI era.
+
+## Who is PING for?
+
+PING is purpose-built for **50-200 person engineering and product teams** — the size where communication overhead starts to dominate and traditional chat tools break down. Even single-person teams benefit immediately from the proactive AI workspace agent.
+
+## Key Differentiators
+
+<CardGrid>
+  <Card title="Copilot Inbox" icon="star">
+    Every message across DMs, groups, and channels is automatically ranked using the **Eisenhower Matrix** — so you always know what to act on first and what to ignore.
+  </Card>
+  <Card title="Proactive Workspace Agent" icon="rocket">
+    PING does not wait for questions. It runs on a heartbeat to nudge PR reviewers, detect blockers, surface unanswered questions, and resolve issues autonomously.
+  </Card>
+  <Card title="Temporal Knowledge Graph" icon="open-book">
+    Every conversation builds a persistent knowledge graph that understands how your project evolves over time. Context is never lost.
+  </Card>
+  <Card title="Native Integrations" icon="puzzle">
+    GitHub PRs and Linear tickets appear as first-class cards inside conversations — not clunky unfurls, but structured objects the AI can reason about.
+  </Card>
+</CardGrid>
+
+## Why PING over Slack or Teams?
+
+| Capability | Slack / Teams | PING |
+|---|---|---|
+| Message prioritization | Manual (unreads, stars) | AI-ranked Eisenhower Matrix |
+| Blocker detection | None | Automatic, with suggested actions |
+| PR review nudges | Manual pings | AI-triggered on heartbeat |
+| Knowledge retention | Ephemeral threads | Temporal knowledge graph |
+| Integration objects | Link unfurls | Structured, actionable cards |
+| Cross-team context | Siloed channels | AI-synced automatically |
+| Pricing | Per-seat, closed source | Free and open-source |
+
+<Aside type="tip">
+  PING is open-source and self-hostable. You can train custom AI models on your own proprietary data for maximum relevance and security.
+</Aside>
+
+## Next Steps
+
+Ready to get started? Head to the [Quickstart](/Platform/getting-started/quickstart/) to have PING running locally in minutes, or read about [Core Concepts](/Platform/getting-started/concepts/) to understand the platform architecture.

@@ -1,6 +1,145 @@
 ---
 title: Installation
-description: How to install and set up PING.
+description: Detailed installation guide with environment variable reference and third-party service setup.
+sidebar:
+  order: 3
 ---
 
-Content coming soon.
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+## Prerequisites
+
+| Requirement | Minimum Version | Check Command |
+|---|---|---|
+| Node.js | 20.0 | `node -v` |
+| pnpm | 10.0 | `pnpm -v` |
+| Git | 2.30 | `git --version` |
+
+<Aside type="tip">
+  The repository enforces the pnpm version via the `packageManager` field in the root `package.json`. If you have corepack enabled (`corepack enable`), the correct version is used automatically.
+</Aside>
+
+## Environment Variable Reference
+
+The table below lists every environment variable used by PING. Required variables must be set for the app to start; optional variables enable additional features.
+
+| Variable | Required | Description | Where to get it |
+|---|---|---|---|
+| `NEXT_PUBLIC_CONVEX_URL` | Yes | Your Convex deployment URL | Convex dashboard |
+| `CONVEX_DEPLOYMENT` | Yes | Convex deployment name | Convex dashboard |
+| `WORKOS_CLIENT_ID` | Yes | WorkOS application client ID | WorkOS dashboard |
+| `WORKOS_API_KEY` | Yes | WorkOS API secret key | WorkOS dashboard |
+| `WORKOS_COOKIE_PASSWORD` | Yes | 32+ character random string for session encryption | Generate locally |
+| `NEXT_PUBLIC_WORKOS_REDIRECT_URI` | Yes | OAuth callback URL (`http://localhost:3000/callback` for local dev) | Your app configuration |
+| `OPENAI_API_KEY` | No | OpenAI key for AI features (inbox ranking, proactive alerts) | OpenAI platform |
+| `GITHUB_TOKEN` | No | GitHub personal access token for PR integration | GitHub settings |
+| `LINEAR_API_KEY` | No | Linear API key for ticket integration | Linear settings |
+
+## WorkOS Setup
+
+WorkOS handles authentication including SSO and SAML. Follow these steps to configure it.
+
+<Steps>
+
+1. **Create a WorkOS account** at [workos.com](https://workos.com) and create a new project.
+
+2. **Configure the OAuth redirect URI.** In the WorkOS dashboard under **Redirects**, add:
+
+   ```
+   http://localhost:3000/callback
+   ```
+
+3. **Copy your credentials.** From the WorkOS dashboard, copy:
+   - **Client ID** (starts with `client_`)
+   - **API Key** (starts with `sk_`)
+
+4. **Generate a cookie password.** This is any random string of at least 32 characters. You can generate one with:
+
+   ```shell
+   openssl rand -base64 32
+   ```
+
+5. **Set the environment variables** in `apps/web/.env.local`:
+
+   ```shell
+   WORKOS_CLIENT_ID=client_...
+   WORKOS_API_KEY=sk_...
+   WORKOS_COOKIE_PASSWORD=your-generated-string
+   NEXT_PUBLIC_WORKOS_REDIRECT_URI=http://localhost:3000/callback
+   ```
+
+</Steps>
+
+## Convex Setup
+
+PING uses [Convex](https://convex.dev) as its serverless backend for the database, real-time subscriptions, and server functions.
+
+<Steps>
+
+1. **Create a free Convex account** at [convex.dev](https://convex.dev).
+
+2. **Create a new project** in the Convex dashboard.
+
+3. **Deploy the schema.** From the repository root:
+
+   ```shell
+   npx convex dev
+   ```
+
+   This will prompt you to link to your Convex project and push the schema defined in `convex/schema.ts`.
+
+4. **Copy your deployment URL** from the Convex dashboard and add it to `apps/web/.env.local`:
+
+   ```shell
+   NEXT_PUBLIC_CONVEX_URL=https://your-project.convex.cloud
+   CONVEX_DEPLOYMENT=your-deployment-name
+   ```
+
+</Steps>
+
+## Optional: OpenAI API Key
+
+The AI features in PING (Copilot Inbox ranking, proactive alerts, knowledge graph) require an OpenAI API key.
+
+```shell
+OPENAI_API_KEY=sk-...
+```
+
+Without this key the app still works, but AI-powered features will be disabled.
+
+## Optional: GitHub and Linear Integrations
+
+To enable native integration cards for GitHub pull requests and Linear tickets, provide the corresponding tokens:
+
+```shell
+GITHUB_TOKEN=ghp_...
+LINEAR_API_KEY=lin_api_...
+```
+
+These tokens allow PING to sync PR status, ticket updates, and display them as first-class objects inside conversations.
+
+## Troubleshooting
+
+### `pnpm install` fails with peer dependency errors
+
+Make sure you are using pnpm 10+. Run `pnpm -v` to check, and upgrade with `npm install -g pnpm@latest` if needed.
+
+### Convex connection refused
+
+Verify that `NEXT_PUBLIC_CONVEX_URL` is set correctly and that you have run `npx convex dev` at least once to push the schema.
+
+### WorkOS callback error
+
+Ensure the redirect URI in your WorkOS dashboard exactly matches the value of `NEXT_PUBLIC_WORKOS_REDIRECT_URI`, including the protocol and port.
+
+### Port 3000 already in use
+
+Kill the existing process or start Next.js on a different port:
+
+```shell
+cd apps/web && pnpm dev -- --port 3001
+```
+
+<Aside type="caution">
+  Never commit `.env.local` or any file containing API keys to version control. The repository `.gitignore` already excludes these files.
+</Aside>

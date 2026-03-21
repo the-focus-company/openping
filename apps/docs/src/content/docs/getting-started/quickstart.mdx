@@ -1,6 +1,87 @@
 ---
 title: Quickstart
-description: Get up and running with PING in minutes.
+description: Get PING running locally in under 10 minutes.
+sidebar:
+  order: 2
 ---
 
-Content coming soon.
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+This guide gets PING running on your local machine as fast as possible. For detailed configuration, see the [Installation](/Platform/getting-started/installation/) page.
+
+## Prerequisites
+
+- **Node.js** 20 or later
+- **pnpm** 10 or later
+
+<Aside type="tip">
+  If you do not have pnpm installed, run `npm install -g pnpm@latest` to get it.
+</Aside>
+
+## Setup
+
+<Steps>
+
+1. **Clone the repository**
+
+   ```shell
+   git clone https://github.com/PingCompany/Platform.git
+   cd Platform
+   ```
+
+2. **Install dependencies**
+
+   ```shell
+   pnpm install
+   ```
+
+3. **Configure environment variables**
+
+   Copy the example env file and fill in your credentials:
+
+   ```shell
+   cp apps/web/.env.example apps/web/.env.local
+   ```
+
+   At minimum you need the following variables set:
+
+   ```shell
+   # Convex
+   NEXT_PUBLIC_CONVEX_URL=https://your-project.convex.cloud
+   CONVEX_DEPLOYMENT=your-deployment-name
+
+   # WorkOS (authentication)
+   WORKOS_CLIENT_ID=client_...
+   WORKOS_API_KEY=sk_...
+   WORKOS_COOKIE_PASSWORD=a-32-character-random-string
+   NEXT_PUBLIC_WORKOS_REDIRECT_URI=http://localhost:3000/callback
+   ```
+
+   See the [Installation guide](/Platform/getting-started/installation/) for a full environment variable reference.
+
+4. **Start the development server**
+
+   ```shell
+   pnpm dev
+   ```
+
+   This starts both the Next.js frontend and the Convex backend in parallel. The web app will be available at `http://localhost:3000`.
+
+5. **Create your first workspace**
+
+   Open `http://localhost:3000` in your browser. Sign in with WorkOS and you will be prompted to create a workspace. Give it a name and invite your team.
+
+6. **Send your first message**
+
+   Navigate to the `#general` channel and send a message. You now have PING running locally.
+
+</Steps>
+
+<Aside type="note">
+  The Convex backend runs as a hosted service. You will need a free Convex account — see [Installation](/Platform/getting-started/installation/) for setup instructions.
+</Aside>
+
+## What's next?
+
+- [Installation](/Platform/getting-started/installation/) — Detailed setup for WorkOS, Convex, and optional integrations.
+- [Core Concepts](/Platform/getting-started/concepts/) — Understand workspaces, channels, the Copilot Inbox, and more.
