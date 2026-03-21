@@ -302,58 +302,49 @@ export default defineSchema({
     .index("by_message", ["messageId"])
     .index("by_message_user", ["messageId", "userId"]),
 
-  decisions: defineTable({
-    userId: v.id("users"),
+  agents: defineTable({
     workspaceId: v.id("workspaces"),
-    type: v.union(
-      v.literal("pr_review"),
-      v.literal("ticket_triage"),
-      v.literal("question_answer"),
-      v.literal("blocked_unblock"),
-      v.literal("fact_verify"),
-      v.literal("cross_team_ack"),
-      v.literal("channel_summary"),
-    ),
-    title: v.string(),
-    summary: v.string(),
-    eisenhowerQuadrant: v.union(
-      v.literal("urgent-important"),
-      v.literal("important"),
-      v.literal("urgent"),
-      v.literal("fyi"),
-    ),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("decided"),
-      v.literal("delegated"),
-      v.literal("snoozed"),
-      v.literal("expired"),
-    ),
-    sourceAlertId: v.optional(v.id("proactiveAlerts")),
-    sourceSummaryId: v.optional(v.id("inboxSummaries")),
-    sourceChannelId: v.optional(v.id("channels")),
-    sourceIntegrationObjectId: v.optional(v.id("integrationObjects")),
-    outcome: v.optional(
-      v.object({
-        action: v.string(),
-        decidedAt: v.number(),
-        comment: v.optional(v.string()),
-      }),
-    ),
-    delegatedTo: v.optional(v.id("users")),
-    snoozedUntil: v.optional(v.number()),
-    agentExecutionStatus: v.optional(
-      v.union(
-        v.literal("pending"),
-        v.literal("running"),
-        v.literal("completed"),
-        v.literal("failed"),
-      ),
-    ),
-    agentExecutionResult: v.optional(v.string()),
+    name: v.string(),
+    description: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("inactive"), v.literal("revoked")),
+    createdBy: v.id("users"),
+    color: v.optional(v.string()),
+    systemPrompt: v.optional(v.string()),
+    userId: v.id("users"),
+    lastActiveAt: v.optional(v.number()),
   })
-    .index("by_user_status", ["userId", "status"])
-    .index("by_user_workspace", ["userId", "workspaceId"])
-    .index("by_source_alert", ["sourceAlertId"])
-    .index("by_source_summary", ["sourceSummaryId"]),
+    .index("by_workspace", ["workspaceId"])
+    .index("by_workspace_status", ["workspaceId", "status"])
+    .index("by_user", ["userId"]),
+
+  agentApiTokens: defineTable({
+    agentId: v.id("agents"),
+    workspaceId: v.id("workspaces"),
+    tokenHash: v.string(),
+    tokenPrefix: v.string(),
+    label: v.string(),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    createdBy: v.id("users"),
+    lastUsedAt: v.optional(v.number()),
+    expiresAt: v.optional(v.number()),
+  })
+    .index("by_agent", ["agentId"])
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_workspace", ["workspaceId"]),
+
+  agentAuditLogs: defineTable({
+    agentId: v.id("agents"),
+    workspaceId: v.id("workspaces"),
+    action: v.string(),
+    resourceType: v.optional(v.string()),
+    resourceId: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    tokenPrefix: v.string(),
+    timestamp: v.number(),
+    durationMs: v.optional(v.number()),
+  })
+    .index("by_agent", ["agentId"])
+    .index("by_workspace", ["workspaceId"])
+    .index("by_workspace_timestamp", ["workspaceId", "timestamp"])
+    .index("by_agent_action", ["agentId", "action"]),
 });
