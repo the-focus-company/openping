@@ -150,9 +150,14 @@ export const getRecentMessages = internalQuery({
     return Promise.all(
       messages.map(async (m) => {
         const author = await ctx.db.get(m.authorId);
+        const threadLabel = m.threadParentId ? " [thread reply]" : "";
+        const replyLabel =
+          m.replyCount && m.replyCount > 0
+            ? ` [has ${m.replyCount} thread replies]`
+            : "";
         return {
           _id: m._id as string,
-          body: m.body,
+          body: m.body + threadLabel + replyLabel,
           authorName: author?.name ?? "Unknown",
         };
       }),

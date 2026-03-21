@@ -111,9 +111,12 @@ export default defineSchema({
     mentions: v.optional(v.array(v.string())),
     graphitiEpisodeId: v.optional(v.string()),
     isEdited: v.boolean(),
+    threadParentId: v.optional(v.id("messages")),
+    replyCount: v.optional(v.number()),
   })
     .index("by_channel", ["channelId"])
     .index("by_author", ["authorId"])
+    .index("by_thread_parent", ["threadParentId"])
     .searchIndex("search_body", {
       searchField: "body",
       filterFields: ["channelId"],

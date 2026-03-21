@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, Paperclip, AtSign, ChevronDown, Pin, Users } from "lucide-react";
+import { Send, Bot, Paperclip, AtSign, ChevronDown, Pin, Users, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CitationRow, type Citation } from "@/components/bot/CitationPill";
@@ -16,20 +16,33 @@ export interface Message {
   timestamp: Date;
   citations?: Citation[];
   botName?: string;
+  replyCount?: number;
+  lastRepliers?: Array<{ name: string; avatarUrl?: string }>;
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 interface MessageItemProps {
   message: Message;
   showAvatar: boolean;
+  onReply?: (messageId: string) => void;
 }
 
-export function MessageItem({ message, showAvatar }: MessageItemProps) {
+export function MessageItem({ message, showAvatar, onReply }: MessageItemProps) {
   const isBot = message.type === "bot";
+  const hasReplies = (message.replyCount ?? 0) > 0;
 
   return (
     <div
       className={cn(
-        "group flex gap-3 px-4 py-1.5 transition-colors hover:bg-surface-2/60",
+        "group relative flex gap-3 px-4 py-1.5 transition-colors hover:bg-surface-2/60",
         showAvatar ? "mt-3" : "mt-0"
       )}
     >
@@ -85,7 +98,46 @@ export function MessageItem({ message, showAvatar }: MessageItemProps) {
         {message.citations && (
           <CitationRow citations={message.citations} />
         )}
+
+        {/* Thread reply count indicator */}
+        {hasReplies && (
+          <button
+            onClick={() => onReply?.(message.id)}
+            className="mt-1 flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs text-ping-purple transition-colors hover:bg-ping-purple/10"
+          >
+            {/* Last replier avatars */}
+            <div className="flex items-center -space-x-1">
+              {message.lastRepliers?.slice(0, 3).map((replier, i) => (
+                <div
+                  key={i}
+                  className="flex h-4 w-4 items-center justify-center rounded-full border border-background bg-surface-3 text-[8px] font-medium text-foreground"
+                  title={replier.name}
+                >
+                  {getInitials(replier.name)}
+                </div>
+              ))}
+            </div>
+            <span className="font-medium">
+              {message.replyCount} {message.replyCount === 1 ? "reply" : "replies"}
+            </span>
+          </button>
+        )}
+
       </div>
+
+      {/* Reply button on hover */}
+      {onReply && (
+        <div className="absolute right-2 top-0 hidden group-hover:flex">
+          <button
+            onClick={() => onReply(message.id)}
+            className="flex items-center gap-1 rounded border border-subtle bg-surface-2 px-1.5 py-0.5 text-2xs text-muted-foreground shadow-sm transition-colors hover:bg-surface-3 hover:text-foreground"
+            title="Reply in thread"
+          >
+            <MessageSquare className="h-3 w-3" />
+            Reply
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -147,6 +199,8 @@ interface MessageListProps {
   typingUsers?: TypingUser[];
   /** Called on input keystrokes for typing indicator */
   onTyping?: () => void;
+  /** Called when user wants to reply to a message */
+  onReply?: (messageId: string) => void;
 }
 
 export function MessageList({
@@ -159,6 +213,7 @@ export function MessageList({
   isDM = false,
   typingUsers = [],
   onTyping,
+  onReply,
 }: MessageListProps) {
   const [input, setInput] = useState("");
   const [showNewMessages, setShowNewMessages] = useState(false);
@@ -271,7 +326,12 @@ export function MessageList({
               msg.timestamp.getTime() - prev.timestamp.getTime() > 5 * 60 * 1000;
 
             return (
-              <MessageItem key={msg.id} message={msg} showAvatar={showAvatar} />
+              <MessageItem
+                key={msg.id}
+                message={msg}
+                showAvatar={showAvatar}
+                onReply={onReply}
+              />
             );
           })
         )}
