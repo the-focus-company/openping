@@ -24,6 +24,23 @@ export default defineSchema({
         proactiveAlerts: v.boolean(),
       }),
     ),
+    // Onboarding fields
+    onboardingStatus: v.optional(v.union(v.literal("pending"), v.literal("completed"))),
+    title: v.optional(v.string()),
+    department: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    expertise: v.optional(v.array(v.string())),
+    workContext: v.optional(v.string()),
+    communicationPrefs: v.optional(v.object({
+      timezone: v.optional(v.string()),
+      preferredHours: v.optional(v.string()),
+      responseTimeGoal: v.optional(v.string()),
+    })),
+    aiPrefs: v.optional(v.object({
+      summaryDetail: v.union(v.literal("concise"), v.literal("detailed")),
+      proactiveLevel: v.union(v.literal("minimal"), v.literal("balanced"), v.literal("aggressive")),
+      autoTriage: v.boolean(),
+    })),
   })
     .index("by_workos_id", ["workosUserId"])
     .index("by_email", ["email"])
@@ -35,6 +52,10 @@ export default defineSchema({
     workosOrgId: v.optional(v.string()),
     createdBy: v.optional(v.id("users")),
     integrations: v.optional(v.any()),
+    industry: v.optional(v.string()),
+    companySize: v.optional(v.string()),
+    companyDescription: v.optional(v.string()),
+    defaultChannels: v.optional(v.array(v.string())),
   })
     .index("by_slug", ["slug"])
     .index("by_workos_org", ["workosOrgId"]),
@@ -252,6 +273,19 @@ export default defineSchema({
   })
     .index("by_channel", ["channelId"])
     .index("by_channel_user", ["channelId", "userId"]),
+
+  invitations: defineTable({
+    workspaceId: v.id("workspaces"),
+    email: v.string(),
+    invitedBy: v.id("users"),
+    role: v.union(v.literal("admin"), v.literal("member")),
+    status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("expired")),
+    token: v.string(),
+    expiresAt: v.number(),
+  })
+    .index("by_email", ["email"])
+    .index("by_token", ["token"])
+    .index("by_workspace", ["workspaceId"]),
 
   reactions: defineTable({
     messageId: v.id("messages"),

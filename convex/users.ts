@@ -29,6 +29,24 @@ export async function createOrUpdateUserHandler(
     return { userId: existing._id, isNew: false as const };
   }
 
+  const pendingInvitation = await ctx.db
+    .query("invitations")
+    .withIndex("by_email", (q) => q.eq("email", args.email))
+    .collect();
+  const invitation = pendingInvitation.find(
+    (inv) => inv.status === "pending" && inv.expiresAt > Date.now(),
+  );
+
+  if (invitation) {
+    const result = await provisionInvitedUser(ctx, args, invitation);
+    return {
+      userId: result.userId,
+      isNew: true as const,
+      workspaceId: result.workspaceId,
+      workspaceName: result.workspaceName,
+    };
+  }
+
   const result = await provisionNewUser(ctx, args);
   return {
     userId: result.userId,
@@ -64,6 +82,7 @@ async function provisionNewUser(
     workspaceId,
     status: "active",
     lastSeenAt: Date.now(),
+    onboardingStatus: "pending",
   });
 
   await ctx.db.patch(workspaceId, { createdBy: userId });
@@ -84,6 +103,54 @@ async function provisionNewUser(
   });
 
   return { userId, workspaceId, workspaceName: `${args.name}'s Workspace` };
+}
+
+async function provisionInvitedUser(
+  ctx: MutationCtx,
+  args: {
+    workosUserId: string;
+    email: string;
+    name: string;
+    avatarUrl?: string;
+  },
+  invitation: {
+    _id: Id<"invitations">;
+    workspaceId: Id<"workspaces">;
+    role: "admin" | "member";
+  },
+) {
+  const workspace = await ctx.db.get(invitation.workspaceId);
+  if (!workspace) throw new Error("Invitation workspace not found");
+
+  const userId = await ctx.db.insert("users", {
+    workosUserId: args.workosUserId,
+    email: args.email,
+    name: args.name,
+    avatarUrl: args.avatarUrl,
+    role: invitation.role,
+    workspaceId: invitation.workspaceId,
+    status: "active",
+    lastSeenAt: Date.now(),
+    onboardingStatus: "pending",
+  });
+
+  await ctx.db.patch(invitation._id, { status: "accepted" });
+
+  const generalChannel = await ctx.db
+    .query("channels")
+    .withIndex("by_workspace_name", (q) =>
+      q.eq("workspaceId", invitation.workspaceId).eq("name", "general"),
+    )
+    .unique();
+
+  if (generalChannel) {
+    await ctx.db.insert("channelMembers", {
+      channelId: generalChannel._id,
+      userId,
+    });
+  }
+
+  return { userId, workspaceId: invitation.workspaceId, workspaceName: workspace.name };
 }
 
 export const getMe = query({
