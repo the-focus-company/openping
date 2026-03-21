@@ -6,7 +6,6 @@ import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { MessageList, type Message } from "@/components/channel/MessageList";
 import { AlertBanner } from "@/components/proactive/AlertBanner";
-import { Loader2 } from "lucide-react";
 
 function getInitials(name: string): string {
   return name
@@ -69,14 +68,6 @@ export default function ChannelPage({ params }: Props) {
 
   const firstAlert = alerts?.[0];
 
-  if (status === "LoadingFirstPage") {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-white/20" />
-      </div>
-    );
-  }
-
   return (
     <div className="relative flex h-full flex-col">
       <MessageList
@@ -84,6 +75,9 @@ export default function ChannelPage({ params }: Props) {
         messages={messages}
         onSend={handleSend}
         memberCount={memberCount ?? undefined}
+        isLoading={status === "LoadingFirstPage"}
+        hasMore={status === "CanLoadMore"}
+        onLoadMore={loadMore}
       />
 
       {firstAlert && (

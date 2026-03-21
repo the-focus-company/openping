@@ -5,6 +5,7 @@ import { useQuery, usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { MessageList, type Message } from "@/components/channel/MessageList";
+import { GroupChatHeader } from "@/components/channel/GroupChatHeader";
 import { Loader2 } from "lucide-react";
 
 function getInitials(name: string): string {
@@ -74,12 +75,18 @@ export default function DMPage({ params }: Props) {
     );
   }
 
+  const isGroup = conversation?.kind === "group" || conversation?.kind === "agent_group";
+
   return (
     <div className="relative flex h-full flex-col">
+      {isGroup && otherMembers.length > 0 && (
+        <GroupChatHeader members={otherMembers} name={displayName} />
+      )}
       <MessageList
         channelName={displayName}
         messages={messages}
         onSend={handleSend}
+        isDM
       />
     </div>
   );

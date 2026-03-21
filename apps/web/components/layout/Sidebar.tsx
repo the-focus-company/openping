@@ -114,6 +114,10 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
   const [addChannelOpen, setAddChannelOpen] = useState(false);
   const [newChannelName, setNewChannelName] = useState("");
   const [newChannelPrivate, setNewChannelPrivate] = useState(false);
+  const [newDmOpen, setNewDmOpen] = useState(false);
+  const [dmUserSearch, setDmUserSearch] = useState("");
+  const allUsers = useQuery(api.users.listAll, isAuthenticated ? {} : "skip");
+  const createConversation = useMutation(api.directConversations.create);
 
   const handleCreateChannel = async () => {
     const name = newChannelName.trim().toLowerCase().replace(/\s+/g, "-");
@@ -213,12 +217,13 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
         <SectionHeader
           label="Direct Messages"
           action={
-            <Link
-              href="/dms"
+            <button
+              onClick={() => { setNewDmOpen(true); setDmUserSearch(""); }}
               className="rounded p-0.5 text-white/25 transition-colors hover:bg-surface-3 hover:text-white/60"
+              title="New message"
             >
               <Plus className="h-3 w-3" />
-            </Link>
+            </button>
           }
         />
 
@@ -371,6 +376,49 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* New DM quick picker */}
+      <Dialog open={newDmOpen} onOpenChange={setNewDmOpen}>
+        <DialogContent className="border-subtle bg-surface-2 sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">New direct message</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 pt-1">
+            <input
+              value={dmUserSearch}
+              onChange={(e) => setDmUserSearch(e.target.value)}
+              placeholder="Search people..."
+              autoFocus
+              className="w-full rounded border border-subtle bg-surface-3 px-2.5 py-1.5 text-xs text-foreground placeholder:text-white/25 focus:border-white/20 focus:outline-none"
+            />
+            <div className="max-h-52 space-y-0.5 overflow-y-auto scrollbar-thin">
+              {(allUsers ?? [])
+                .filter(
+                  (u) =>
+                    u._id !== user?._id &&
+                    u.name.toLowerCase().includes(dmUserSearch.toLowerCase()),
+                )
+                .map((u) => (
+                  <button
+                    key={u._id}
+                    onClick={async () => {
+                      const id = await createConversation({ kind: "1to1", memberIds: [u._id] });
+                      setNewDmOpen(false);
+                      router.push(`/dm/${id}`);
+                    }}
+                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-surface-3"
+                  >
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-3 text-2xs font-medium">
+                      {u.name[0]?.toUpperCase()}
+                    </div>
+                    <span className="flex-1 truncate">{u.name}</span>
+                    <span className="text-2xs text-white/30">{u.email}</span>
+                  </button>
+                ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Channel Dialog */}
       <Dialog open={addChannelOpen} onOpenChange={setAddChannelOpen}>

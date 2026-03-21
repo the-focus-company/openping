@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/utils";
 
-export type Priority = "urgent" | "important" | "delegate" | "low";
+export type EisenhowerQuadrant = "urgent-important" | "important" | "urgent" | "fyi";
 
 export interface InboxAction {
   label: string;
@@ -17,7 +17,7 @@ export interface InboxAction {
 
 export interface InboxItem {
   id: string;
-  priority: Priority;
+  priority: EisenhowerQuadrant;
   channel: string;
   author: string;
   authorInitials: string;
@@ -29,14 +29,17 @@ export interface InboxItem {
 }
 
 const priorityConfig: Record<
-  Priority,
-  { color: string; bg: string; label: string; textColor: string }
+  EisenhowerQuadrant,
+  { borderColor: string; borderWidth: string; bg: string; label: string; textColor: string; dimmed: boolean; bold: boolean; pulse: boolean }
 > = {
-  urgent:    { color: "bg-priority-urgent",    bg: "bg-priority-urgent/8",    label: "Do Now",   textColor: "text-priority-urgent" },
-  important: { color: "bg-priority-important", bg: "bg-priority-important/8", label: "Schedule", textColor: "text-priority-important" },
-  delegate:  { color: "bg-priority-delegate",  bg: "bg-priority-delegate/8",  label: "Delegate", textColor: "text-priority-delegate" },
-  low:       { color: "bg-priority-low",       bg: "bg-priority-low/8",       label: "Low",      textColor: "text-priority-low" },
+  "urgent-important": { borderColor: "bg-priority-urgent",    borderWidth: "w-[3px]", bg: "bg-priority-urgent/8",    label: "URGENT",            textColor: "text-priority-urgent",    dimmed: false, bold: true,  pulse: true  },
+  "important":        { borderColor: "bg-priority-important", borderWidth: "w-0.5",   bg: "bg-priority-important/8", label: "IMPORTANT",         textColor: "text-priority-important", dimmed: false, bold: false, pulse: false },
+  "urgent":           { borderColor: "bg-blue-500",           borderWidth: "w-0.5",   bg: "bg-blue-500/8",           label: "URGENT",            textColor: "text-blue-400",           dimmed: false, bold: false, pulse: false },
+  "fyi":              { borderColor: "bg-white/20",           borderWidth: "w-0.5",   bg: "bg-white/5",              label: "FYI",               textColor: "text-white/30",           dimmed: true,  bold: false, pulse: false },
 };
+
+// Sort order for Eisenhower quadrants
+export const QUADRANT_ORDER: EisenhowerQuadrant[] = ["urgent-important", "important", "urgent", "fyi"];
 
 interface InboxCardProps {
   item: InboxItem;
@@ -63,10 +66,19 @@ export function InboxCard({ item, onMarkRead, onArchive }: InboxCardProps) {
       {/* Priority left border */}
       <div
         className={cn(
-          "absolute left-0 top-3 bottom-3 w-0.5 rounded-r",
-          config.color
+          "absolute left-0 top-3 bottom-3 rounded-r",
+          config.borderColor,
+          config.borderWidth
         )}
       />
+
+      {/* Pulse dot for Q1 urgent-important */}
+      {config.pulse && (
+        <span className="absolute left-3 top-3 flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-priority-urgent opacity-60" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-priority-urgent" />
+        </span>
+      )}
 
       {/* Avatar */}
       <Avatar className="mt-0.5 h-6 w-6 shrink-0">
@@ -76,7 +88,7 @@ export function InboxCard({ item, onMarkRead, onArchive }: InboxCardProps) {
       </Avatar>
 
       {/* Content */}
-      <div className="min-w-0 flex-1">
+      <div className={cn("min-w-0 flex-1", config.dimmed && "opacity-60")}>
         {/* Header row */}
         <div className="flex items-center gap-2 pb-0.5">
           <span className="text-xs font-medium text-foreground">{item.author}</span>
@@ -101,7 +113,9 @@ export function InboxCard({ item, onMarkRead, onArchive }: InboxCardProps) {
         </div>
 
         {/* Summary */}
-        <p className="text-sm text-foreground">{item.summary}</p>
+        <p className={cn("text-sm text-foreground", config.bold && "font-semibold")}>
+          {item.summary}
+        </p>
 
         {/* Context */}
         <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">

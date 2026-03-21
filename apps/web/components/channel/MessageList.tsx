@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Send, Bot, Paperclip, AtSign } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, Bot, Paperclip, AtSign, ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CitationRow, type Citation } from "@/components/bot/CitationPill";
 import { cn } from "@/lib/utils";
 
@@ -17,12 +18,12 @@ export interface Message {
   botName?: string;
 }
 
-interface MessageRowProps {
+interface MessageItemProps {
   message: Message;
   showAvatar: boolean;
 }
 
-function MessageRow({ message, showAvatar }: MessageRowProps) {
+export function MessageItem({ message, showAvatar }: MessageItemProps) {
   const isBot = message.type === "bot";
 
   return (
@@ -89,27 +90,96 @@ function MessageRow({ message, showAvatar }: MessageRowProps) {
   );
 }
 
+function MessageSkeleton() {
+  return (
+    <div className="flex gap-3 px-4 py-1.5 mt-3">
+      <Skeleton className="h-6 w-6 shrink-0 rounded-full" />
+      <div className="flex-1 space-y-1.5">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-3 w-10" />
+        </div>
+        <Skeleton className="h-3.5 w-3/4" />
+        <Skeleton className="h-3.5 w-1/2" />
+      </div>
+    </div>
+  );
+}
+
 interface MessageListProps {
   channelName: string;
   messages: Message[];
   onSend?: (content: string) => void;
   memberCount?: number;
+  isLoading?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  /** When true, renders a DM-style header (no # prefix, avatar shown) */
+  isDM?: boolean;
 }
 
-export function MessageList({ channelName, messages, onSend, memberCount }: MessageListProps) {
+export function MessageList({
+  channelName,
+  messages,
+  onSend,
+  memberCount,
+  isLoading,
+  hasMore,
+  onLoadMore,
+  isDM = false,
+}: MessageListProps) {
   const [input, setInput] = useState("");
+  const [showNewMessages, setShowNewMessages] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const prevMessageCountRef = useRef(messages.length);
 
+  const isAtBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  }, []);
+
+  // Auto-scroll when new messages arrive (only if at bottom)
   useEffect(() => {
+    const newCount = messages.length;
+    const prevCount = prevMessageCountRef.current;
+    prevMessageCountRef.current = newCount;
+
+    if (newCount > prevCount) {
+      if (isAtBottom()) {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        setShowNewMessages(false);
+      } else {
+        setShowNewMessages(true);
+      }
+    }
+  }, [messages, isAtBottom]);
+
+  // Initial scroll to bottom
+  useEffect(() => {
+    if (!isLoading) {
+      bottomRef.current?.scrollIntoView({ behavior: "instant" });
+    }
+  }, [isLoading]);
+
+  const handleScrollToBottom = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    setShowNewMessages(false);
+  };
+
+  const handleScroll = () => {
+    if (isAtBottom()) setShowNewMessages(false);
+  };
 
   const handleSend = () => {
     const trimmed = input.trim();
     if (!trimmed) return;
     onSend?.(trimmed);
     setInput("");
+    // Scroll to bottom after send
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -121,9 +191,11 @@ export function MessageList({ channelName, messages, onSend, memberCount }: Mess
 
   return (
     <div className="flex h-full flex-col">
-      {/* Channel header */}
+      {/* Header */}
       <div className="flex items-center gap-2 border-b border-subtle px-4 py-2">
-        <span className="text-sm font-medium text-foreground">#{channelName}</span>
+        <span className="text-sm font-medium text-foreground">
+          {isDM ? channelName : `#${channelName}`}
+        </span>
         {memberCount !== undefined && (
           <span className="rounded bg-surface-3 px-1.5 py-px text-2xs text-muted-foreground">
             {memberCount} member{memberCount !== 1 ? "s" : ""}
@@ -132,20 +204,54 @@ export function MessageList({ channelName, messages, onSend, memberCount }: Mess
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto py-2 scrollbar-thin">
-        {messages.map((msg, i) => {
-          const prev = messages[i - 1];
-          const showAvatar =
-            !prev ||
-            prev.author !== msg.author ||
-            msg.timestamp.getTime() - prev.timestamp.getTime() > 5 * 60 * 1000;
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="relative flex-1 overflow-y-auto py-2 scrollbar-thin"
+      >
+        {/* Load more */}
+        {hasMore && (
+          <div className="flex justify-center py-2">
+            <button
+              onClick={onLoadMore}
+              className="rounded px-3 py-1 text-2xs text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
+            >
+              Load earlier messages
+            </button>
+          </div>
+        )}
 
-          return (
-            <MessageRow key={msg.id} message={msg} showAvatar={showAvatar} />
-          );
-        })}
+        {/* Skeletons */}
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => <MessageSkeleton key={i} />)
+        ) : (
+          messages.map((msg, i) => {
+            const prev = messages[i - 1];
+            const showAvatar =
+              !prev ||
+              prev.author !== msg.author ||
+              msg.timestamp.getTime() - prev.timestamp.getTime() > 5 * 60 * 1000;
+
+            return (
+              <MessageItem key={msg.id} message={msg} showAvatar={showAvatar} />
+            );
+          })
+        )}
         <div ref={bottomRef} />
       </div>
+
+      {/* New messages pill */}
+      {showNewMessages && (
+        <div className="absolute bottom-20 left-1/2 z-10 -translate-x-1/2">
+          <button
+            onClick={handleScrollToBottom}
+            className="flex items-center gap-1.5 rounded-full border border-subtle bg-surface-2 px-3 py-1.5 text-xs font-medium text-foreground shadow-lg transition-colors hover:bg-surface-3"
+          >
+            <ChevronDown className="h-3 w-3" />
+            New messages
+          </button>
+        </div>
+      )}
 
       {/* Composer */}
       <div className="border-t border-subtle p-3">
@@ -155,7 +261,7 @@ export function MessageList({ channelName, messages, onSend, memberCount }: Mess
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Message #${channelName}... or @KnowledgeBot`}
+            placeholder={isDM ? `Message ${channelName}...` : `Message #${channelName}... or @KnowledgeBot`}
             rows={1}
             className="max-h-32 flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-white/25 focus:outline-none"
             style={{ height: "20px" }}
@@ -166,15 +272,17 @@ export function MessageList({ channelName, messages, onSend, memberCount }: Mess
             }}
           />
           <div className="flex shrink-0 items-center gap-1 pb-0.5">
-            <button
-              onClick={() => {
-                setInput((prev) => prev + "@");
-                textareaRef.current?.focus();
-              }}
-              className="rounded p-1 text-white/25 hover:bg-surface-3 hover:text-white/60"
-            >
-              <AtSign className="h-3.5 w-3.5" />
-            </button>
+            {!isDM && (
+              <button
+                onClick={() => {
+                  setInput((prev) => prev + "@");
+                  textareaRef.current?.focus();
+                }}
+                className="rounded p-1 text-white/25 hover:bg-surface-3 hover:text-white/60"
+              >
+                <AtSign className="h-3.5 w-3.5" />
+              </button>
+            )}
             <button
               disabled
               title="File attachments coming soon"
@@ -197,7 +305,7 @@ export function MessageList({ channelName, messages, onSend, memberCount }: Mess
           </div>
         </div>
         <p className="mt-1 text-2xs text-white/20">
-          Enter to send · Shift+Enter for new line · @mention to summon agents
+          Enter to send · Shift+Enter for new line{!isDM && " · @mention to summon agents"}
         </p>
       </div>
     </div>
