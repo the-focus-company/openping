@@ -6,6 +6,7 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
+import WelcomeModal from "@/components/onboarding/WelcomeModal";
 import { SIDEBAR_WIDTH } from "@/lib/constants";
 import { usePresenceHeartbeat } from "@/hooks/usePresenceHeartbeat";
 
@@ -148,6 +149,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         open={shortcutsOpen}
         onOpenChange={setShortcutsOpen}
       />
+      <WelcomeModal />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useQuery, usePaginatedQuery, useMutation, useConvexAuth } from "convex/
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { MessageList, type Message } from "@/components/channel/MessageList";
+import { ChannelSkeleton } from "@/components/channel/ChannelSkeleton";
 import { AlertBanner } from "@/components/proactive/AlertBanner";
 
 function getInitials(name: string): string {
@@ -69,6 +70,10 @@ export default function ChannelPage({ params }: Props) {
   };
 
   const firstAlert = alerts?.[0];
+
+  if (status === "LoadingFirstPage" && !channel) {
+    return <ChannelSkeleton />;
+  }
 
   return (
     <div className="relative flex h-full flex-col">

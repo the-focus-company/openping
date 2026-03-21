@@ -6,7 +6,8 @@ import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import { StatusDot } from "@/components/ui/status-dot";
-import { Building2, Link, Github, Loader2 } from "lucide-react";
+import { IntegrationEmptyState } from "@/components/integrations/IntegrationEmptyState";
+import { Building2, GitBranch, Link, Github, Loader2 } from "lucide-react";
 
 export default function WorkspacePage() {
   const { toast } = useToast();
@@ -132,6 +133,27 @@ export default function WorkspacePage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Integration Empty States */}
+        <div>
+          <label className="mb-2 block text-2xs font-medium uppercase tracking-widest text-white/40">
+            Connect Services
+          </label>
+          <div className="space-y-3">
+            <IntegrationEmptyState
+              icon={GitBranch}
+              title="Connect GitHub"
+              description="Link pull requests, issues, and commits to your PING workspace for smarter alerts."
+              actionLabel="Connect GitHub"
+            />
+            <IntegrationEmptyState
+              icon={Building2}
+              title="Connect Linear"
+              description="Sync Linear issues and projects so PING can surface blockers and track progress."
+              actionLabel="Connect Linear"
+            />
           </div>
         </div>
 
