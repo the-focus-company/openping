@@ -301,4 +301,50 @@ export default defineSchema({
   })
     .index("by_message", ["messageId"])
     .index("by_message_user", ["messageId", "userId"]),
+
+  agents: defineTable({
+    workspaceId: v.id("workspaces"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("inactive"), v.literal("revoked")),
+    createdBy: v.id("users"),
+    color: v.optional(v.string()),
+    systemPrompt: v.optional(v.string()),
+    userId: v.id("users"),
+    lastActiveAt: v.optional(v.number()),
+  })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_workspace_status", ["workspaceId", "status"])
+    .index("by_user", ["userId"]),
+
+  agentApiTokens: defineTable({
+    agentId: v.id("agents"),
+    workspaceId: v.id("workspaces"),
+    tokenHash: v.string(),
+    tokenPrefix: v.string(),
+    label: v.string(),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    createdBy: v.id("users"),
+    lastUsedAt: v.optional(v.number()),
+    expiresAt: v.optional(v.number()),
+  })
+    .index("by_agent", ["agentId"])
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_workspace", ["workspaceId"]),
+
+  agentAuditLogs: defineTable({
+    agentId: v.id("agents"),
+    workspaceId: v.id("workspaces"),
+    action: v.string(),
+    resourceType: v.optional(v.string()),
+    resourceId: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    tokenPrefix: v.string(),
+    timestamp: v.number(),
+    durationMs: v.optional(v.number()),
+  })
+    .index("by_agent", ["agentId"])
+    .index("by_workspace", ["workspaceId"])
+    .index("by_workspace_timestamp", ["workspaceId", "timestamp"])
+    .index("by_agent_action", ["agentId", "action"]),
 });
