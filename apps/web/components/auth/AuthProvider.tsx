@@ -16,8 +16,6 @@ interface User {
   email: string;
   name: string;
   avatarUrl?: string;
-  role: "admin" | "member";
-  workspaceId: Id<"workspaces">;
   status: "active" | "invited" | "deactivated";
   lastSeenAt?: number;
 }
@@ -25,14 +23,12 @@ interface User {
 interface AuthContextValue {
   currentUser: User | null;
   isLoading: boolean;
-  workspaceId: Id<"workspaces"> | null;
   logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextValue>({
   currentUser: null,
   isLoading: true,
-  workspaceId: null,
   logout: () => {},
 });
 
@@ -55,7 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         currentUser: currentUser ?? null,
         isLoading,
-        workspaceId: currentUser?.workspaceId ?? null,
         logout,
       }}
     >

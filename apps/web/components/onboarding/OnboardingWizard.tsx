@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Loader2 } from "lucide-react";
 import { OnboardingLayout } from "./OnboardingLayout";
@@ -36,10 +36,27 @@ export function OnboardingWizard() {
   const router = useRouter();
   const [step, setStep] = useState(0);
 
-  const state = useQuery(api.onboarding.getOnboardingState);
+  const { isAuthenticated } = useConvexAuth();
+  const workspaces = useQuery(
+    api.workspaceMembers.listMyWorkspaces,
+    isAuthenticated ? {} : "skip",
+  );
+  const workspaceId = workspaces?.[0]?.workspaceId;
+  const workspaceSlug = workspaces?.[0]?.slug;
+
+  const state = useQuery(api.onboarding.getOnboardingState, workspaceId ? { workspaceId } : "skip");
   const completeOnboarding = useMutation(api.onboarding.completeOnboarding);
 
-  if (state === undefined) {
+  const shouldRedirect = state !== undefined && state !== null &&
+    (state.onboardingStatus === "completed" || !state.onboardingStatus);
+
+  useEffect(() => {
+    if (shouldRedirect) {
+      router.replace(workspaceSlug ? `/app/${workspaceSlug}/inbox` : "/");
+    }
+  }, [shouldRedirect, router, workspaceSlug]);
+
+  if (state === undefined || workspaces === undefined) {
     return (
       <OnboardingLayout>
         <div className="flex items-center justify-center py-24">
@@ -49,8 +66,7 @@ export function OnboardingWizard() {
     );
   }
 
-  if (state.onboardingStatus === "completed" || !state.onboardingStatus) {
-    router.replace("/inbox");
+  if (shouldRedirect) {
     return null;
   }
 
@@ -63,12 +79,13 @@ export function OnboardingWizard() {
       setStep((s) => s + 1);
     } else {
       await completeOnboarding();
-      router.replace("/inbox");
+      // Redirect to root — it will re-query workspaces and navigate to correct workspace slug
+      window.location.href = "/";
     }
   };
 
   function renderStep() {
-    if (!state) return null;
+    if (!state || !workspaceId) return null;
     if (isAdmin) {
       switch (step) {
         case 0:
@@ -83,17 +100,18 @@ export function OnboardingWizard() {
           return (
             <CompanyContextStep
               workspaceName={state.workspaceName ?? ""}
+              workspaceId={workspaceId}
               onNext={handleNext}
             />
           );
         case 2:
-          return <WorkspaceSetupStep onNext={handleNext} />;
+          return <WorkspaceSetupStep workspaceId={workspaceId} onNext={handleNext} />;
         case 3:
           return <AiPrefsStep onNext={handleNext} />;
         case 4:
           return <IntegrationsStep onNext={handleNext} />;
         case 5:
-          return <InviteTeamStep onNext={handleNext} />;
+          return <InviteTeamStep workspaceId={workspaceId} onNext={handleNext} />;
         default:
           return null;
       }
@@ -109,7 +127,7 @@ export function OnboardingWizard() {
           />
         );
       case 1:
-        return <ChannelSelectionStep onNext={handleNext} />;
+        return <ChannelSelectionStep workspaceId={workspaceId} onNext={handleNext} />;
       case 2:
         return <AiPrefsStep onNext={handleNext} />;
       case 3:

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import {
   Inbox,
   Hash,
@@ -17,7 +18,7 @@ import {
   User,
   Building2,
   MessageSquare,
-  FileText,
+
 } from "lucide-react";
 import {
   CommandDialog,
@@ -49,16 +50,19 @@ const PAGES = [
 
 export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandPaletteProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [search, setSearch] = useState("");
   const { isAuthenticated } = useConvexAuth();
 
-  const channels = useQuery(api.channels.list, isAuthenticated ? {} : "skip");
+  // Extract workspace slug from URL and resolve to workspaceId
+  const workspaceSlug = pathname.match(/^\/app\/([^/]+)/)?.[1];
+  const workspacePrefix = workspaceSlug ? `/app/${workspaceSlug}` : "";
+  const workspace = useQuery(api.workspaces.getBySlug, isAuthenticated && workspaceSlug ? { slug: workspaceSlug } : "skip");
+  const workspaceId = workspace?._id as Id<"workspaces"> | undefined;
+
+  const channels = useQuery(api.channels.list, isAuthenticated && workspaceId ? { workspaceId } : "skip");
   const dmConversations = useQuery(api.directConversations.list, isAuthenticated ? {} : "skip");
   const currentUser = useQuery(api.users.getMe, isAuthenticated ? {} : "skip");
-  const messageResults = useQuery(
-    api.messages.search,
-    isAuthenticated && search.length >= 2 ? { query: search } : "skip",
-  );
 
   // Reset search when closed
   useEffect(() => {
@@ -66,7 +70,9 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
   }, [open]);
 
   const navigate = (href: string) => {
-    router.push(href);
+    // Prefix workspace-scoped paths with the ws prefix
+    const fullHref = href.startsWith("/admin") ? href : `${workspacePrefix}${href}`;
+    router.push(fullHref);
     onOpenChange(false);
   };
 
@@ -136,25 +142,6 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
                 </CommandItem>
               );
             })}
-          </CommandGroup>
-        )}
-
-        {messageResults && messageResults.length > 0 && (
-          <CommandGroup heading="Messages">
-            {messageResults.map((msg) => (
-              <CommandItem
-                key={msg._id}
-                onSelect={() => navigate(`/channel/${msg.channelId}`)}
-              >
-                <FileText className="h-3.5 w-3.5 text-white/40" />
-                <div className="flex-1 min-w-0">
-                  <span className="truncate text-sm">{msg.body.slice(0, 80)}{msg.body.length > 80 ? "…" : ""}</span>
-                  <span className="ml-2 text-2xs text-muted-foreground">
-                    #{msg.channelName} · {msg.authorName}
-                  </span>
-                </div>
-              </CommandItem>
-            ))}
           </CommandGroup>
         )}
 

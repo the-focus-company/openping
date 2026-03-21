@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { useQuery } from "convex/react";
 import { useRouter, usePathname } from "next/navigation";
@@ -12,6 +13,15 @@ function WaitForUser({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const isOnboarding = pathname.startsWith("/onboarding");
+  const needsOnboarding = user?.onboardingStatus === "pending" && !isOnboarding;
+
+  useEffect(() => {
+    if (needsOnboarding) {
+      router.replace("/onboarding");
+    }
+  }, [needsOnboarding, router]);
+
   if (user === undefined || user === null) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-3">
@@ -21,18 +31,20 @@ function WaitForUser({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Redirect to onboarding if status is "pending" (undefined = legacy user, treat as completed)
-  if (user.onboardingStatus === "pending" && !pathname.startsWith("/onboarding")) {
-    router.replace("/onboarding");
+  if (needsOnboarding) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-3">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-ping-purple border-t-transparent" />
-        <p className="text-sm text-muted-foreground">Setting up your account…</p>
       </div>
     );
   }
 
-  return <>{children}</>;
+  // Onboarding pages render without sidebar
+  if (isOnboarding) {
+    return <>{children}</>;
+  }
+
+  return <DashboardShell>{children}</DashboardShell>;
 }
 
 export default function DashboardLayout({
@@ -54,7 +66,7 @@ export default function DashboardLayout({
       </Unauthenticated>
       <Authenticated>
         <WaitForUser>
-          <DashboardShell>{children}</DashboardShell>
+          {children}
         </WaitForUser>
       </Authenticated>
     </ToastProvider>

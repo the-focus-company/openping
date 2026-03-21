@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PING Platform — Architecture Diagram</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0f0f17;
+      color: #e2e8f0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 32px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #818cf8;
+      margin-bottom: 8px;
+    }
+    h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #a5b4fc;
+      margin: 40px 0 16px;
+    }
+    .subtitle {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .diagram-container {
+      background: #1a1a2e;
+      border: 1px solid #2d2d44;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+      overflow-x: auto;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .dot-frontend { background: #6366f1; }
+    .dot-backend { background: #22d3ee; }
+    .dot-ai { background: #f472b6; }
+    .dot-external { background: #fbbf24; }
+    .dot-cron { background: #a78bfa; }
+    .dot-data { background: #34d399; }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+    .badge-done { background: #064e3b; color: #34d399; }
+    .badge-planned { background: #3b1f4a; color: #c084fc; }
+    .badge-partial { background: #422006; color: #fbbf24; }
+    .section-note {
+      color: #64748b;
+      font-size: 13px;
+      margin-bottom: 8px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+<h1>PING Platform — Architektura Systemu</h1>
+<p class="subtitle">Diagram architektury, przepływów danych i miejsc aktywacji AI</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot dot-frontend"></div>Frontend (Next.js)</div>
+  <div class="legend-item"><div class="legend-dot dot-backend"></div>Backend (Convex)</div>
+  <div class="legend-item"><div class="legend-dot dot-ai"></div>AI / LLM</div>
+  <div class="legend-item"><div class="legend-dot dot-external"></div>Zewnętrzne serwisy</div>
+  <div class="legend-item"><div class="legend-dot dot-cron"></div>CRON / Automatyczne</div>
+  <div class="legend-item"><div class="legend-dot dot-data"></div>Dane / Storage</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>1. Architektura wysokopoziomowa</h2>
+<p class="section-note">Główne komponenty systemu i ich połączenia</p>
+<div class="diagram-container">
+  <pre class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#6366f1', 'primaryTextColor': '#e2e8f0', 'lineColor': '#475569', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#1a1a2e', 'fontSize': '14px'}}}%%
+graph TB
+    subgraph FRONTEND["🖥️ FRONTEND — Next.js 15 + React 19"]
+        direction TB
+        PAGES["App Router Pages<br/>/inbox · /channel/[id] · /settings"]
+        COMPONENTS["Komponenty UI<br/>DashboardShell · Sidebar · InboxList<br/>MessageList · ProactiveAlerts"]
+        CONVEX_REACT["Convex React Bindings<br/>useQuery() · useMutation()<br/>Real-time WebSocket sync"]
+        AUTH_MIDDLEWARE["Middleware Auth<br/>WorkOS session check"]
+    end
+
+    subgraph BACKEND["⚡ BACKEND — Convex (Serverless)"]
+        direction TB
+        QUERIES["Queries (real-time)<br/>users.getMe · channels.list<br/>inbox.getInbox · messages.list"]
+        MUTATIONS["Mutations<br/>messages.send · channels.create<br/>drafts.save · alerts.dismiss"]
+        ACTIONS["Actions (async)<br/>bot.respond · drafts.generateSuggestion<br/>integrations.sync"]
+        CRON_JOBS["⏱️ CRON Jobs<br/>Automatyczne uruchamianie"]
+        HTTP_ROUTES["HTTP Router<br/>Webhook endpoints"]
+    end
+
+    subgraph DATA["💾 BAZA DANYCH — Convex DB"]
+        direction LR
+        TABLES["10 tabel:<br/>users · workspaces · channels<br/>messages · inboxSummaries<br/>drafts · proactiveAlerts<br/>integrationObjects · sessions<br/>channelMembers"]
+        VECTOR["Vector Index<br/>messages.body<br/>(semantic search)"]
+    end
+
+    subgraph AI_LAYER["🤖 WARSTWA AI"]
+        direction TB
+        OPENAI["OpenAI GPT-4o<br/>(primary LLM)"]
+        GRAPHITI["Graphiti + Neo4j<br/>Knowledge Graph RAG<br/>Temporal semantic graph"]
+        VERCEL_AI["Vercel AI SDK<br/>Model orchestration"]
+    end
+
+    subgraph EXTERNAL["🌐 ZEWNĘTRZNE SERWISY"]
+        direction TB
+        WORKOS["WorkOS<br/>Auth · SSO · OIDC"]
+        GITHUB["GitHub<br/>PR webhooks"]
+        LINEAR["Linear<br/>Ticket webhooks"]
+    end
+
+    %% Frontend → Backend
+    PAGES --> CONVEX_REACT
+    COMPONENTS --> CONVEX_REACT
+    CONVEX_REACT -->|"WebSocket<br/>real-time sync"| QUERIES
+    CONVEX_REACT -->|"mutacje"| MUTATIONS
+    AUTH_MIDDLEWARE -->|"JWT token"| WORKOS
+
+    %% Backend internal
+    QUERIES --> TABLES
+    MUTATIONS --> TABLES
+    ACTIONS --> TABLES
+    CRON_JOBS --> ACTIONS
+    TABLES --- VECTOR
+
+    %% Backend → AI
+    ACTIONS -->|"API calls"| VERCEL_AI
+    VERCEL_AI --> OPENAI
+    ACTIONS -->|"REST: /query, /ingest"| GRAPHITI
+
+    %% External → Backend
+    WORKOS -->|"OAuth callback"| AUTH_MIDDLEWARE
+    WORKOS -->|"webhook: user events"| HTTP_ROUTES
+    GITHUB -->|"webhook: PR events"| HTTP_ROUTES
+    LINEAR -->|"webhook: ticket events"| HTTP_ROUTES
+    HTTP_ROUTES --> MUTATIONS
+
+    %% Styling
+    style FRONTEND fill:#1e1b4b,stroke:#6366f1,stroke-width:2px,color:#e2e8f0
+    style BACKEND fill:#0c2d3e,stroke:#22d3ee,stroke-width:2px,color:#e2e8f0
+    style DATA fill:#042f2e,stroke:#34d399,stroke-width:2px,color:#e2e8f0
+    style AI_LAYER fill:#2d1a3e,stroke:#f472b6,stroke-width:2px,color:#e2e8f0
+    style EXTERNAL fill:#2d2006,stroke:#fbbf24,stroke-width:2px,color:#e2e8f0
+    style CRON_JOBS fill:#2e1065,stroke:#a78bfa,stroke-width:2px,color:#e2e8f0
+  </pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>2. Przepływy AI — Gdzie AI się samo aktywuje</h2>
+<p class="section-note">Wszystkie miejsca gdzie sztuczna inteligencja działa automatycznie (CRON) lub jest wyzwalana zdarzeniem</p>
+<div class="diagram-container">
+  <pre class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#f472b6', 'primaryTextColor': '#e2e8f0', 'lineColor': '#6b21a8', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#1a1a2e', 'fontSize': '13px'}}}%%
+flowchart TB
+    subgraph CRON_AI["⏱️ AI AKTYWOWANE AUTOMATYCZNIE (CRON)"]
+        direction TB
+
+        CRON1["🔄 co 15 min<br/><b>Channel Summarizer</b><br/>Podsumowuje wiadomości<br/>z każdego kanału"]
+        CRON2["🔄 co 10 min<br/><b>Unanswered Question Scanner</b><br/>Wykrywa pytania bez odpowiedzi"]
+        CRON3["🔄 co 15 min<br/><b>PR Review Nudge</b><br/>Identyfikuje stale PR-y<br/>sugeruje reviewerów"]
+        CRON4["🔄 co 30 min<br/><b>Blocked Task Scanner</b><br/>Wykrywa zablokowane taski<br/>w Linear"]
+        CRON5["🔄 co 60 min<br/><b>Alert Expiration</b><br/>Czyści wygasłe alerty"]
+    end
+
+    subgraph EVENT_AI["⚡ AI AKTYWOWANE ZDARZENIEM"]
+        direction TB
+
+        EVENT1["💬 User wspomina @KnowledgeBot<br/><b>Bot Q&A</b><br/>Odpowiada na pytania<br/>z cytowaniami źródeł"]
+        EVENT2["✏️ User zapisuje draft<br/><b>Draft Completion</b><br/>Sugeruje dokończenie<br/>wiadomości"]
+        EVENT3["🚨 Wykryto incydent<br/><b>Incident Auto-Router</b><br/>Kieruje do właściwego<br/>inżyniera"]
+    end
+
+    subgraph OUTPUTS["📤 WYNIKI AI"]
+        direction TB
+
+        OUT1["📋 inboxSummaries<br/>3 bullet points + priorytety<br/>+ action items"]
+        OUT2["🔔 proactiveAlerts<br/>Banery z akcjami<br/>w UI"]
+        OUT3["🤖 Bot messages<br/>Odpowiedzi z cytowaniami"]
+        OUT4["💡 Draft suggestions<br/>Sugerowane dokończenia"]
+    end
+
+    CRON1 -->|"GPT-4o: generateObject()"| OUT1
+    CRON2 -->|"Klasyfikator pytań"| OUT2
+    CRON3 -->|"Analiza PR metadata"| OUT2
+    CRON4 -->|"Analiza Linear tickets"| OUT2
+
+    EVENT1 -->|"Graphiti → GPT-4o"| OUT3
+    EVENT2 -->|"Kontekst kanału → GPT-4o"| OUT4
+    EVENT3 -->|"Analiza + routing"| OUT2
+
+    OUT1 -->|"real-time sync"| UI_INBOX["🖥️ Inbox Page<br/>Copilot Inbox"]
+    OUT2 -->|"real-time sync"| UI_ALERTS["🖥️ Alert Banners<br/>Proactive UI"]
+    OUT3 -->|"real-time sync"| UI_CHANNEL["🖥️ Channel View<br/>Bot message"]
+    OUT4 -->|"real-time sync"| UI_DRAFT["🖥️ Draft Editor<br/>Suggestion popup"]
+
+    style CRON_AI fill:#2e1065,stroke:#a78bfa,stroke-width:2px,color:#e2e8f0
+    style EVENT_AI fill:#2d1a3e,stroke:#f472b6,stroke-width:2px,color:#e2e8f0
+    style OUTPUTS fill:#042f2e,stroke:#34d399,stroke-width:2px,color:#e2e8f0
+  </pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>3. Przepływ danych — Wiadomość od wysłania do AI</h2>
+<p class="section-note">Pełny cykl życia wiadomości i jak wpływa na system</p>
+<div class="diagram-container">
+  <pre class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#22d3ee', 'primaryTextColor': '#e2e8f0', 'lineColor': '#475569', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#1a1a2e', 'fontSize': '13px'}}}%%
+sequenceDiagram
+    participant U as 👤 User
+    participant FE as 🖥️ Frontend<br/>(Next.js)
+    participant CV as ⚡ Convex<br/>(Backend)
+    participant DB as 💾 Convex DB
+    participant AI as 🤖 OpenAI<br/>(GPT-4o)
+    participant KG as 🧠 Graphiti<br/>(Knowledge Graph)
+
+    Note over U,KG: PRZEPŁYW 1: Wysyłanie wiadomości
+    U->>FE: Pisze wiadomość w kanale
+    FE->>CV: messages.send(body, channelId)
+    CV->>DB: INSERT message
+    DB-->>FE: Real-time WebSocket update
+    FE-->>U: Wiadomość pojawia się natychmiast
+
+    Note over U,KG: PRZEPŁYW 2: Ingest do Knowledge Graph
+    CV->>KG: POST /ingest (message data)
+    KG->>KG: Ekstrakcja encji i relacji
+    KG-->>CV: OK (episode_id)
+    CV->>DB: UPDATE message.graphitiEpisodeId
+
+    Note over U,KG: PRZEPŁYW 3: AI Summarization (CRON co 15 min)
+    CV->>DB: Pobierz nowe wiadomości z kanałów
+    DB-->>CV: Messages since last summary
+    CV->>AI: Prompt: "Podsumuj w 3 bulletach"
+    AI-->>CV: {bullets, actionItems, priorities}
+    CV->>DB: UPSERT inboxSummaries (per user)
+    DB-->>FE: Real-time update → Inbox
+    FE-->>U: Nowe podsumowanie w Inbox
+
+    Note over U,KG: PRZEPŁYW 4: @KnowledgeBot Q&A
+    U->>FE: "@KnowledgeBot jak zdecydowaliśmy o X?"
+    FE->>CV: messages.send (wykrywa @mention)
+    CV->>KG: POST /query (question)
+    KG-->>CV: Ranked results + citations
+    CV->>AI: Prompt + context → cited answer
+    AI-->>CV: Answer with source references
+    CV->>DB: INSERT bot message (type=bot)
+    DB-->>FE: Real-time update
+    FE-->>U: Bot odpowiada z cytowaniami
+  </pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>4. Przepływ autentykacji</h2>
+<p class="section-note">Od logowania do autoryzacji zapytań</p>
+<div class="diagram-container">
+  <pre class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#fbbf24', 'primaryTextColor': '#e2e8f0', 'lineColor': '#475569', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#1a1a2e', 'fontSize': '13px'}}}%%
+sequenceDiagram
+    participant U as 👤 User
+    participant FE as 🖥️ Next.js
+    participant MW as 🛡️ Middleware
+    participant WOS as 🔑 WorkOS
+    participant CV as ⚡ Convex
+
+    U->>FE: Odwiedza /inbox
+    FE->>MW: Sprawdza sesję
+    MW-->>FE: Brak sesji → redirect
+    FE-->>U: Przekierowanie na /login
+
+    U->>FE: Klika "Login with Google"
+    FE->>WOS: OAuth Authorization Request
+    WOS-->>U: Google login prompt
+    U->>WOS: Loguje się (Google OAuth)
+    WOS-->>FE: Redirect do /callback + auth code
+
+    FE->>WOS: Exchange code → session + JWT
+    WOS-->>FE: WorkOS session token
+
+    FE->>FE: /api/auth/token
+    FE->>CV: ConvexProviderWithAuth(token)
+    CV->>CV: ctx.auth.getUserIdentity()
+    CV->>CV: users.getMe(workosUserId)
+    CV-->>FE: User data (real-time subscription)
+    FE-->>U: Dashboard załadowany ✅
+  </pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>5. Integracje zewnętrzne — Webhook Flow</h2>
+<p class="section-note">Jak dane z GitHub i Linear trafiają do systemu</p>
+<div class="diagram-container">
+  <pre class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#fbbf24', 'primaryTextColor': '#e2e8f0', 'lineColor': '#475569', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#1a1a2e', 'fontSize': '13px'}}}%%
+flowchart LR
+    subgraph SOURCES["📡 Źródła webhooków"]
+        GH["🐙 GitHub<br/>PR opened/reviewed/merged"]
+        LN["📐 Linear<br/>Ticket created/updated"]
+        WOS2["🔑 WorkOS<br/>User created/updated<br/>SCIM/DSYNC"]
+    end
+
+    subgraph CONVEX_HTTP["⚡ Convex HTTP Router"]
+        WH1["POST /webhooks/github"]
+        WH2["POST /webhooks/linear"]
+        WH3["POST /webhooks/workos"]
+    end
+
+    subgraph PROCESSING["⚙️ Przetwarzanie"]
+        VERIFY["Weryfikacja podpisu<br/>(HMAC / signature)"]
+        PARSE["Parsowanie payload"]
+        UPSERT["Upsert do DB"]
+    end
+
+    subgraph STORAGE["💾 Przechowywanie"]
+        IO["integrationObjects<br/>type: github_pr /<br/>linear_ticket"]
+        USR["users<br/>(WorkOS sync)"]
+    end
+
+    subgraph AI_PROC["🤖 AI Processing"]
+        PR_AI["PR Review Nudge<br/>(CRON co 15 min)"]
+        TASK_AI["Blocked Task Scanner<br/>(CRON co 30 min)"]
+        INGEST["Graphiti ingest<br/>(knowledge graph)"]
+    end
+
+    GH -->|"HTTP POST"| WH1
+    LN -->|"HTTP POST"| WH2
+    WOS2 -->|"HTTP POST"| WH3
+
+    WH1 --> VERIFY --> PARSE --> UPSERT
+    WH2 --> VERIFY
+    WH3 --> VERIFY
+
+    UPSERT --> IO
+    UPSERT --> USR
+
+    IO --> PR_AI
+    IO --> TASK_AI
+    IO --> INGEST
+
+    style SOURCES fill:#2d2006,stroke:#fbbf24,stroke-width:2px,color:#e2e8f0
+    style CONVEX_HTTP fill:#0c2d3e,stroke:#22d3ee,stroke-width:2px,color:#e2e8f0
+    style PROCESSING fill:#1a1a2e,stroke:#475569,stroke-width:2px,color:#e2e8f0
+    style STORAGE fill:#042f2e,stroke:#34d399,stroke-width:2px,color:#e2e8f0
+    style AI_PROC fill:#2d1a3e,stroke:#f472b6,stroke-width:2px,color:#e2e8f0
+  </pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>6. Stos technologiczny</h2>
+<div class="diagram-container">
+  <pre class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#6366f1', 'primaryTextColor': '#e2e8f0', 'lineColor': '#475569', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#1a1a2e', 'fontSize': '13px'}}}%%
+block-beta
+    columns 4
+
+    block:frontend["🖥️ Frontend"]:2
+        A["Next.js 15"]
+        B["React 19"]
+        C["Tailwind CSS 4"]
+        D["shadcn/ui"]
+    end
+    block:backend["⚡ Backend"]:2
+        E["Convex"]
+        F["Real-time DB"]
+        G["CRON"]
+        H["Vector Search"]
+    end
+
+    block:ai["🤖 AI Layer"]:2
+        I["Vercel AI SDK"]
+        J["OpenAI GPT-4o"]
+        K["Graphiti"]
+        L["Neo4j"]
+    end
+    block:infra["🌐 Infra & Auth"]:2
+        M["Vercel (hosting)"]
+        N["WorkOS (auth)"]
+        O["GitHub (webhooks)"]
+        P["Linear (webhooks)"]
+    end
+
+    block:tools["🛠️ Dev Tools"]:4
+        Q["TypeScript"]
+        R["Turborepo"]
+        S["pnpm"]
+        T["ESLint"]
+    end
+
+    style frontend fill:#1e1b4b,stroke:#6366f1,stroke-width:2px
+    style backend fill:#0c2d3e,stroke:#22d3ee,stroke-width:2px
+    style ai fill:#2d1a3e,stroke:#f472b6,stroke-width:2px
+    style infra fill:#2d2006,stroke:#fbbf24,stroke-width:2px
+    style tools fill:#1a1a2e,stroke:#475569,stroke-width:2px
+  </pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>7. Status implementacji</h2>
+<div class="diagram-container" style="padding: 20px 24px;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+    <thead>
+      <tr style="border-bottom: 2px solid #2d2d44;">
+        <th style="text-align: left; padding: 8px 12px; color: #94a3b8;">Komponent</th>
+        <th style="text-align: left; padding: 8px 12px; color: #94a3b8;">Status</th>
+        <th style="text-align: left; padding: 8px 12px; color: #94a3b8;">Opis</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom: 1px solid #1e1e30;">
+        <td style="padding: 8px 12px;">Convex Schema (10 tabel)</td>
+        <td style="padding: 8px 12px;"><span class="status-badge badge-done">✅ Done</span></td>
+        <td style="padding: 8px 12px; color: #94a3b8;">Pełny schemat z indeksami</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #1e1e30;">
+        <td style="padding: 8px 12px;">Auth (WorkOS + Convex)</td>
+        <td style="padding: 8px 12px;"><span class="status-badge badge-done">✅ Done</span></td>
+        <td style="padding: 8px 12px; color: #94a3b8;">Google OAuth, JWT, middleware</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #1e1e30;">
+        <td style="padding: 8px 12px;">Users / Workspaces / Channels CRUD</td>
+        <td style="padding: 8px 12px;"><span class="status-badge badge-done">✅ Done</span></td>
+        <td style="padding: 8px 12px; color: #94a3b8;">Queries, mutations, auto-join</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #1e1e30;">
+        <td style="padding: 8px 12px;">Frontend Shell (Layout)</td>
+        <td style="padding: 8px 12px;"><span class="status-badge badge-done">✅ Done</span></td>
+        <td style="padding: 8px 12px; color: #94a3b8;">Sidebar, TopBar, routing</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #1e1e30;">
+        <td style="padding: 8px 12px;">WorkOS Webhook</td>
+        <td style="padding: 8px 12px;"><span class="status-badge badge-partial">⚠️ Partial</span></td>
+        <td style="padding: 8px 12px; color: #94a3b8;">Endpoint działa, brak weryfikacji podpisu</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #1e1e30;">
+        <td style="padding: 8px 12px;">Messages CRUD</td>
+        <td style="padding: 8px 12px;"><span class="status-badge badge-planned">📋 Planned</span></td>
+        <td style="padding: 8px 12px; color: #94a3b8;">send, list, edit, delete</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #1e1e30;">
+        <td style="padding: 8px 12px;">Inbox AI Summaries</td>
+        <td style="padding: 8px 12px;"><span class="status-badge badge-planned">📋 Planned</span></td>
+        <td style="padding: 8px 12px; color: #94a3b8;">CRON co 15 min + GPT-4o</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #1e1e30;">
+        <td style="padding: 8px 12px;">@KnowledgeBot Q&A</td>
+        <td style="padding: 8px 12px;"><span class="status-badge badge-planned">📋 Planned</span></td>
+        <td style="padding: 8px 12px; color: #94a3b8;">Graphiti + GPT-4o + cytowania</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #1e1e30;">
+        <td style="padding: 8px 12px;">Proactive Alerts (4 agentów)</td>
+        <td style="padding: 8px 12px;"><span class="status-badge badge-planned">📋 Planned</span></td>
+        <td style="padding: 8px 12px; color: #94a3b8;">Unanswered Q, PR nudge, incidents, blocked tasks</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #1e1e30;">
+        <td style="padding: 8px 12px;">Draft Completion AI</td>
+        <td style="padding: 8px 12px;"><span class="status-badge badge-planned">📋 Planned</span></td>
+        <td style="padding: 8px 12px; color: #94a3b8;">Sugestie dokończenia wiadomości</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #1e1e30;">
+        <td style="padding: 8px 12px;">GitHub / Linear Webhooks</td>
+        <td style="padding: 8px 12px;"><span class="status-badge badge-planned">📋 Planned</span></td>
+        <td style="padding: 8px 12px; color: #94a3b8;">PR/ticket sync + AI processing</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 12px;">Knowledge Engine (Graphiti)</td>
+        <td style="padding: 8px 12px;"><span class="status-badge badge-planned">📋 Planned</span></td>
+        <td style="padding: 8px 12px; color: #94a3b8;">Skeleton w services/knowledge-engine/</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    securityLevel: 'loose',
+    themeVariables: {
+      darkMode: true,
+      background: '#1a1a2e',
+      primaryColor: '#6366f1',
+      primaryTextColor: '#e2e8f0',
+      secondaryColor: '#1e1b4b',
+      tertiaryColor: '#0f0f17',
+      lineColor: '#475569',
+      textColor: '#e2e8f0',
+      mainBkg: '#1e1b4b',
+      nodeBorder: '#6366f1',
+      clusterBkg: '#1a1a2e',
+      clusterBorder: '#2d2d44',
+      titleColor: '#e2e8f0',
+      edgeLabelBackground: '#1a1a2e',
+      actorBkg: '#1e1b4b',
+      actorBorder: '#6366f1',
+      actorTextColor: '#e2e8f0',
+      actorLineColor: '#475569',
+      signalColor: '#e2e8f0',
+      signalTextColor: '#e2e8f0',
+      labelBoxBkgColor: '#1a1a2e',
+      labelBoxBorderColor: '#2d2d44',
+      labelTextColor: '#e2e8f0',
+      loopTextColor: '#e2e8f0',
+      noteBkgColor: '#2d1a3e',
+      noteTextColor: '#e2e8f0',
+      noteBorderColor: '#6366f1',
+      activationBkgColor: '#1e1b4b',
+      activationBorderColor: '#6366f1',
+      sequenceNumberColor: '#e2e8f0'
+    },
+    flowchart: {
+      curve: 'basis',
+      padding: 20
+    },
+    sequence: {
+      mirrorActors: false,
+      actorMargin: 80,
+      messageMargin: 40
+    }
+  });
+</script>
+
+</body>
+</html>

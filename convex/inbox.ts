@@ -1,11 +1,11 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth } from "./auth";
+import { requireUser } from "./auth";
 
 export const getInbox = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const allSummaries = await ctx.db
       .query("inboxSummaries")
@@ -50,7 +50,7 @@ export const getInbox = query({
 export const markRead = mutation({
   args: { summaryId: v.id("inboxSummaries") },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const summary = await ctx.db.get(args.summaryId);
     if (!summary) throw new Error("Summary not found");
@@ -63,7 +63,7 @@ export const markRead = mutation({
 export const archive = mutation({
   args: { summaryId: v.id("inboxSummaries") },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const summary = await ctx.db.get(args.summaryId);
     if (!summary) throw new Error("Summary not found");

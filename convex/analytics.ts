@@ -35,16 +35,16 @@ async function getRecentMessages(ctx: QueryCtx, channelId: Id<"channels">) {
  * per-category counts in a single pass over the data.
  */
 export const getKPIs = query({
-  args: { period: periodValidator },
+  args: { period: periodValidator, workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireAuth(ctx, args.workspaceId);
 
     const now = Date.now();
     const periodMs = PERIOD_MS[args.period];
     const cutoff = now - periodMs;
     const prevCutoff = cutoff - periodMs;
 
-    const channels = await getWorkspaceChannels(ctx, user.workspaceId);
+    const channels = await getWorkspaceChannels(ctx, args.workspaceId);
 
     let botMessages = 0;
     let prevBotMessages = 0;
@@ -138,11 +138,11 @@ export const getKPIs = query({
  * within the user's workspace for the given period.
  */
 export const getAgentLeaderboard = query({
-  args: { period: periodValidator },
+  args: { period: periodValidator, workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireAuth(ctx, args.workspaceId);
     const cutoff = Date.now() - PERIOD_MS[args.period];
-    const channels = await getWorkspaceChannels(ctx, user.workspaceId);
+    const channels = await getWorkspaceChannels(ctx, args.workspaceId);
 
     const authorCounts: Record<string, number> = {};
 

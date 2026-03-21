@@ -3,7 +3,15 @@ import { authkitMiddleware } from "@workos-inc/authkit-nextjs";
 export default authkitMiddleware({
   middlewareAuth: {
     enabled: true,
-    unauthenticatedPaths: ["/", "/pricing", "/callback", "/sign-in", "/sign-out", "/api/webhooks(.*)"],
+    unauthenticatedPaths: [
+      "/",
+      "/pricing",
+      "/callback",
+      "/sign-in",
+      "/sign-out",
+      "/api/webhooks(.*)",
+      "/invite/(.*)",
+    ],
   },
 });
 

@@ -7,8 +7,6 @@ export default defineSchema({
     email: v.string(),
     name: v.string(),
     avatarUrl: v.optional(v.string()),
-    role: v.union(v.literal("admin"), v.literal("member")),
-    workspaceId: v.id("workspaces"),
     status: v.union(
       v.literal("active"),
       v.literal("invited"),
@@ -43,8 +41,17 @@ export default defineSchema({
     })),
   })
     .index("by_workos_id", ["workosUserId"])
-    .index("by_email", ["email"])
-    .index("by_workspace", ["workspaceId"]),
+    .index("by_email", ["email"]),
+
+  workspaceMembers: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    role: v.union(v.literal("admin"), v.literal("member")),
+    joinedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_workspace", ["workspaceId"])
+    .index("by_user_workspace", ["userId", "workspaceId"]),
 
   workspaces: defineTable({
     name: v.string(),

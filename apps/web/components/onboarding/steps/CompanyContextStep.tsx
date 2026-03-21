@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -27,36 +28,67 @@ function stripWorkspaceSuffix(name: string): string {
   return name.replace(/'s Workspace$/i, "").replace(/\u2019s Workspace$/i, "");
 }
 
+function toSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 interface CompanyContextStepProps {
   workspaceName: string;
+  workspaceId: Id<"workspaces">;
   onNext: () => void;
 }
 
 export function CompanyContextStep({
   workspaceName,
+  workspaceId,
   onNext,
 }: CompanyContextStepProps) {
-  const [companyName, setCompanyName] = useState(
-    stripWorkspaceSuffix(workspaceName)
-  );
+  const stripped = stripWorkspaceSuffix(workspaceName);
+  const [companyName, setCompanyName] = useState(stripped);
+  const [slug, setSlug] = useState(toSlug(stripped));
   const [companySize, setCompanySize] = useState("");
   const [industry, setIndustry] = useState("");
   const [companyDescription, setCompanyDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const saveCompanyContext = useMutation(api.onboarding.saveCompanyContext);
 
+  // Check slug availability
+  const existingWorkspace = useQuery(
+    api.workspaces.getBySlug,
+    slug ? { slug } : "skip",
+  );
+  const slugTaken = existingWorkspace !== null && existingWorkspace !== undefined && existingWorkspace._id !== workspaceId;
+
   async function handleContinue() {
+    if (!companyName.trim()) {
+      setError("Company name is required");
+      return;
+    }
+    if (!slug.trim()) {
+      setError("Workspace URL is required");
+      return;
+    }
+    if (slugTaken) {
+      setError("This URL is already taken");
+      return;
+    }
+
     setSaving(true);
+    setError("");
     try {
       await saveCompanyContext({
+        workspaceId,
         companyName,
+        slug,
         industry,
         companySize,
         companyDescription,
       });
       onNext();
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save");
       setSaving(false);
     }
   }
@@ -79,13 +111,38 @@ export function CompanyContextStep({
           </label>
           <Input
             value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
+            onChange={(e) => {
+              setCompanyName(e.target.value);
+              setSlug(toSlug(e.target.value));
+              setError("");
+            }}
             placeholder="Acme Inc."
             className="border-subtle bg-surface-2"
           />
-          <p className="text-xs text-muted-foreground">
-            This will also be your workspace name.
-          </p>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-2xs font-medium uppercase tracking-widest text-white/40">
+            Workspace URL
+          </label>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{process.env.NEXT_PUBLIC_APP_DOMAIN ?? "localhost:3000"}/app/</span>
+            <Input
+              value={slug}
+              onChange={(e) => {
+                setSlug(toSlug(e.target.value));
+                setError("");
+              }}
+              placeholder="acme"
+              className="border-subtle bg-surface-2"
+            />
+          </div>
+          {slugTaken && (
+            <p className="text-xs text-destructive">This URL is already taken</p>
+          )}
+          {slug && !slugTaken && existingWorkspace !== undefined && (
+            <p className="text-xs text-status-online">Available</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -146,6 +203,8 @@ export function CompanyContextStep({
         </div>
       </div>
 
+      {error && <p className="text-xs text-destructive">{error}</p>}
+
       <div className="flex items-center justify-between">
         <Button
           variant="ghost"
@@ -160,7 +219,7 @@ export function CompanyContextStep({
           size="sm"
           className="bg-ping-purple px-6 text-xs text-white hover:bg-ping-purple/90"
           onClick={handleContinue}
-          disabled={saving}
+          disabled={saving || slugTaken}
         >
           {saving ? "Saving\u2026" : "Continue"}
         </Button>

@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, Paperclip, AtSign, ChevronDown } from "lucide-react";
+import { Send, Bot, Paperclip, AtSign, ChevronDown, Pin, Users } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CitationRow, type Citation } from "@/components/bot/CitationPill";
-import { StatusDot } from "@/components/ui/status-dot";
 import { cn } from "@/lib/utils";
 
 export interface Message {
@@ -139,12 +138,10 @@ interface MessageListProps {
   channelName: string;
   messages: Message[];
   onSend?: (content: string) => void;
-  memberCount?: number;
-  onlineCount?: number;
   isLoading?: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void;
-  /** When true, renders a DM-style header (no # prefix, avatar shown) */
+  /** When true, renders a DM-style composer (no # prefix, no toolbar) */
   isDM?: boolean;
   /** Users currently typing */
   typingUsers?: TypingUser[];
@@ -156,8 +153,6 @@ export function MessageList({
   channelName,
   messages,
   onSend,
-  memberCount,
-  onlineCount,
   isLoading,
   hasMore,
   onLoadMore,
@@ -228,23 +223,23 @@ export function MessageList({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-subtle px-4 py-2">
-        <span className="text-sm font-medium text-foreground">
-          {isDM ? channelName : `#${channelName}`}
-        </span>
-        {memberCount !== undefined && (
-          <span className="rounded bg-surface-3 px-1.5 py-px text-2xs text-muted-foreground">
-            {memberCount} member{memberCount !== 1 ? "s" : ""}
-          </span>
-        )}
-        {onlineCount !== undefined && onlineCount > 0 && (
-          <span className="flex items-center gap-1">
-            <StatusDot variant="online" size="xs" />
-            <span className="text-2xs text-muted-foreground">{onlineCount} online</span>
-          </span>
-        )}
-      </div>
+      {/* Utility toolbar — channels only */}
+      {!isDM && (
+        <div className="flex items-center gap-1 border-b border-subtle px-3 py-1">
+          <button className="flex items-center gap-1.5 rounded px-2 py-1 text-2xs text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground">
+            <Pin className="h-3 w-3" />
+            Pinned
+          </button>
+          <button className="flex items-center gap-1.5 rounded px-2 py-1 text-2xs text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground">
+            <Bot className="h-3 w-3" />
+            Agents
+          </button>
+          <button className="flex items-center gap-1.5 rounded px-2 py-1 text-2xs text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground">
+            <Users className="h-3 w-3" />
+            Members
+          </button>
+        </div>
+      )}
 
       {/* Messages */}
       <div

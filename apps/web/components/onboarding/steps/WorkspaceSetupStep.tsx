@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Hash } from "lucide-react";
 
@@ -46,10 +47,11 @@ const SUGGESTED_CHANNELS: ChannelOption[] = [
 ];
 
 interface WorkspaceSetupStepProps {
+  workspaceId: Id<"workspaces">;
   onNext: () => void;
 }
 
-export function WorkspaceSetupStep({ onNext }: WorkspaceSetupStepProps) {
+export function WorkspaceSetupStep({ workspaceId, onNext }: WorkspaceSetupStepProps) {
   const [selected, setSelected] = useState<Set<string>>(
     () =>
       new Set(
@@ -77,7 +79,7 @@ export function WorkspaceSetupStep({ onNext }: WorkspaceSetupStepProps) {
   async function handleContinue() {
     setSaving(true);
     try {
-      await createDefaultChannels({ channelNames: [...selected] });
+      await createDefaultChannels({ workspaceId, channelNames: [...selected] });
       onNext();
     } catch {
       setSaving(false);

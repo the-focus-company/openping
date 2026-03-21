@@ -2,14 +2,14 @@ import { query, mutation, internalAction, internalQuery, internalMutation } from
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { requireAuth } from "./auth";
+import { requireUser } from "./auth";
 
 // ─── Public queries / mutations ───────────────────────────────────────────────
 
 export const listPending = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const alerts = await ctx.db
       .query("proactiveAlerts")
@@ -25,7 +25,7 @@ export const listPending = query({
 export const dismiss = mutation({
   args: { alertId: v.id("proactiveAlerts") },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
     const alert = await ctx.db.get(args.alertId);
     if (!alert || alert.userId !== user._id) {
       throw new Error("Not found");
@@ -101,10 +101,10 @@ export const getChannelMembers = internalQuery({
       rows.map(async (r) => {
         const user = await ctx.db.get(r.userId);
         return user
-          ? { _id: user._id, name: user.name, workspaceId: user.workspaceId }
+          ? { _id: user._id, name: user.name }
           : null;
       }),
-    ).then((users) => users.filter(Boolean) as Array<{ _id: Id<"users">; name: string; workspaceId: Id<"workspaces"> }>);
+    ).then((users) => users.filter(Boolean) as Array<{ _id: Id<"users">; name: string }>);
   },
 });
 
@@ -194,12 +194,13 @@ export const getWorkspaceBotUser = internalQuery({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
     // Find the first admin user as the bot author fallback
-    const user = await ctx.db
-      .query("users")
+    const membership = await ctx.db
+      .query("workspaceMembers")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
       .filter((q) => q.eq(q.field("role"), "admin"))
       .first();
-    return user;
+    if (!membership) return null;
+    return await ctx.db.get(membership.userId);
   },
 });
 

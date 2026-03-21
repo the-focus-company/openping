@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, X, Check, Send } from "lucide-react";
@@ -19,10 +20,11 @@ function createEmptyRow(): InviteRow {
 }
 
 interface InviteTeamStepProps {
+  workspaceId: Id<"workspaces">;
   onNext: () => void;
 }
 
-export function InviteTeamStep({ onNext }: InviteTeamStepProps) {
+export function InviteTeamStep({ workspaceId, onNext }: InviteTeamStepProps) {
   const [rows, setRows] = useState<InviteRow[]>([createEmptyRow()]);
   const [sending, setSending] = useState(false);
 
@@ -57,7 +59,7 @@ export function InviteTeamStep({ onNext }: InviteTeamStepProps) {
       if (!row.email.trim() || row.sent) continue;
 
       try {
-        await sendInvitation({ email: row.email.trim(), role: row.role });
+        await sendInvitation({ workspaceId, email: row.email.trim(), role: row.role });
         updated[i] = { ...row, sent: true, error: undefined };
       } catch (err) {
         updated[i] = {

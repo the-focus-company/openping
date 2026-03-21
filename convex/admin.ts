@@ -7,12 +7,16 @@ export const listWorkspaces = query({
 
     const results = await Promise.all(
       workspaces.map(async (ws) => {
-        const members = await ctx.db
-          .query("users")
+        const memberships = await ctx.db
+          .query("workspaceMembers")
           .withIndex("by_workspace", (q) => q.eq("workspaceId", ws._id))
           .collect();
 
-        const activeMembers = members.filter((m) => m.status === "active");
+        const members = await Promise.all(
+          memberships.map((m) => ctx.db.get(m.userId)),
+        );
+
+        const activeMembers = members.filter((m) => m && m.status === "active");
 
         return {
           _id: ws._id,

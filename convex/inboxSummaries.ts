@@ -1,11 +1,11 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth } from "./auth";
+import { requireUser } from "./auth";
 
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const unread = await ctx.db
       .query("inboxSummaries")
@@ -54,7 +54,7 @@ export const list = query({
 export const markRead = mutation({
   args: { summaryId: v.id("inboxSummaries") },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
     const summary = await ctx.db.get(args.summaryId);
     if (!summary || summary.userId !== user._id) {
       throw new Error("Not found");
@@ -66,7 +66,7 @@ export const markRead = mutation({
 export const archive = mutation({
   args: { summaryId: v.id("inboxSummaries") },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
     const summary = await ctx.db.get(args.summaryId);
     if (!summary || summary.userId !== user._id) {
       throw new Error("Not found");
@@ -78,7 +78,7 @@ export const archive = mutation({
 export const unreadCount = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
     const unread = await ctx.db
       .query("inboxSummaries")
       .withIndex("by_user_read", (q) =>

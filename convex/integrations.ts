@@ -1,6 +1,6 @@
 import { query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth } from "./auth";
+import { requireUser } from "./auth";
 
 export const upsert = internalMutation({
   args: {
@@ -80,7 +80,7 @@ export const listInProgressTickets = internalQuery({
 export const getByExternalId = query({
   args: { externalId: v.string() },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
+    await requireUser(ctx);
 
     return await ctx.db
       .query("integrationObjects")
@@ -99,7 +99,7 @@ export const listByWorkspace = query({
     ),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
+    await requireUser(ctx);
 
     if (args.type) {
       return await ctx.db

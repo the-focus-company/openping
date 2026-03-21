@@ -1,11 +1,11 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth } from "./auth";
+import { requireAuth, requireUser } from "./auth";
 
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     // Get all conversations this user is a member of
     const memberships = await ctx.db
@@ -86,7 +86,7 @@ export const list = query({
 export const get = query({
   args: { conversationId: v.id("directConversations") },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const conversation = await ctx.db.get(args.conversationId);
     if (!conversation) throw new Error("Conversation not found");
@@ -136,9 +136,10 @@ export const create = mutation({
     name: v.optional(v.string()),
     memberIds: v.array(v.id("users")),
     agentMemberIds: v.optional(v.array(v.id("users"))),
+    workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireAuth(ctx, args.workspaceId);
 
     // For 1-to-1, check if conversation already exists
     if (args.kind === "1to1" && args.memberIds.length === 1) {
@@ -165,7 +166,7 @@ export const create = mutation({
     }
 
     const conversationId = await ctx.db.insert("directConversations", {
-      workspaceId: user.workspaceId,
+      workspaceId: args.workspaceId,
       kind: args.kind,
       name: args.name,
       createdBy: user._id,
@@ -206,7 +207,7 @@ export const create = mutation({
 export const markRead = mutation({
   args: { conversationId: v.id("directConversations") },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const membership = await ctx.db
       .query("directConversationMembers")

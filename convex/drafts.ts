@@ -1,10 +1,10 @@
 import { query } from "./_generated/server";
-import { requireAuth } from "./auth";
+import { requireUser } from "./auth";
 
 export const listActive = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const drafts = await ctx.db
       .query("drafts")

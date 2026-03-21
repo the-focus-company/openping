@@ -1,13 +1,13 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth } from "./auth";
+import { requireUser } from "./auth";
 
 const ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
 
 export const heartbeat = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
     await ctx.db.patch(user._id, {
       lastSeenAt: Date.now(),
       presenceStatus: "online",
@@ -21,7 +21,7 @@ export const setStatus = mutation({
     statusEmoji: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
     await ctx.db.patch(user._id, {
       statusMessage: args.statusMessage,
       statusEmoji: args.statusEmoji,
@@ -32,7 +32,7 @@ export const setStatus = mutation({
 export const clearStatus = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
     await ctx.db.patch(user._id, {
       statusMessage: undefined,
       statusEmoji: undefined,
@@ -41,18 +41,29 @@ export const clearStatus = mutation({
 });
 
 export const getOnlineUsers = query({
-  args: {},
-  handler: async (ctx) => {
-    const user = await requireAuth(ctx);
+  args: {
+    workspaceId: v.id("workspaces"),
+  },
+  handler: async (ctx, args) => {
+    await requireUser(ctx);
     const cutoff = Date.now() - ONLINE_THRESHOLD_MS;
 
-    const users = await ctx.db
-      .query("users")
-      .withIndex("by_workspace", (q) => q.eq("workspaceId", user.workspaceId))
+    const wsMembers = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
       .collect();
 
+    const users = await Promise.all(
+      wsMembers.map(async (m) => {
+        const u = await ctx.db.get(m.userId);
+        return u;
+      }),
+    );
+
     return users
-      .filter((u) => u.status === "active" && u.lastSeenAt && u.lastSeenAt > cutoff)
+      .filter((u): u is NonNullable<typeof u> =>
+        u !== null && u !== undefined && u.status === "active" && !!u.lastSeenAt && u.lastSeenAt > cutoff,
+      )
       .map((u) => ({
         _id: u._id,
         name: u.name,
@@ -68,7 +79,7 @@ export const getOnlineUsers = query({
 export const getUserPresence = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
+    await requireUser(ctx);
     const target = await ctx.db.get(args.userId);
     if (!target) throw new Error("User not found");
 

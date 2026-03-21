@@ -1,7 +1,7 @@
 import { query, mutation, internalQuery, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { requireAuth } from "./auth";
+import { requireAuth, requireUser } from "./auth";
 
 export async function createOrUpdateUserHandler(
   ctx: MutationCtx,
@@ -65,7 +65,7 @@ async function provisionNewUser(
     avatarUrl?: string;
   },
 ) {
-  const slug = args.email.split("@")[0] + "-" + Date.now();
+  const slug = args.email.split("@")[0].replace(/[^a-z0-9]/g, "-") + "-" + Date.now();
 
   const workspaceId = await ctx.db.insert("workspaces", {
     name: `${args.name}'s Workspace`,
@@ -78,14 +78,19 @@ async function provisionNewUser(
     email: args.email,
     name: args.name,
     avatarUrl: args.avatarUrl,
-    role: "admin",
-    workspaceId,
     status: "active",
     lastSeenAt: Date.now(),
     onboardingStatus: "pending",
   });
 
   await ctx.db.patch(workspaceId, { createdBy: userId });
+
+  await ctx.db.insert("workspaceMembers", {
+    userId,
+    workspaceId,
+    role: "admin",
+    joinedAt: Date.now(),
+  });
 
   // Create a default #general channel
   const channelId = await ctx.db.insert("channels", {
@@ -127,11 +132,16 @@ async function provisionInvitedUser(
     email: args.email,
     name: args.name,
     avatarUrl: args.avatarUrl,
-    role: invitation.role,
-    workspaceId: invitation.workspaceId,
     status: "active",
     lastSeenAt: Date.now(),
     onboardingStatus: "pending",
+  });
+
+  await ctx.db.insert("workspaceMembers", {
+    userId,
+    workspaceId: invitation.workspaceId,
+    role: invitation.role,
+    joinedAt: Date.now(),
   });
 
   await ctx.db.patch(invitation._id, { status: "accepted" });
@@ -169,21 +179,33 @@ export const getMe = query({
 });
 
 export const listAll = query({
-  args: {},
-  handler: async (ctx) => {
-    const user = await requireAuth(ctx);
-    const users = await ctx.db
-      .query("users")
-      .withIndex("by_workspace", (q) => q.eq("workspaceId", user.workspaceId))
+  args: {
+    workspaceId: v.id("workspaces"),
+  },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.workspaceId);
+
+    const wsMembers = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
       .take(200);
-    return users.map((u) => ({
-        _id: u._id,
-        name: u.name,
-        email: u.email,
-        avatarUrl: u.avatarUrl,
-        role: u.role,
-        status: u.status,
-      }));
+
+    const users = await Promise.all(
+      wsMembers.map(async (m) => {
+        const u = await ctx.db.get(m.userId);
+        if (!u) return null;
+        return {
+          _id: u._id,
+          name: u.name,
+          email: u.email,
+          avatarUrl: u.avatarUrl,
+          role: m.role,
+          status: u.status,
+        };
+      }),
+    );
+
+    return users.filter((u): u is NonNullable<typeof u> => u !== null);
   },
 });
 
@@ -210,17 +232,7 @@ export const updateProfile = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_workos_id", (q) =>
-        q.eq("workosUserId", identity.subject),
-      )
-      .unique();
-
-    if (!user) throw new Error("User not found");
+    const user = await requireUser(ctx);
 
     const updates: Record<string, unknown> = { lastSeenAt: Date.now() };
     if (args.name !== undefined) updates.name = args.name;
@@ -231,50 +243,82 @@ export const updateProfile = mutation({
   },
 });
 
-async function requireAdminAndTarget(ctx: MutationCtx, targetUserId: Id<"users">) {
-  const currentUser = await requireAuth(ctx);
+async function requireAdminAndTarget(
+  ctx: MutationCtx,
+  targetUserId: Id<"users">,
+  workspaceId: Id<"workspaces">,
+) {
+  const currentUser = await requireAuth(ctx, workspaceId);
   if (currentUser.role !== "admin") {
     throw new Error("Only admins can perform this action");
   }
   const target = await ctx.db.get(targetUserId);
   if (!target) throw new Error("User not found");
-  if (target.workspaceId !== currentUser.workspaceId) {
+
+  const targetMembership = await ctx.db
+    .query("workspaceMembers")
+    .withIndex("by_user_workspace", (q) =>
+      q.eq("userId", targetUserId).eq("workspaceId", workspaceId),
+    )
+    .unique();
+  if (!targetMembership) {
     throw new Error("User not in your workspace");
   }
-  return { currentUser, target };
+
+  return { currentUser, target, targetMembership };
 }
 
 export const updateRole = mutation({
   args: {
     userId: v.id("users"),
     role: v.union(v.literal("admin"), v.literal("member")),
+    workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args) => {
-    await requireAdminAndTarget(ctx, args.userId);
-    await ctx.db.patch(args.userId, { role: args.role });
+    const { targetMembership } = await requireAdminAndTarget(ctx, args.userId, args.workspaceId);
+    await ctx.db.patch(targetMembership._id, { role: args.role });
   },
 });
 
 export const deactivate = mutation({
   args: {
     userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args) => {
-    const { currentUser } = await requireAdminAndTarget(ctx, args.userId);
+    const { currentUser, targetMembership } = await requireAdminAndTarget(ctx, args.userId, args.workspaceId);
     if (args.userId === currentUser._id) {
       throw new Error("Cannot deactivate yourself");
     }
-    await ctx.db.patch(args.userId, { status: "deactivated" });
+    // Remove from workspace
+    await ctx.db.delete(targetMembership._id);
+    // Check if user has any other workspace memberships
+    const otherMemberships = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+    if (!otherMemberships) {
+      await ctx.db.patch(args.userId, { status: "deactivated" });
+    }
   },
 });
 
 export const listByWorkspace = internalQuery({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
-    return await ctx.db
-      .query("users")
+    const wsMembers = await ctx.db
+      .query("workspaceMembers")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
       .collect();
+
+    const users = await Promise.all(
+      wsMembers.map(async (m) => {
+        const u = await ctx.db.get(m.userId);
+        return u;
+      }),
+    );
+
+    return users.filter((u): u is NonNullable<typeof u> => u !== null);
   },
 });
 

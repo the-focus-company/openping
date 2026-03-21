@@ -9,11 +9,12 @@ import { Check, Hash, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChannelSelectionStepProps {
+  workspaceId: Id<"workspaces">;
   onNext: () => void;
 }
 
-export function ChannelSelectionStep({ onNext }: ChannelSelectionStepProps) {
-  const channels = useQuery(api.channels.list);
+export function ChannelSelectionStep({ workspaceId, onNext }: ChannelSelectionStepProps) {
+  const channels = useQuery(api.channels.list, { workspaceId });
   const joinChannel = useMutation(api.channels.join);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);

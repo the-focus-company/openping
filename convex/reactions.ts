@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { requireAuth, requireChannelMember } from "./auth";
+import { requireUser, requireChannelMember } from "./auth";
 
 function groupReactionsByEmoji<T extends { emoji: string }>(reactions: T[]) {
   const grouped = new Map<string, T[]>();
@@ -22,7 +22,7 @@ export const toggle = mutation({
     emoji: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const message = await ctx.db.get(args.messageId);
     if (!message) throw new Error("Message not found");
@@ -62,7 +62,7 @@ export const getByMessage = query({
     messageId: v.id("messages"),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const message = await ctx.db.get(args.messageId);
     if (!message) return [];
@@ -100,7 +100,7 @@ export const getByMessages = query({
     messageIds: v.array(v.id("messages")),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     // Verify membership for all unique channels referenced by these messages
     const messages = await Promise.all(

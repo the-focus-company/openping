@@ -1,6 +1,6 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth } from "./auth";
+import { requireAuth, requireUser } from "./auth";
 
 export const create = mutation({
   args: {
@@ -8,7 +8,7 @@ export const create = mutation({
     slug: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const existing = await ctx.db
       .query("workspaces")
@@ -16,30 +16,60 @@ export const create = mutation({
       .unique();
     if (existing) throw new Error("Workspace slug already taken");
 
-    return await ctx.db.insert("workspaces", {
+    const workspaceId = await ctx.db.insert("workspaces", {
       name: args.name,
       slug: args.slug,
       createdBy: user._id,
     });
+
+    await ctx.db.insert("workspaceMembers", {
+      userId: user._id,
+      workspaceId,
+      role: "admin",
+      joinedAt: Date.now(),
+    });
+
+    // Create a default #general channel
+    const channelId = await ctx.db.insert("channels", {
+      name: "general",
+      description: "General discussion",
+      workspaceId,
+      createdBy: user._id,
+      isDefault: true,
+      isArchived: false,
+    });
+
+    await ctx.db.insert("channelMembers", {
+      channelId,
+      userId: user._id,
+    });
+
+    return workspaceId;
   },
 });
 
 export const get = query({
-  args: {},
-  handler: async (ctx) => {
-    const user = await requireAuth(ctx);
-    return await ctx.db.get(user.workspaceId);
+  args: {
+    workspaceId: v.id("workspaces"),
+  },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx, args.workspaceId);
+    return await ctx.db.get(args.workspaceId);
   },
 });
 
 export const update = mutation({
   args: {
+    workspaceId: v.id("workspaces"),
     name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireAuth(ctx, args.workspaceId);
+    if (user.role !== "admin") {
+      throw new Error("Only admins can update the workspace");
+    }
     if (args.name !== undefined) {
-      await ctx.db.patch(user.workspaceId, { name: args.name });
+      await ctx.db.patch(args.workspaceId, { name: args.name });
     }
   },
 });

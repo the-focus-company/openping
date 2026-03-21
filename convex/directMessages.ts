@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { requireAuth } from "./auth";
+import { requireUser } from "./auth";
 
 export const list = query({
   args: {
@@ -9,7 +9,7 @@ export const list = query({
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     // Verify membership
     const membership = await ctx.db
@@ -61,7 +61,7 @@ export const send = mutation({
     body: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     // Verify membership
     const membership = await ctx.db

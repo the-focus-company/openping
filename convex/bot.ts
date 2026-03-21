@@ -14,11 +14,15 @@ export const getChannelContext = internalQuery({
 export const getBotUser = internalQuery({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
-    return ctx.db
-      .query("users")
+    const adminMembership = await ctx.db
+      .query("workspaceMembers")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
       .filter((q) => q.eq(q.field("role"), "admin"))
       .first();
+
+    if (!adminMembership) return null;
+
+    return ctx.db.get(adminMembership.userId);
   },
 });
 

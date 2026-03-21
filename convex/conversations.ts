@@ -1,13 +1,14 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth, requireChannelMember } from "./auth";
+import { requireAuth, requireUser, requireChannelMember } from "./auth";
 
 export const getOrCreateDM = mutation({
   args: {
     userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireAuth(ctx, args.workspaceId);
 
     if (args.userId === user._id) {
       throw new Error("Cannot create a DM with yourself");
@@ -15,7 +16,14 @@ export const getOrCreateDM = mutation({
 
     const targetUser = await ctx.db.get(args.userId);
     if (!targetUser) throw new Error("User not found");
-    if (targetUser.workspaceId !== user.workspaceId) {
+
+    const targetWsMembership = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_user_workspace", (q) =>
+        q.eq("userId", args.userId).eq("workspaceId", args.workspaceId),
+      )
+      .unique();
+    if (!targetWsMembership) {
       throw new Error("User is not in the same workspace");
     }
 
@@ -42,7 +50,7 @@ export const getOrCreateDM = mutation({
 
     const channelId = await ctx.db.insert("channels", {
       name: "",
-      workspaceId: user.workspaceId,
+      workspaceId: args.workspaceId,
       createdBy: user._id,
       isDefault: false,
       isArchived: false,
@@ -67,9 +75,10 @@ export const createGroup = mutation({
   args: {
     name: v.string(),
     memberIds: v.array(v.id("users")),
+    workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireAuth(ctx, args.workspaceId);
 
     const name = args.name.trim();
     if (!name) throw new Error("Group name cannot be empty");
@@ -85,7 +94,13 @@ export const createGroup = mutation({
       uniqueMemberIds.map(async (memberId) => {
         const member = await ctx.db.get(memberId);
         if (!member) throw new Error(`User ${memberId} not found`);
-        if (member.workspaceId !== user.workspaceId) {
+        const wsMembership = await ctx.db
+          .query("workspaceMembers")
+          .withIndex("by_user_workspace", (q) =>
+            q.eq("userId", memberId).eq("workspaceId", args.workspaceId),
+          )
+          .unique();
+        if (!wsMembership) {
           throw new Error(`User ${memberId} is not in the same workspace`);
         }
       }),
@@ -93,7 +108,7 @@ export const createGroup = mutation({
 
     const channelId = await ctx.db.insert("channels", {
       name,
-      workspaceId: user.workspaceId,
+      workspaceId: args.workspaceId,
       createdBy: user._id,
       isDefault: false,
       isArchived: false,
@@ -121,7 +136,7 @@ export const createGroup = mutation({
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const myMemberships = await ctx.db
       .query("channelMembers")
@@ -208,7 +223,7 @@ export const addMembers = mutation({
     userIds: v.array(v.id("users")),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const channel = await ctx.db.get(args.channelId);
     if (!channel) throw new Error("Channel not found");
@@ -229,7 +244,13 @@ export const addMembers = mutation({
     for (const userId of args.userIds) {
       const targetUser = await ctx.db.get(userId);
       if (!targetUser) throw new Error(`User ${userId} not found`);
-      if (targetUser.workspaceId !== user.workspaceId) {
+      const targetWsMembership = await ctx.db
+        .query("workspaceMembers")
+        .withIndex("by_user_workspace", (q) =>
+          q.eq("userId", userId).eq("workspaceId", channel.workspaceId),
+        )
+        .unique();
+      if (!targetWsMembership) {
         throw new Error(`User ${userId} is not in the same workspace`);
       }
 
@@ -267,7 +288,7 @@ export const removeMember = mutation({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const channel = await ctx.db.get(args.channelId);
     if (!channel) throw new Error("Channel not found");
@@ -287,7 +308,13 @@ export const removeMember = mutation({
 
     if (!isSelf) {
       const isCreator = channel.createdBy === user._id;
-      const isAdmin = user.role === "admin";
+      const wsMembership = await ctx.db
+        .query("workspaceMembers")
+        .withIndex("by_user_workspace", (q) =>
+          q.eq("userId", user._id).eq("workspaceId", channel.workspaceId),
+        )
+        .unique();
+      const isAdmin = wsMembership?.role === "admin";
       if (!isCreator && !isAdmin) {
         throw new Error("Only the group creator or an admin can remove members");
       }
@@ -330,8 +357,11 @@ export const getParticipants = query({
     channelId: v.id("channels"),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
     await requireChannelMember(ctx, args.channelId, user._id);
+
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) throw new Error("Channel not found");
 
     const members = await ctx.db
       .query("channelMembers")
@@ -342,11 +372,19 @@ export const getParticipants = query({
       members.map(async (member) => {
         const u = await ctx.db.get(member.userId);
         if (!u) return null;
+
+        const wsMembership = await ctx.db
+          .query("workspaceMembers")
+          .withIndex("by_user_workspace", (q) =>
+            q.eq("userId", u._id).eq("workspaceId", channel.workspaceId),
+          )
+          .unique();
+
         return {
           _id: u._id,
           name: u.name,
           avatarUrl: u.avatarUrl,
-          role: u.role,
+          role: wsMembership?.role ?? "member",
           lastSeenAt: u.lastSeenAt,
         };
       }),

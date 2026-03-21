@@ -6,20 +6,22 @@ import { usePathname } from "next/navigation";
 import { TOPBAR_HEIGHT } from "@/lib/constants";
 import { Kbd } from "@/components/ui/kbd";
 
-function titleFromPath(pathname: string): string {
-  if (pathname === "/inbox") return "Inbox";
-  if (pathname === "/dms") return "Direct Messages";
-  if (pathname.startsWith("/dm/")) return "Direct Message";
-  if (pathname.startsWith("/channel/")) return `# ${pathname.split("/channel/")[1]}`;
-  if (pathname === "/settings/profile") return "Profile";
-  if (pathname === "/settings/workspace") return "Workspace";
-  if (pathname === "/settings/team") return "Team";
-  if (pathname === "/settings/agents") return "Agents";
-  if (pathname === "/settings/knowledge-graph") return "Knowledge Graph";
-  if (pathname === "/settings/analytics") return "Analytics";
+export function titleFromPath(pathname: string): string | null {
+  // Strip /app/{slug} prefix
+  const p = pathname.replace(/^\/app\/[^/]+/, "");
+  if (p === "/inbox" || p === "") return "Inbox";
+  if (p === "/dms") return "Direct Messages";
+  if (p.startsWith("/dm/")) return "Direct Message";
+  if (p.startsWith("/channel/")) return null; // resolved by DashboardShell
+  if (p === "/settings/profile") return "Profile";
+  if (p === "/settings/workspace") return "Workspace";
+  if (p === "/settings/team") return "Team";
+  if (p === "/settings/agents") return "Agents";
+  if (p === "/settings/knowledge-graph") return "Knowledge Graph";
+  if (p === "/settings/analytics") return "Analytics";
   if (pathname === "/admin") return "Backoffice";
-  if (pathname.includes("/security")) return "Security";
-  if (pathname.includes("/proxy")) return "Impersonation";
+  if (p.includes("/security")) return "Security";
+  if (p.includes("/proxy")) return "Impersonation";
   return "PING";
 }
 
@@ -27,10 +29,12 @@ interface TopBarProps {
   onToggleSidebar: () => void;
   onOpenSearch?: () => void;
   trailing?: ReactNode;
+  title?: ReactNode;
+  subtitle?: ReactNode;
 }
 
-export function TopBar({ onToggleSidebar, onOpenSearch, trailing }: TopBarProps) {
-  const title = titleFromPath(usePathname());
+export function TopBar({ onToggleSidebar, onOpenSearch, trailing, title, subtitle }: TopBarProps) {
+  const fallback = titleFromPath(usePathname());
 
   return (
     <header
@@ -44,7 +48,8 @@ export function TopBar({ onToggleSidebar, onOpenSearch, trailing }: TopBarProps)
         >
           <Menu className="h-4 w-4" />
         </button>
-        <h1 className="text-sm font-medium text-foreground">{title}</h1>
+        <h1 className="text-sm font-medium text-foreground">{title ?? fallback}</h1>
+        {subtitle}
       </div>
 
       <div className="flex items-center gap-2">

@@ -16,8 +16,6 @@ export const seedDefaultData = internalMutation({
       workosUserId: "system",
       email: "system@ping.app",
       name: "System",
-      role: "admin",
-      workspaceId: "" as any, // Will be updated
       status: "active",
     });
 
@@ -27,8 +25,13 @@ export const seedDefaultData = internalMutation({
       createdBy: systemUserId,
     });
 
-    // Update system user with workspace
-    await ctx.db.patch(systemUserId, { workspaceId });
+    // Create workspace membership for system user
+    await ctx.db.insert("workspaceMembers", {
+      userId: systemUserId,
+      workspaceId,
+      role: "admin",
+      joinedAt: Date.now(),
+    });
 
     // Create default channels
     const generalId = await ctx.db.insert("channels", {

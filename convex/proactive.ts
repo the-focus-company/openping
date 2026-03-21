@@ -6,7 +6,7 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { requireAuth } from "./auth";
+import { requireUser } from "./auth";
 import {
   callCivicNexusTool,
   closeCivicNexusClient,
@@ -32,7 +32,7 @@ export const getAlerts = query({
     ),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     if (args.status) {
       return await ctx.db
@@ -98,7 +98,7 @@ export const actOnAlert = mutation({
     alertId: v.id("proactiveAlerts"),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const alert = await ctx.db.get(args.alertId);
     if (!alert) throw new Error("Alert not found");
@@ -113,7 +113,7 @@ export const dismissAlert = mutation({
     alertId: v.id("proactiveAlerts"),
   },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
+    const user = await requireUser(ctx);
 
     const alert = await ctx.db.get(args.alertId);
     if (!alert) throw new Error("Alert not found");
@@ -387,7 +387,7 @@ export const scanBlockedTasks = internalAction({
             u.email.toLowerCase().includes(ticket.author.toLowerCase())),
       );
 
-      const targetUser = assigneeUser ?? allUsers.find((u) => u.role === "admin");
+      const targetUser = assigneeUser ?? allUsers.find((u) => u.status === "active");
       if (!targetUser) continue;
 
       // Only alert users who are members of the target channel
