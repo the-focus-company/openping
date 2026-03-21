@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Send, Bot, Paperclip, AtSign, ChevronDown, Pin, Users } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CitationRow, type Citation } from "@/components/bot/CitationPill";
@@ -162,10 +163,32 @@ export function MessageList({
 }: MessageListProps) {
   const [input, setInput] = useState("");
   const [showNewMessages, setShowNewMessages] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevMessageCountRef = useRef(messages.length);
+  const hasInitiallyScrolledRef = useRef(false);
+
+  // Pre-compute which messages should show avatars so the virtualizer can use it
+  const showAvatarFlags = useMemo(() => {
+    return messages.map((msg, i) => {
+      const prev = messages[i - 1];
+      return (
+        !prev ||
+        prev.author !== msg.author ||
+        msg.timestamp.getTime() - prev.timestamp.getTime() > 5 * 60 * 1000
+      );
+    });
+  }, [messages]);
+
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (index) => {
+      // Messages with avatars are taller due to the author header and top margin
+      return showAvatarFlags[index] ? 64 : 32;
+    },
+    overscan: 20,
+  });
 
   const isAtBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -173,7 +196,18 @@ export function MessageList({
     return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
   }, []);
 
-  // Auto-scroll when new messages arrive (only if at bottom)
+  const scrollToBottom = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      if (messages.length === 0) return;
+      virtualizer.scrollToIndex(messages.length - 1, {
+        align: "end",
+        behavior,
+      });
+    },
+    [virtualizer, messages.length]
+  );
+
+  // Auto-scroll when new messages arrive (only if already at bottom)
   useEffect(() => {
     const newCount = messages.length;
     const prevCount = prevMessageCountRef.current;
@@ -181,23 +215,27 @@ export function MessageList({
 
     if (newCount > prevCount) {
       if (isAtBottom()) {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        scrollToBottom("smooth");
         setShowNewMessages(false);
       } else {
         setShowNewMessages(true);
       }
     }
-  }, [messages, isAtBottom]);
+  }, [messages, isAtBottom, scrollToBottom]);
 
-  // Initial scroll to bottom
+  // Initial scroll to bottom once loading completes
   useEffect(() => {
-    if (!isLoading) {
-      bottomRef.current?.scrollIntoView({ behavior: "instant" });
+    if (!isLoading && messages.length > 0 && !hasInitiallyScrolledRef.current) {
+      hasInitiallyScrolledRef.current = true;
+      // Use requestAnimationFrame to ensure the virtualizer has rendered
+      requestAnimationFrame(() => {
+        scrollToBottom("instant");
+      });
     }
-  }, [isLoading]);
+  }, [isLoading, messages.length, scrollToBottom]);
 
   const handleScrollToBottom = () => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollToBottom("smooth");
     setShowNewMessages(false);
   };
 
@@ -211,7 +249,7 @@ export function MessageList({
     onSend?.(trimmed);
     setInput("");
     // Scroll to bottom after send
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    setTimeout(() => scrollToBottom("smooth"), 50);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -220,6 +258,8 @@ export function MessageList({
       handleSend();
     }
   };
+
+  const virtualItems = virtualizer.getVirtualItems();
 
   return (
     <div className="flex h-full flex-col">
@@ -263,19 +303,36 @@ export function MessageList({
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => <MessageSkeleton key={i} />)
         ) : (
-          messages.map((msg, i) => {
-            const prev = messages[i - 1];
-            const showAvatar =
-              !prev ||
-              prev.author !== msg.author ||
-              msg.timestamp.getTime() - prev.timestamp.getTime() > 5 * 60 * 1000;
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualItems.map((virtualRow) => {
+              const msg = messages[virtualRow.index];
+              const showAvatar = showAvatarFlags[virtualRow.index];
 
-            return (
-              <MessageItem key={msg.id} message={msg} showAvatar={showAvatar} />
-            );
-          })
+              return (
+                <div
+                  key={msg.id}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <MessageItem message={msg} showAvatar={showAvatar} />
+                </div>
+              );
+            })}
+          </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
       {/* New messages pill */}
