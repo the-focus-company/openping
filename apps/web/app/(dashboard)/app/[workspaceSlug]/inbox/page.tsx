@@ -8,8 +8,19 @@ import type { Id } from "@convex/_generated/dataModel";
 import { InboxCard, type InboxItem, type EisenhowerQuadrant, QUADRANT_ORDER } from "@/components/inbox/InboxCard";
 import { DraftReminderCard } from "@/components/inbox/DraftReminderCard";
 import { UnansweredQuestionCard } from "@/components/inbox/UnansweredQuestionCard";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Gavel, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/hooks/useWorkspace";
+
+const DECISION_TYPE_BADGE_COLORS: Record<string, string> = {
+  pr_review: "bg-blue-500/15 text-blue-400",
+  ticket_triage: "bg-amber-500/15 text-amber-400",
+  question_answer: "bg-green-500/15 text-green-400",
+  blocked_unblock: "bg-red-500/15 text-red-400",
+  fact_verify: "bg-purple-500/15 text-purple-400",
+  cross_team_ack: "bg-cyan-500/15 text-cyan-400",
+  channel_summary: "bg-white/10 text-white/50",
+};
 
 const SECTION_LABELS: Record<EisenhowerQuadrant, string> = {
   "urgent-important": "Do Now",
@@ -26,9 +37,12 @@ export default function InboxPage() {
   const summaries = useQuery(api.inboxSummaries.list, isAuthenticated ? {} : "skip");
   const drafts = useQuery(api.drafts.listActive, isAuthenticated ? {} : "skip");
   const alerts = useQuery(api.proactiveAlerts.listPending, isAuthenticated ? {} : "skip");
+  const decisions = useQuery(api.decisions.list, isAuthenticated ? {} : "skip");
   const markReadMutation = useMutation(api.inboxSummaries.markRead);
   const archiveMutation = useMutation(api.inboxSummaries.archive);
   const dismissAlertMutation = useMutation(api.proactiveAlerts.dismiss);
+  const decideMutation = useMutation(api.decisions.decide);
+  const snoozeMutation = useMutation(api.decisions.snooze);
 
   const unansweredQuestions = useMemo(
     () => (alerts ?? []).filter((a) => a.type === "unanswered_question"),
@@ -83,7 +97,7 @@ export default function InboxPage() {
     dismissAlertMutation({ alertId: alertId as Id<"proactiveAlerts"> });
   };
 
-  const isLoading = summaries === undefined || drafts === undefined;
+  const isLoading = summaries === undefined || drafts === undefined || decisions === undefined;
 
   if (isLoading) {
     return (
@@ -93,7 +107,7 @@ export default function InboxPage() {
     );
   }
 
-  const totalCount = items.length + (drafts?.length ?? 0) + unansweredQuestions.length;
+  const totalCount = items.length + (drafts?.length ?? 0) + unansweredQuestions.length + (decisions?.length ?? 0);
 
   if (totalCount === 0) {
     return (
@@ -169,6 +183,56 @@ export default function InboxPage() {
               createdAt={new Date(alert.createdAt)}
               onDismiss={handleDismissAlert}
             />
+          ))}
+        </div>
+      )}
+
+      {/* Decisions */}
+      {decisions && decisions.length > 0 && (
+        <div>
+          <div className="sticky top-0 z-10 border-b border-subtle bg-background/90 backdrop-blur-sm px-4 py-1.5">
+            <span className="text-2xs font-medium uppercase tracking-widest text-white/25">
+              Decisions
+            </span>
+          </div>
+          {decisions.map((decision) => (
+              <div
+                key={decision._id}
+                className="group flex flex-col gap-2 border-b border-subtle px-4 py-3"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "rounded px-1.5 py-px text-2xs font-medium capitalize",
+                    DECISION_TYPE_BADGE_COLORS[decision.type] ?? "bg-white/10 text-white/50",
+                  )}>
+                    {decision.type.replace(/_/g, " ")}
+                  </span>
+                  {decision.channelName && (
+                    <>
+                      <span className="text-2xs text-white/25">·</span>
+                      <span className="text-2xs text-muted-foreground">#{decision.channelName}</span>
+                    </>
+                  )}
+                </div>
+                <p className="text-sm font-medium text-foreground">{decision.title}</p>
+                <p className="line-clamp-2 text-xs text-muted-foreground">{decision.summary}</p>
+                <div className="flex items-center gap-1.5 pt-1">
+                  <button
+                    onClick={() => decideMutation({ decisionId: decision._id, action: "approve" })}
+                    className="flex items-center gap-1 rounded bg-ping-purple px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-ping-purple-hover"
+                  >
+                    <Gavel className="h-3 w-3" />
+                    Decide
+                  </button>
+                  <button
+                    onClick={() => snoozeMutation({ decisionId: decision._id, snoozeUntil: Date.now() + 60 * 60 * 1000 })}
+                    className="flex items-center gap-1 rounded bg-surface-3 px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-white/10"
+                  >
+                    <Clock className="h-3 w-3" />
+                    Snooze
+                  </button>
+                </div>
+              </div>
           ))}
         </div>
       )}
