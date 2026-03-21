@@ -1,0 +1,127 @@
+---
+title: Linear Integration
+description: Connect Linear to PING for ticket tracking and blocker detection.
+sidebar:
+  order: 3
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+The Linear integration brings issue and ticket updates into PING. Tickets appear as native cards in your inbox, and PING's AI detects blockers and stalled work.
+
+## Features
+
+- **Ticket cards in inbox**: Linear issues appear as rich cards with status, assignee, and labels
+- **Blocker detection**: AI identifies tickets marked as blocked and surfaces them as alerts
+- **Status sync**: Ticket status updates flow into PING in real time
+- **Priority mapping**: Linear priorities map to PING's inbox priority system
+
+## Setup guide
+
+<Steps>
+1. **Open workspace settings**
+
+   Navigate to **Settings > Integrations > Linear** in your PING workspace.
+
+   {/* Screenshot: settings-integrations-linear.png */}
+
+2. **Create a Linear webhook**
+
+   In your Linear workspace, go to **Settings > API > Webhooks > New webhook**.
+
+   | Field | Value |
+   |-------|-------|
+   | URL | `https://your-deployment.convex.cloud/webhooks/linear` |
+   | Data change events | Issues, Comments |
+
+3. **Copy the signing secret**
+
+   Linear provides a signing secret for the webhook. Enter this in the PING integration settings so that incoming payloads can be verified.
+
+4. **Test the connection**
+
+   Create or update a Linear issue. A card should appear in your PING inbox shortly.
+</Steps>
+
+## Supported events
+
+| Linear event | What happens in PING |
+|-------------|---------------------|
+| Issue created | Creates a new `linear_ticket` IntegrationObject |
+| Issue updated | Updates status, assignee, or labels on the existing object |
+| Issue deleted | Marks the IntegrationObject as deleted |
+| Comment added | Updates the `lastSyncedAt` timestamp |
+
+## Ticket cards in the inbox
+
+When a Linear issue is created or updated, PING stores it as an IntegrationObject of type `linear_ticket`:
+
+```json
+{
+  "type": "linear_ticket",
+  "externalId": "ENG-142",
+  "title": "Fix auth token refresh race condition",
+  "status": "In Progress",
+  "url": "https://linear.app/acme/issue/ENG-142",
+  "author": "alice",
+  "metadata": {
+    "assignee": "bob",
+    "priority": 1,
+    "labels": ["bug", "auth"],
+    "project": "Q1 Security Hardening"
+  }
+}
+```
+
+Cards display:
+
+- Issue identifier and title
+- Current status and priority
+- Assignee
+- Labels and project
+- Direct link to Linear
+
+## Blocker detection
+
+PING's AI monitors Linear tickets for signs of blocked work and generates proactive alerts:
+
+```json
+{
+  "type": "blocked_task",
+  "title": "ENG-142 appears to be blocked",
+  "body": "This ticket has been 'In Progress' for 7 days with no recent updates. The assignee mentioned a dependency on the infrastructure team.",
+  "suggestedAction": "Check in with Bob about the blocker",
+  "priority": "high",
+  "sourceIntegrationObjectId": "jd7intobj02..."
+}
+```
+
+Blocker detection considers:
+
+- Time in current status without updates
+- Keywords in comments (e.g., "blocked", "waiting on", "dependency")
+- Priority level of the ticket
+
+## Priority mapping
+
+Linear priorities map to PING inbox priorities as follows:
+
+| Linear priority | PING priority |
+|----------------|---------------|
+| Urgent (0) | `high` |
+| High (1) | `high` |
+| Medium (2) | `medium` |
+| Low (3) | `low` |
+| No priority (4) | `low` |
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Webhooks not arriving | Verify the URL matches your Convex deployment URL |
+| Signature verification failing | Confirm the signing secret matches between Linear and PING |
+| Tickets not appearing | Ensure "Issues" is selected in the webhook event types |
+
+<Aside type="tip">
+Linear webhooks send all updates for the selected event types. PING filters and processes only the events relevant to your workspace members.
+</Aside>

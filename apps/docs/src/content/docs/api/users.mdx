@@ -1,0 +1,257 @@
+---
+title: Users
+description: API reference for user management and profiles in PING.
+sidebar:
+  order: 7
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+PING manages users within workspaces. Each user has a role (`admin` or `member`), a status (`active`, `invited`, or `deactivated`), and belongs to exactly one workspace.
+
+## Get current user
+
+Retrieve the authenticated user's profile. Returns `null` if the request is not authenticated (does not throw an error).
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `users:getMe`
+- **Auth:** Optional (returns `null` if unauthenticated)
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "users:getMe",
+    "args": {},
+    "format": "json"
+  }'
+```
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": {
+    "_id": "jd7user01...",
+    "_creationTime": 1711234567890,
+    "workosUserId": "user_01H...",
+    "email": "alice@example.com",
+    "name": "Alice Smith",
+    "avatarUrl": "https://cdn.example.com/alice.jpg",
+    "role": "admin",
+    "workspaceId": "jd7xyz789...",
+    "status": "active",
+    "lastSeenAt": 1711234567890
+  }
+}
+```
+
+### User fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `_id` | `string` | User document ID |
+| `workosUserId` | `string` | WorkOS user identifier |
+| `email` | `string` | Email address |
+| `name` | `string` | Display name |
+| `avatarUrl` | `string?` | Profile picture URL |
+| `role` | `string` | Either `admin` or `member` |
+| `workspaceId` | `string` | Workspace the user belongs to |
+| `status` | `string` | One of `active`, `invited`, `deactivated` |
+| `lastSeenAt` | `number?` | Last activity timestamp (Unix epoch ms) |
+
+---
+
+## Look up user by WorkOS ID
+
+Find a user by their WorkOS user identifier.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `users:getByWorkosId`
+- **Auth:** Not required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "users:getByWorkosId",
+    "args": { "workosUserId": "user_01H..." },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `workosUserId` | `string` | Yes | The WorkOS user ID |
+
+---
+
+## List workspace members
+
+List all users in the current user's workspace. Returns up to 200 members with basic profile information.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `users:listAll`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "users:listAll",
+    "args": {},
+    "format": "json"
+  }'
+```
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": [
+    {
+      "_id": "jd7user01...",
+      "name": "Alice Smith",
+      "email": "alice@example.com",
+      "avatarUrl": "https://cdn.example.com/alice.jpg",
+      "role": "admin",
+      "status": "active"
+    },
+    {
+      "_id": "jd7user02...",
+      "name": "Bob Jones",
+      "email": "bob@example.com",
+      "avatarUrl": null,
+      "role": "member",
+      "status": "active"
+    }
+  ]
+}
+```
+
+---
+
+## Update profile
+
+Update the current user's profile. Supports changing the display name and notification preferences.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `users:updateProfile`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/mutation \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "users:updateProfile",
+    "args": {
+      "name": "Alice S.",
+      "notificationPrefs": {
+        "inboxNotifications": true,
+        "proactiveAlerts": true
+      }
+    },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | `string` | No | New display name |
+| `notificationPrefs` | `object` | No | Notification settings |
+| `notificationPrefs.inboxNotifications` | `boolean` | Yes (if `notificationPrefs` provided) | Enable inbox notifications |
+| `notificationPrefs.proactiveAlerts` | `boolean` | Yes (if `notificationPrefs` provided) | Enable proactive alerts |
+
+---
+
+## Create or update user
+
+Upsert a user from WorkOS data. If a user with the given `workosUserId` exists, their profile is updated. Otherwise, a new user is created along with a default workspace and `#general` channel.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `users:createOrUpdate`
+- **Auth:** Not required (used by webhooks)
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/mutation \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "users:createOrUpdate",
+    "args": {
+      "workosUserId": "user_01H...",
+      "email": "alice@example.com",
+      "name": "Alice Smith",
+      "avatarUrl": "https://cdn.example.com/alice.jpg"
+    },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `workosUserId` | `string` | Yes | WorkOS user identifier |
+| `email` | `string` | Yes | Email address |
+| `name` | `string` | Yes | Display name |
+| `avatarUrl` | `string` | No | Profile picture URL |
+
+<Aside type="tip">
+This endpoint is primarily called from the WorkOS webhook handler. For new users, it automatically provisions a workspace, creates a default `#general` channel, and joins the user to it.
+</Aside>
+
+---
+
+## Update user role (admin only)
+
+Change a user's role within the workspace. Only workspace admins can perform this action.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `users:updateRole`
+- **Auth:** Required (admin only)
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | `Id<"users">` | Yes | Target user ID |
+| `role` | `string` | Yes | New role: `admin` or `member` |
+
+---
+
+## Deactivate user (admin only)
+
+Deactivate a user in the workspace. Admins cannot deactivate themselves.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `users:deactivate`
+- **Auth:** Required (admin only)
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | `Id<"users">` | Yes | User ID to deactivate |
+
+<Aside type="caution">
+Deactivated users cannot sign in or access the workspace. This action does not delete the user record.
+</Aside>

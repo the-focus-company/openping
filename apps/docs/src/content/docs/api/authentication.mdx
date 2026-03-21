@@ -1,0 +1,115 @@
+---
+title: Authentication
+description: How to authenticate requests to the PING API using WorkOS JWT tokens.
+sidebar:
+  order: 2
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+PING uses [WorkOS](https://workos.com) for authentication. WorkOS handles SSO, SAML, and OAuth flows, issuing JWT tokens that Convex verifies on every API call.
+
+## Authentication flow
+
+<Steps>
+1. **User signs in** via WorkOS OAuth (Google, Microsoft, SAML, etc.)
+2. **WorkOS issues a JWT** containing the user's identity claims
+3. **Client includes the JWT** in the `Authorization` header of every API request
+4. **Convex verifies the token** and resolves the authenticated user
+</Steps>
+
+## Using the Bearer token
+
+Include the JWT in the `Authorization` header as a Bearer token:
+
+```
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Full example
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIs..." \
+  -d '{
+    "path": "users:getMe",
+    "args": {},
+    "format": "json"
+  }'
+```
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": {
+    "_id": "jd7abc123...",
+    "email": "alice@example.com",
+    "name": "Alice Smith",
+    "role": "admin",
+    "workspaceId": "jd7xyz789...",
+    "status": "active",
+    "lastSeenAt": 1711234567890
+  }
+}
+```
+
+## Obtaining a token
+
+### Web application flow
+
+In the PING web app, WorkOS authentication is handled via the Next.js server. After a successful OAuth callback, the server stores the session and provides the JWT to the client.
+
+```typescript
+// In the Next.js app, the Convex client is configured with
+// an auth token provider that retrieves the WorkOS JWT
+import { ConvexProviderWithAuth } from "convex/react";
+
+function App() {
+  return (
+    <ConvexProviderWithAuth client={convex} useAuth={useWorkOSAuth}>
+      {children}
+    </ConvexProviderWithAuth>
+  );
+}
+```
+
+### Server-to-server flow
+
+For server-side integrations (webhooks, background jobs), some endpoints do not require user authentication. These are marked with `security: []` in the OpenAPI spec. For example, the WorkOS webhook endpoint at `/webhooks/workos` uses its own verification mechanism rather than Bearer tokens.
+
+## How Convex resolves the user
+
+Inside Convex functions, the authenticated user is resolved like this:
+
+```typescript
+const identity = await ctx.auth.getUserIdentity();
+if (!identity) throw new Error("Not authenticated");
+
+const user = await ctx.db
+  .query("users")
+  .withIndex("by_workos_id", (q) =>
+    q.eq("workosUserId", identity.subject)
+  )
+  .unique();
+```
+
+<Aside type="caution">
+PING uses `identity.subject` (the WorkOS user ID) to look up users, not `identity.tokenIdentifier`. Never pass a `userId` as a function argument for authentication purposes -- the user is always derived from the JWT.
+</Aside>
+
+## Token refresh
+
+WorkOS JWTs have a limited lifetime. The Convex client SDK handles token refresh automatically when configured with a proper auth token provider. If you are calling the API directly, you are responsible for refreshing expired tokens by re-authenticating with WorkOS.
+
+## Unauthenticated endpoints
+
+The following endpoints do not require a Bearer token:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /webhooks/workos` | Receives WorkOS lifecycle events |
+| `users:getMe` | Returns `null` instead of throwing when unauthenticated |
+| `workspaces:getBySlug` | Public workspace lookup by slug |

@@ -1,0 +1,32 @@
+---
+title: PING Documentation
+description: Documentation for PING, the AI-native workspace communication platform.
+template: splash
+hero:
+  title: PING Documentation
+  tagline: The AI-native workspace communication platform.
+  actions:
+    - text: Getting Started
+      link: /Platform/getting-started/introduction/
+      icon: right-arrow
+    - text: API Reference
+      link: /Platform/api/overview/
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+<CardGrid>
+  <Card title="Getting Started" icon="rocket">
+    Set up your workspace and start communicating in minutes.
+  </Card>
+  <Card title="API Reference" icon="setting">
+    Integrate with PING using the Convex-backed API.
+  </Card>
+  <Card title="Integrations" icon="puzzle">
+    Connect GitHub, Linear, and custom webhooks.
+  </Card>
+  <Card title="AI Features" icon="star">
+    Inbox summaries, proactive alerts, and smart nudges.
+  </Card>
+</CardGrid>

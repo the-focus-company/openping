@@ -1,0 +1,195 @@
+---
+title: Inbox
+description: API reference for AI-generated inbox summaries and action items.
+sidebar:
+  order: 6
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The PING inbox provides AI-generated summaries of channel activity, ranked by priority using an Eisenhower-style matrix. Each summary includes bullet points, action items, and links to related messages and integration objects.
+
+## List inbox summaries
+
+Retrieve inbox summaries for the authenticated user. Returns unread summaries first (up to 50), followed by read summaries (up to 20). Archived summaries are excluded.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `inboxSummaries:list`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "inboxSummaries:list",
+    "args": {},
+    "format": "json"
+  }'
+```
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": [
+    {
+      "_id": "jd7inbox01...",
+      "_creationTime": 1711234567890,
+      "userId": "jd7user01...",
+      "channelId": "jd7abc123...",
+      "channelName": "engineering",
+      "bullets": [
+        {
+          "text": "Deployment v2.3 is blocked on CI pipeline fix",
+          "priority": "high",
+          "relatedMessageIds": ["jd7msg01...", "jd7msg02..."]
+        },
+        {
+          "text": "Team standup moved to 10am starting next week",
+          "priority": "low",
+          "relatedMessageIds": ["jd7msg05..."]
+        }
+      ],
+      "messageCount": 47,
+      "periodStart": 1711200000000,
+      "periodEnd": 1711234567890,
+      "isRead": false,
+      "isArchived": false,
+      "actionItems": [
+        {
+          "text": "Review PR #142 for auth refactor",
+          "assignee": "jd7user01...",
+          "relatedIntegrationObjectId": "jd7intobj01...",
+          "integrationUrl": "https://github.com/org/repo/pull/142"
+        },
+        {
+          "text": "Update CI config for new Node version",
+          "assignee": null,
+          "relatedIntegrationObjectId": null,
+          "integrationUrl": null
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Summary fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `_id` | `string` | Summary document ID |
+| `channelId` | `string` | Channel this summary covers |
+| `channelName` | `string` | Human-readable channel name |
+| `bullets` | `array` | AI-generated summary bullets |
+| `bullets[].text` | `string` | Bullet text |
+| `bullets[].priority` | `string` | Priority level: `high`, `medium`, or `low` |
+| `bullets[].relatedMessageIds` | `string[]` | IDs of messages this bullet references |
+| `messageCount` | `number` | Total messages in the summarized period |
+| `periodStart` | `number` | Start of the summarized period (Unix epoch ms) |
+| `periodEnd` | `number` | End of the summarized period (Unix epoch ms) |
+| `isRead` | `boolean` | Whether the user has read this summary |
+| `isArchived` | `boolean` | Whether the summary is archived |
+| `actionItems` | `array?` | Extracted action items |
+| `actionItems[].text` | `string` | Description of the action |
+| `actionItems[].assignee` | `string?` | User ID of the assignee |
+| `actionItems[].relatedIntegrationObjectId` | `string?` | Linked integration object |
+| `actionItems[].integrationUrl` | `string?` | URL to the linked external resource |
+
+---
+
+## Mark summary as read
+
+Mark a specific inbox summary as read.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `inboxSummaries:markRead`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/mutation \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "inboxSummaries:markRead",
+    "args": { "summaryId": "jd7inbox01..." },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `summaryId` | `Id<"inboxSummaries">` | Yes | The summary to mark as read |
+
+<Aside type="caution">
+You can only mark summaries that belong to your own user account. Attempting to mark another user's summary returns a `"Not found"` error.
+</Aside>
+
+---
+
+## Archive summary
+
+Archive an inbox summary so it no longer appears in the list.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `inboxSummaries:archive`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/mutation \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "inboxSummaries:archive",
+    "args": { "summaryId": "jd7inbox01..." },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `summaryId` | `Id<"inboxSummaries">` | Yes | The summary to archive |
+
+---
+
+## Unread count
+
+Get the total number of unread inbox summaries for the current user.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `inboxSummaries:unreadCount`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "inboxSummaries:unreadCount",
+    "args": {},
+    "format": "json"
+  }'
+```
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": 5
+}
+```
