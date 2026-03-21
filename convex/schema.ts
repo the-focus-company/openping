@@ -301,4 +301,39 @@ export default defineSchema({
   })
     .index("by_message", ["messageId"])
     .index("by_message_user", ["messageId", "userId"]),
+
+  decisions: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    type: v.union(
+      v.literal("inbox_summary"),
+      v.literal("proactive_alert"),
+      v.literal("draft"),
+      v.literal("integration"),
+    ),
+    sourceId: v.optional(v.string()),
+    action: v.union(
+      v.literal("approved"),
+      v.literal("rejected"),
+      v.literal("delegated"),
+      v.literal("snoozed"),
+      v.literal("archived"),
+    ),
+    delegatedTo: v.optional(v.id("users")),
+    snoozedUntil: v.optional(v.number()),
+    quadrant: v.optional(
+      v.union(
+        v.literal("urgent-important"),
+        v.literal("important"),
+        v.literal("urgent"),
+        v.literal("fyi"),
+      ),
+    ),
+    decidedAt: v.number(),
+    decisionTimeMs: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_decided", ["userId", "decidedAt"])
+    .index("by_workspace", ["workspaceId"])
+    .index("by_workspace_decided", ["workspaceId", "decidedAt"]),
 });
