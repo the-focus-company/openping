@@ -1,0 +1,112 @@
+---
+title: Core Concepts
+description: Key concepts in PING — workspaces, channels, DMs, the Copilot Inbox, proactive alerts, and the knowledge graph.
+sidebar:
+  order: 4
+---
+
+import { Aside, Card, CardGrid } from "@astrojs/starlight/components";
+
+This page explains the core building blocks of PING. Understanding these concepts will help you get the most out of the platform.
+
+## Workspaces
+
+A **workspace** is the top-level organizational unit in PING — similar to a Slack workspace or a Discord server. Each workspace is isolated with its own channels, members, and integrations.
+
+- Workspaces are **multi-tenant**: each user belongs to one or more workspaces.
+- Members have one of two **roles**: `admin` or `member`.
+- Admins can manage workspace settings, integrations, and invite new members.
+- Each workspace has a unique slug used in URLs.
+
+## Channels
+
+**Channels** are shared communication spaces within a workspace — the primary place for team discussions.
+
+- Every workspace starts with a default `#general` channel.
+- Channels can be public or organized by team/topic.
+- All messages within channels support **full-text search**, so you can find any conversation quickly.
+- Channels can contain messages from users, bots, system events, and integration objects.
+
+## Direct Messages
+
+PING supports several types of private conversations:
+
+- **1:1 DMs** — Private conversations between two team members.
+- **Group DMs** — Multi-person private conversations outside of channels.
+- **Agent conversations** — DMs where an AI agent is a participant, either 1:1 or in a group. These enable direct interaction with PING's AI capabilities.
+
+## Copilot Inbox
+
+The **Copilot Inbox** is PING's signature feature. Instead of a linear feed of unread messages, PING uses AI to rank and categorize every message you receive using the **Eisenhower Matrix**.
+
+### The Eisenhower Matrix
+
+Every inbox item is classified into one of four quadrants based on urgency and importance:
+
+<CardGrid>
+  <Card title="Do — Urgent + Important" icon="warning">
+    Items that need your immediate attention. Examples: production incidents, blocking PR reviews, direct questions from your manager.
+  </Card>
+  <Card title="Schedule — Important" icon="star">
+    Important but not time-sensitive. Examples: architecture discussions, long-term planning threads, non-blocking code reviews.
+  </Card>
+  <Card title="Delegate — Urgent" icon="right-arrow">
+    Time-sensitive but not necessarily for you. Examples: requests that should be routed to another team member, automated alerts that need triage.
+  </Card>
+  <Card title="Eliminate — Neither" icon="close">
+    Low-priority FYI items. Examples: social messages, automated notifications you have already seen, resolved threads.
+  </Card>
+</CardGrid>
+
+Each inbox summary includes:
+- **Bullet points** summarizing what happened in a channel or conversation.
+- **Action items** with assignees and links to related integration objects (PRs, tickets).
+- **Message counts** and time period covered.
+
+<Aside type="tip">
+  The Copilot Inbox does not hide messages — it ranks them. You can always browse the full chronological feed in any channel.
+</Aside>
+
+## Proactive Alerts
+
+PING's **Workspace Agent** continuously monitors your workspace and generates proactive alerts when it detects situations that need attention. Alert types include:
+
+| Alert Type | What it Detects |
+|---|---|
+| **Unanswered question** | A question in a channel that has gone unanswered for too long. |
+| **PR review nudge** | A pull request that has been idle and needs a reviewer's attention. |
+| **Incident route** | An incident or outage mention that should be escalated. |
+| **Blocked task** | A task or ticket that is blocked and needs intervention. |
+| **Fact check** | A claim in a conversation that may be inaccurate based on the knowledge graph. |
+| **Cross-team sync** | Context from one team that is relevant to another team's discussion. |
+
+Each alert includes a **suggested action** so you can resolve it with a single click, and alerts expire automatically if they are no longer relevant.
+
+## Knowledge Graph
+
+PING builds a **temporal knowledge graph** from every conversation, integration event, and decision that flows through the workspace. This graph:
+
+- Tracks how context and decisions **evolve over time** — not just the latest state, but the history of how you got there.
+- Powers the AI features (inbox ranking, proactive alerts, fact-checking) with deep organizational context.
+- Connects messages to related entities: people, PRs, tickets, channels, and decisions.
+- Becomes more valuable the longer your team uses PING — creating a durable organizational memory.
+
+<Aside type="note">
+  The knowledge graph is powered by Graphiti and stores episode IDs alongside messages and integration objects for traceability.
+</Aside>
+
+## Integration Objects
+
+**Integration objects** are first-class entities within PING that represent external resources from tools your team already uses:
+
+- **GitHub PRs** — Pull request status, author, review state, and URL are synced into PING. PRs appear as rich cards inside conversations, and the AI can reason about their state (e.g., nudging reviewers).
+- **Linear tickets** — Ticket status, assignee, and metadata are synced and displayed as actionable cards.
+
+Integration objects are not just link previews. They are structured data stored in the PING database, indexed per workspace, and available to the AI for proactive analysis.
+
+## Next Steps
+
+Now that you understand the core concepts, check out:
+
+- [Quickstart](/Platform/getting-started/quickstart/) — Get PING running locally.
+- [Architecture Overview](/Platform/architecture/overview/) — Dive deeper into the technical architecture.
