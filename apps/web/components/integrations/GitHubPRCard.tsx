@@ -2,184 +2,140 @@
 
 import {
   GitPullRequest,
-  GitMerge,
-  GitPullRequestClosed,
-  ExternalLink,
   CheckCircle2,
   XCircle,
   Loader2,
-  Plus,
-  Minus,
+  FileDiff,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-export interface GitHubPRReviewer {
-  name: string;
-  avatarUrl?: string;
-}
-
-export type GitHubPRStatus = "open" | "merged" | "closed";
-export type CIStatus = "success" | "failure" | "pending" | "neutral";
-
 export interface GitHubPRCardProps {
-  repo: string;
+  prNumber: number;
   title: string;
-  number: number;
-  status: GitHubPRStatus;
+  repoName: string;
+  author: string;
+  status: "open" | "merged" | "closed" | "draft";
   additions?: number;
   deletions?: number;
-  reviewers?: GitHubPRReviewer[];
-  ciStatus?: CIStatus;
+  reviewCommentCount?: number;
+  ciStatus?: "success" | "failure" | "pending" | "neutral";
   url: string;
+  compact?: boolean;
 }
 
-const statusConfig: Record<
-  GitHubPRStatus,
-  { icon: React.ElementType; label: string; color: string; bg: string }
+const STATUS_CONFIG: Record<
+  GitHubPRCardProps["status"],
+  { color: string; label: string }
 > = {
-  open: {
-    icon: GitPullRequest,
-    label: "Open",
-    color: "text-green-400",
-    bg: "bg-green-400/10 border-green-400/20",
-  },
-  merged: {
-    icon: GitMerge,
-    label: "Merged",
-    color: "text-purple-400",
-    bg: "bg-purple-400/10 border-purple-400/20",
-  },
-  closed: {
-    icon: GitPullRequestClosed,
-    label: "Closed",
-    color: "text-red-400",
-    bg: "bg-red-400/10 border-red-400/20",
-  },
+  open: { color: "text-green-400", label: "Open" },
+  merged: { color: "text-purple-400", label: "Merged" },
+  closed: { color: "text-red-400", label: "Closed" },
+  draft: { color: "text-white/40", label: "Draft" },
 };
 
-const ciConfig: Record<
-  CIStatus,
-  { icon: React.ElementType; color: string; label: string }
+const CI_CONFIG: Record<
+  NonNullable<GitHubPRCardProps["ciStatus"]>,
+  { icon: typeof CheckCircle2; color: string }
 > = {
-  success: { icon: CheckCircle2, color: "text-green-400", label: "CI passed" },
-  failure: { icon: XCircle, color: "text-red-400", label: "CI failed" },
-  pending: { icon: Loader2, color: "text-yellow-400", label: "CI running" },
-  neutral: { icon: CheckCircle2, color: "text-white/30", label: "CI neutral" },
+  success: { icon: CheckCircle2, color: "text-green-400" },
+  failure: { icon: XCircle, color: "text-red-400" },
+  pending: { icon: Loader2, color: "text-amber-400" },
+  neutral: { icon: CheckCircle2, color: "text-white/30" },
 };
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 export function GitHubPRCard({
-  repo,
+  prNumber,
   title,
-  number,
+  repoName,
+  author,
   status,
   additions,
   deletions,
-  reviewers,
+  reviewCommentCount,
   ciStatus,
   url,
+  compact,
 }: GitHubPRCardProps) {
-  const sc = statusConfig[status];
-  const StatusIcon = sc.icon;
-  const ci = ciStatus ? ciConfig[ciStatus] : null;
-  const CIIcon = ci?.icon;
+  const statusCfg = STATUS_CONFIG[status];
+  const ciCfg = ciStatus ? CI_CONFIG[ciStatus] : null;
+  const CiIcon = ciCfg?.icon ?? null;
 
   return (
-    <div className="mt-1.5 max-w-md rounded border border-white/8 bg-white/[0.03] p-3">
-      {/* Header: repo + status badge */}
-      <div className="flex items-center gap-2">
-        <span className="text-2xs font-mono text-muted-foreground">{repo}</span>
-        <span
-          className={cn(
-            "ml-auto inline-flex items-center gap-1 rounded border px-1.5 py-px text-2xs font-medium",
-            sc.bg,
-            sc.color,
-          )}
-        >
-          <StatusIcon className="h-2.5 w-2.5" />
-          {sc.label}
-        </span>
-      </div>
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        "flex items-start gap-2 rounded border border-subtle p-2 transition-colors hover:bg-surface-2",
+        compact && "p-1.5 gap-1.5"
+      )}
+    >
+      <GitPullRequest
+        className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", statusCfg.color)}
+      />
 
-      {/* Title + PR number */}
-      <p className="mt-1 text-sm font-medium text-foreground leading-snug">
-        {title}{" "}
-        <span className="text-muted-foreground font-normal">#{number}</span>
-      </p>
-
-      {/* Stats row */}
-      <div className="mt-2 flex items-center gap-3 text-2xs">
-        {/* Diff stats */}
-        {(additions !== undefined || deletions !== undefined) && (
-          <div className="flex items-center gap-2">
-            {additions !== undefined && (
-              <span className="inline-flex items-center gap-0.5 text-green-400">
-                <Plus className="h-2.5 w-2.5" />
-                {additions}
-              </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              "truncate font-medium text-foreground",
+              compact ? "text-2xs" : "text-xs"
             )}
-            {deletions !== undefined && (
-              <span className="inline-flex items-center gap-0.5 text-red-400">
-                <Minus className="h-2.5 w-2.5" />
-                {deletions}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* CI status */}
-        {ci && CIIcon && (
-          <span className={cn("inline-flex items-center gap-1", ci.color)}>
-            <CIIcon
-              className={cn(
-                "h-2.5 w-2.5",
-                ciStatus === "pending" && "animate-spin",
-              )}
-            />
-            {ci.label}
+          >
+            {title}
           </span>
-        )}
-      </div>
+          <span className="shrink-0 text-2xs text-muted-foreground">
+            #{prNumber}
+          </span>
+        </div>
 
-      {/* Reviewers + action */}
-      <div className="mt-2 flex items-center gap-2">
-        {/* Reviewer avatars */}
-        {reviewers && reviewers.length > 0 && (
-          <div className="flex -space-x-1.5">
-            {reviewers.slice(0, 4).map((r) => (
-              <Avatar key={r.name} className="h-5 w-5 border border-surface-1">
-                <AvatarFallback className="bg-surface-3 text-[9px] font-medium text-foreground">
-                  {getInitials(r.name)}
-                </AvatarFallback>
-              </Avatar>
-            ))}
-            {reviewers.length > 4 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full border border-surface-1 bg-surface-3 text-[9px] text-muted-foreground">
-                +{reviewers.length - 4}
+        <div className="mt-0.5 flex items-center gap-2 text-2xs text-muted-foreground">
+          <span>{repoName}</span>
+          <span className="text-white/20">·</span>
+          <span>{author}</span>
+
+          {/* Diff stats */}
+          {(additions !== undefined || deletions !== undefined) && (
+            <>
+              <span className="text-white/20">·</span>
+              <span className="flex items-center gap-0.5">
+                <FileDiff className="h-3 w-3 text-white/30" />
+                {additions !== undefined && (
+                  <span className="text-green-400">+{additions}</span>
+                )}
+                {deletions !== undefined && (
+                  <span className="text-red-400">-{deletions}</span>
+                )}
               </span>
-            )}
-          </div>
-        )}
+            </>
+          )}
 
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ml-auto inline-flex items-center gap-1 rounded px-2 py-1 text-2xs font-medium text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
-        >
-          Open in GitHub
-          <ExternalLink className="h-2.5 w-2.5" />
-        </a>
+          {/* Review comment count */}
+          {reviewCommentCount !== undefined && reviewCommentCount > 0 && (
+            <>
+              <span className="text-white/20">·</span>
+              <span className="flex items-center gap-0.5">
+                <span aria-hidden>💬</span>
+                <span>{reviewCommentCount}</span>
+              </span>
+            </>
+          )}
+
+          {/* CI status */}
+          {CiIcon && ciCfg && (
+            <>
+              <span className="text-white/20">·</span>
+              <CiIcon
+                className={cn(
+                  "h-3.5 w-3.5",
+                  ciCfg.color,
+                  ciStatus === "pending" && "animate-spin"
+                )}
+              />
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </a>
   );
 }

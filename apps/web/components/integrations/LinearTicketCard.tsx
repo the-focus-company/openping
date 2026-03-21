@@ -1,77 +1,50 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Circle,
+  CircleDot,
+  CheckCircle2,
+  XCircle,
+  SignalHigh,
+  Signal,
+  SignalMedium,
+  SignalLow,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-
-export type LinearStatus =
-  | "backlog"
-  | "todo"
-  | "in_progress"
-  | "done"
-  | "cancelled";
-
-export type LinearPriority = "urgent" | "high" | "medium" | "low" | "none";
 
 export interface LinearTicketCardProps {
   ticketId: string;
   title: string;
-  status: LinearStatus;
-  priority: LinearPriority;
-  assignee?: { name: string; avatarUrl?: string };
-  url: string;
+  status: "backlog" | "todo" | "in_progress" | "done" | "cancelled";
+  priority?: "urgent" | "high" | "medium" | "low" | "none";
+  assignee?: string;
+  subTaskCount?: number;
+  cycleName?: string;
+  url?: string;
+  compact?: boolean;
 }
 
-const statusConfig: Record<
-  LinearStatus,
-  { color: string; borderColor: string; label: string }
+const STATUS_CONFIG: Record<
+  LinearTicketCardProps["status"],
+  { icon: typeof Circle; color: string; label: string }
 > = {
-  backlog: {
-    color: "bg-white/20",
-    borderColor: "border-white/20",
-    label: "Backlog",
-  },
-  todo: {
-    color: "bg-white/40",
-    borderColor: "border-white/40",
-    label: "Todo",
-  },
-  in_progress: {
-    color: "bg-yellow-400",
-    borderColor: "border-yellow-400",
-    label: "In Progress",
-  },
-  done: {
-    color: "bg-green-400",
-    borderColor: "border-green-400",
-    label: "Done",
-  },
-  cancelled: {
-    color: "bg-red-400",
-    borderColor: "border-red-400",
-    label: "Cancelled",
-  },
+  backlog: { icon: Circle, color: "text-white/30", label: "Backlog" },
+  todo: { icon: Circle, color: "text-white/50", label: "Todo" },
+  in_progress: { icon: CircleDot, color: "text-amber-400", label: "In Progress" },
+  done: { icon: CheckCircle2, color: "text-green-400", label: "Done" },
+  cancelled: { icon: XCircle, color: "text-red-400", label: "Cancelled" },
 };
 
-const priorityConfig: Record<
-  LinearPriority,
-  { icon: string; color: string; label: string }
+const PRIORITY_CONFIG: Record<
+  NonNullable<LinearTicketCardProps["priority"]>,
+  { icon: typeof Signal; color: string }
 > = {
-  urgent: { icon: "!!!", color: "text-red-400", label: "Urgent" },
-  high: { icon: "!!", color: "text-orange-400", label: "High" },
-  medium: { icon: "!", color: "text-yellow-400", label: "Medium" },
-  low: { icon: "-", color: "text-blue-400", label: "Low" },
-  none: { icon: "...", color: "text-white/30", label: "No priority" },
+  urgent: { icon: SignalHigh, color: "text-red-400" },
+  high: { icon: Signal, color: "text-orange-400" },
+  medium: { icon: SignalMedium, color: "text-amber-400" },
+  low: { icon: SignalLow, color: "text-white/40" },
+  none: { icon: SignalLow, color: "text-white/20" },
 };
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 export function LinearTicketCard({
   ticketId,
@@ -79,72 +52,85 @@ export function LinearTicketCard({
   status,
   priority,
   assignee,
+  subTaskCount,
+  cycleName,
   url,
+  compact,
 }: LinearTicketCardProps) {
-  const sc = statusConfig[status];
-  const pc = priorityConfig[priority];
+  const statusCfg = STATUS_CONFIG[status];
+  const StatusIcon = statusCfg.icon;
+  const priorityCfg = priority ? PRIORITY_CONFIG[priority] : null;
+  const PriorityIcon = priorityCfg?.icon ?? null;
+
+  const Wrapper = url ? "a" : "div";
+  const wrapperProps = url
+    ? { href: url, target: "_blank" as const, rel: "noopener noreferrer" }
+    : {};
 
   return (
-    <div className="mt-1.5 max-w-md rounded border border-white/8 bg-white/[0.03] p-3">
-      {/* Header: ticket ID + priority */}
-      <div className="flex items-center gap-2">
-        {/* Status circle */}
-        <span
-          className={cn(
-            "h-2.5 w-2.5 shrink-0 rounded-full border",
-            sc.borderColor,
-            status === "in_progress" || status === "done" || status === "cancelled"
-              ? sc.color
-              : "bg-transparent",
+    <Wrapper
+      {...wrapperProps}
+      className={cn(
+        "flex items-start gap-2 rounded border border-subtle transition-colors",
+        url && "hover:bg-surface-2",
+        compact ? "p-1.5 gap-1.5" : "p-2"
+      )}
+    >
+      <StatusIcon
+        className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", statusCfg.color)}
+      />
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="shrink-0 text-2xs text-muted-foreground">
+            {ticketId}
+          </span>
+          <span
+            className={cn(
+              "truncate font-medium text-foreground",
+              compact ? "text-2xs" : "text-xs"
+            )}
+          >
+            {title}
+          </span>
+        </div>
+
+        <div className="mt-0.5 flex items-center gap-2 text-2xs text-muted-foreground">
+          <span className={statusCfg.color}>{statusCfg.label}</span>
+
+          {PriorityIcon && priorityCfg && (
+            <>
+              <span className="text-white/20">·</span>
+              <PriorityIcon className={cn("h-3 w-3", priorityCfg.color)} />
+            </>
           )}
-        />
-        <span className="text-2xs font-mono text-muted-foreground">
-          {ticketId}
-        </span>
-        <span className="text-2xs text-muted-foreground">{sc.label}</span>
 
-        {/* Priority badge */}
-        <span
-          className={cn(
-            "ml-auto inline-flex items-center gap-1 rounded px-1.5 py-px text-2xs font-mono font-medium",
-            pc.color,
+          {assignee && (
+            <>
+              <span className="text-white/20">·</span>
+              <span>{assignee}</span>
+            </>
           )}
-        >
-          <span>{pc.icon}</span>
-          {pc.label}
-        </span>
+
+          {subTaskCount !== undefined && subTaskCount > 0 && (
+            <>
+              <span className="text-white/20">·</span>
+              <span>
+                {subTaskCount} subtask{subTaskCount !== 1 ? "s" : ""}
+              </span>
+            </>
+          )}
+
+          {cycleName && (
+            <>
+              <span className="text-white/20">·</span>
+              <span className="rounded bg-surface-3 px-1 py-px text-2xs text-muted-foreground">
+                {cycleName}
+              </span>
+            </>
+          )}
+        </div>
       </div>
-
-      {/* Title */}
-      <p className="mt-1 text-sm font-medium text-foreground leading-snug">
-        {title}
-      </p>
-
-      {/* Footer: assignee + link */}
-      <div className="mt-2 flex items-center gap-2">
-        {assignee && (
-          <div className="flex items-center gap-1.5">
-            <Avatar className="h-5 w-5">
-              <AvatarFallback className="bg-surface-3 text-[9px] font-medium text-foreground">
-                {getInitials(assignee.name)}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-2xs text-muted-foreground">
-              {assignee.name}
-            </span>
-          </div>
-        )}
-
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ml-auto inline-flex items-center gap-1 rounded px-2 py-1 text-2xs font-medium text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
-        >
-          Open in Linear
-          <ExternalLink className="h-2.5 w-2.5" />
-        </a>
-      </div>
-    </div>
+    </Wrapper>
   );
 }
