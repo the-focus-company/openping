@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { TOPBAR_HEIGHT } from "@/lib/constants";
 import {
@@ -15,6 +16,16 @@ interface TopBarProps {
 }
 
 export function TopBar({ onToggleSidebar }: TopBarProps) {
+  const pathname = usePathname();
+
+  let title = "Inbox";
+  if (pathname?.startsWith("/channel/")) {
+    const channelId = pathname.split("/channel/")[1];
+    title = `# ${channelId}`;
+  } else if (pathname === "/settings") {
+    title = "Settings";
+  }
+
   return (
     <header
       className="flex items-center justify-between border-b border-border px-4"
@@ -28,7 +39,7 @@ export function TopBar({ onToggleSidebar }: TopBarProps) {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-semibold text-foreground">Inbox</h1>
+        <h1 className="text-lg font-semibold text-foreground">{title}</h1>
       </div>
 
       <div className="flex items-center gap-2">
