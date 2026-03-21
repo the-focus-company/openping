@@ -1,16 +1,27 @@
 "use client";
 
-import { ReactNode, useState, useEffect, useCallback } from "react";
+import { ReactNode, useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
 import { SIDEBAR_WIDTH } from "@/lib/constants";
 
+function isEditableTarget(e: KeyboardEvent): boolean {
+  const tag = (e.target as HTMLElement)?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  if ((e.target as HTMLElement)?.isContentEditable) return true;
+  return false;
+}
+
 export function DashboardShell({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const router = useRouter();
+  const pendingKeyRef = useRef<string | null>(null);
+  const chordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (window.innerWidth < 768) {
@@ -22,33 +33,74 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const openSearch = useCallback(() => setCmdOpen(true), []);
   const openShortcuts = useCallback(() => setShortcutsOpen(true), []);
 
+  const clearChord = useCallback(() => {
+    pendingKeyRef.current = null;
+    if (chordTimerRef.current) {
+      clearTimeout(chordTimerRef.current);
+      chordTimerRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // ⌘B — toggle sidebar
       if ((e.metaKey || e.ctrlKey) && e.key === "b") {
         e.preventDefault();
         toggleSidebar();
+        return;
       }
       // ⌘K — command palette
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setCmdOpen(true);
+        return;
       }
-      // ? — keyboard shortcuts (only when not typing in an input)
-      if (
-        e.key === "?" &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !(e.target instanceof HTMLInputElement) &&
-        !(e.target instanceof HTMLTextAreaElement)
-      ) {
+
+      // Skip chord/single-key shortcuts when typing in editable elements
+      if (isEditableTarget(e)) return;
+      // Skip when modifier keys are held (except shift)
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const key = e.key.toLowerCase();
+
+      // Second key of a chord
+      if (pendingKeyRef.current === "g") {
+        clearChord();
+        if (key === "i") {
+          e.preventDefault();
+          router.push("/inbox");
+          return;
+        }
+        if (key === "t") {
+          e.preventDefault();
+          router.push("/settings/team");
+          return;
+        }
+        return;
+      }
+
+      // First key of a chord
+      if (key === "g") {
+        pendingKeyRef.current = "g";
+        chordTimerRef.current = setTimeout(() => {
+          pendingKeyRef.current = null;
+          chordTimerRef.current = null;
+        }, 500);
+        return;
+      }
+
+      // ? — keyboard shortcuts
+      if (e.key === "?") {
         e.preventDefault();
         setShortcutsOpen(true);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleSidebar]);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      clearChord();
+    };
+  }, [toggleSidebar, clearChord, router]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
