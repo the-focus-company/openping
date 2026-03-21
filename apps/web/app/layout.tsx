@@ -32,6 +32,8 @@ export const metadata: Metadata = {
       "AI-powered team communication with Eisenhower inbox, smart alerts, and deep integrations.",
     images: ["/og-image.png"],
   },
+  manifest: "/manifest.json",
+  themeColor: "#5E6AD2",
 };
 
 export default function RootLayout({
