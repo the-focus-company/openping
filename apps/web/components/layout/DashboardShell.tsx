@@ -2,6 +2,8 @@
 
 import { ReactNode, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useConvexAuth } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
@@ -22,6 +24,23 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pendingKeyRef = useRef<string | null>(null);
   const chordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Unread count for browser tab title
+  const { isAuthenticated } = useConvexAuth();
+  const channels = useQuery(api.channels.list, isAuthenticated ? {} : "skip");
+  const dmConversations = useQuery(api.directConversations.list, isAuthenticated ? {} : "skip");
+  const inboxUnread = useQuery(api.inboxSummaries.unreadCount, isAuthenticated ? {} : "skip");
+
+  useEffect(() => {
+    const channelUnread = channels?.reduce((sum, ch) => sum + (ch.unreadCount ?? 0), 0) ?? 0;
+    const dmUnread = dmConversations?.reduce((sum, conv) => sum + (conv.unreadCount ?? 0), 0) ?? 0;
+    const inbox = inboxUnread ?? 0;
+    const total = channelUnread + dmUnread + inbox;
+    document.title = total > 0 ? `(${total}) PING` : "PING";
+    return () => {
+      document.title = "PING";
+    };
+  }, [channels, dmConversations, inboxUnread]);
 
   useEffect(() => {
     if (window.innerWidth < 768) {
