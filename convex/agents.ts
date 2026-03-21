@@ -4,37 +4,14 @@ import { requireAuth } from "./auth";
 import { hashToken } from "./agentAuth";
 
 export const list = query({
-  args: {
-    workspaceId: v.id("workspaces"),
-  },
+  args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
     await requireAuth(ctx, args.workspaceId);
 
-    const agents = await ctx.db
+    return await ctx.db
       .query("agents")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
       .take(50);
-
-    const result = await Promise.all(
-      agents.map(async (agent) => {
-        const agentUser = await ctx.db.get(agent.userId);
-        return {
-          _id: agent._id,
-          _creationTime: agent._creationTime,
-          name: agent.name,
-          description: agent.description,
-          status: agent.status,
-          color: agent.color,
-          systemPrompt: agent.systemPrompt,
-          lastActiveAt: agent.lastActiveAt,
-          createdBy: agent.createdBy,
-          agentUserName: agentUser?.name,
-          agentUserEmail: agentUser?.email,
-        };
-      }),
-    );
-
-    return result;
   },
 });
 
@@ -47,10 +24,10 @@ export const get = query({
     await requireAuth(ctx, args.workspaceId);
 
     const agent = await ctx.db.get(args.agentId);
-    if (!agent || agent.workspaceId !== args.workspaceId) {
-      return null;
+    if (!agent) throw new Error("Agent not found");
+    if (agent.workspaceId !== args.workspaceId) {
+      throw new Error("Agent not found");
     }
-
     return agent;
   },
 });
@@ -60,8 +37,8 @@ export const create = mutation({
     workspaceId: v.id("workspaces"),
     name: v.string(),
     description: v.optional(v.string()),
-    systemPrompt: v.optional(v.string()),
     color: v.optional(v.string()),
+    systemPrompt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireAuth(ctx, args.workspaceId);
@@ -69,22 +46,12 @@ export const create = mutation({
       throw new Error("Only admins can create agents");
     }
 
-    const agentEmail = `${args.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}@agent.ping`;
-    const workosUserId = `agent_${crypto.randomUUID()}`;
-
-    const agentUserId = await ctx.db.insert("users", {
-      workosUserId,
-      email: agentEmail,
+    // Create a synthetic user row for the agent
+    const syntheticUserId = await ctx.db.insert("users", {
+      workosUserId: `agent_${crypto.randomUUID()}`,
+      email: `${args.name.toLowerCase().replace(/\s+/g, "-")}@agent.ping`,
       name: args.name,
       status: "active",
-      lastSeenAt: Date.now(),
-    });
-
-    await ctx.db.insert("workspaceMembers", {
-      userId: agentUserId,
-      workspaceId: args.workspaceId,
-      role: "member",
-      joinedAt: Date.now(),
     });
 
     const agentId = await ctx.db.insert("agents", {
@@ -95,7 +62,7 @@ export const create = mutation({
       createdBy: user._id,
       color: args.color,
       systemPrompt: args.systemPrompt,
-      userId: agentUserId,
+      userId: syntheticUserId,
     });
 
     return agentId;
@@ -108,11 +75,15 @@ export const update = mutation({
     workspaceId: v.id("workspaces"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
-    systemPrompt: v.optional(v.string()),
-    color: v.optional(v.string()),
     status: v.optional(
-      v.union(v.literal("active"), v.literal("inactive")),
+      v.union(
+        v.literal("active"),
+        v.literal("inactive"),
+        v.literal("revoked"),
+      ),
     ),
+    color: v.optional(v.string()),
+    systemPrompt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireAuth(ctx, args.workspaceId);
@@ -121,22 +92,13 @@ export const update = mutation({
     }
 
     const agent = await ctx.db.get(args.agentId);
-    if (!agent || agent.workspaceId !== args.workspaceId) {
+    if (!agent) throw new Error("Agent not found");
+    if (agent.workspaceId !== args.workspaceId) {
       throw new Error("Agent not found");
     }
 
-    const updates: Record<string, unknown> = {};
-    if (args.name !== undefined) updates.name = args.name;
-    if (args.description !== undefined) updates.description = args.description;
-    if (args.systemPrompt !== undefined) updates.systemPrompt = args.systemPrompt;
-    if (args.color !== undefined) updates.color = args.color;
-    if (args.status !== undefined) updates.status = args.status;
-
+    const { agentId: _, workspaceId: __, ...updates } = args;
     await ctx.db.patch(args.agentId, updates);
-
-    if (args.name !== undefined) {
-      await ctx.db.patch(agent.userId, { name: args.name });
-    }
   },
 });
 
@@ -152,12 +114,14 @@ export const remove = mutation({
     }
 
     const agent = await ctx.db.get(args.agentId);
-    if (!agent || agent.workspaceId !== args.workspaceId) {
+    if (!agent) throw new Error("Agent not found");
+    if (agent.workspaceId !== args.workspaceId) {
       throw new Error("Agent not found");
     }
 
     await ctx.db.patch(args.agentId, { status: "revoked" });
 
+    // Revoke all tokens for this agent
     const tokens = await ctx.db
       .query("agentApiTokens")
       .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
@@ -180,29 +144,31 @@ export const generateToken = mutation({
   handler: async (ctx, args) => {
     const user = await requireAuth(ctx, args.workspaceId);
     if (user.role !== "admin") {
-      throw new Error("Only admins can generate tokens");
+      throw new Error("Only admins can generate agent tokens");
     }
 
     const agent = await ctx.db.get(args.agentId);
-    if (!agent || agent.workspaceId !== args.workspaceId) {
+    if (!agent) throw new Error("Agent not found");
+    if (agent.workspaceId !== args.workspaceId) {
       throw new Error("Agent not found");
     }
 
-    const rawToken = `ping_ag_${crypto.randomUUID()}`;
-    const tokenHashValue = await hashToken(rawToken);
-    const tokenPrefix = rawToken.slice(0, 14) + "...";
+    const raw = `ping_ag_${crypto.randomUUID()}`;
+    const tokenHash = await hashToken(raw);
+
+    const tokenPrefix = raw.slice(0, 16);
 
     await ctx.db.insert("agentApiTokens", {
       agentId: args.agentId,
       workspaceId: args.workspaceId,
-      tokenHash: tokenHashValue,
+      tokenHash,
       tokenPrefix,
       label: args.label,
       status: "active",
       createdBy: user._id,
     });
 
-    return rawToken;
+    return { token: raw, prefix: tokenPrefix };
   },
 });
 
@@ -214,11 +180,12 @@ export const revokeToken = mutation({
   handler: async (ctx, args) => {
     const user = await requireAuth(ctx, args.workspaceId);
     if (user.role !== "admin") {
-      throw new Error("Only admins can revoke tokens");
+      throw new Error("Only admins can revoke agent tokens");
     }
 
     const token = await ctx.db.get(args.tokenId);
-    if (!token || token.workspaceId !== args.workspaceId) {
+    if (!token) throw new Error("Token not found");
+    if (token.workspaceId !== args.workspaceId) {
       throw new Error("Token not found");
     }
 
@@ -235,8 +202,9 @@ export const listTokens = query({
     await requireAuth(ctx, args.workspaceId);
 
     const agent = await ctx.db.get(args.agentId);
-    if (!agent || agent.workspaceId !== args.workspaceId) {
-      return [];
+    if (!agent) throw new Error("Agent not found");
+    if (agent.workspaceId !== args.workspaceId) {
+      throw new Error("Agent not found");
     }
 
     const tokens = await ctx.db
@@ -244,12 +212,14 @@ export const listTokens = query({
       .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
       .take(50);
 
+    // Return prefix + metadata, never the hash
     return tokens.map((t) => ({
       _id: t._id,
       _creationTime: t._creationTime,
       tokenPrefix: t.tokenPrefix,
       label: t.label,
       status: t.status,
+      createdBy: t.createdBy,
       lastUsedAt: t.lastUsedAt,
       expiresAt: t.expiresAt,
     }));
