@@ -3,7 +3,7 @@ import starlight from "@astrojs/starlight";
 
 export default defineConfig({
   site: "https://pingcompany.github.io",
-  base: "/Platform/",
+  base: "/platform/",
   integrations: [
     starlight({
       title: "PING Docs",
