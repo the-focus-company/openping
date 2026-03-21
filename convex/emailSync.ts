@@ -213,8 +213,8 @@ export const syncGmailAccount = action({
 
 export const syncOutlookAccount = action({
   args: { accountId: v.id("emailAccounts") },
-  handler: async (ctx, args) => {
-    const account = await ctx.runQuery(
+  handler: async (ctx, args): Promise<{ synced: number }> => {
+    const account: any = await ctx.runQuery(
       internal.emailSync.getAccountInternal,
       { accountId: args.accountId },
     );
@@ -397,6 +397,7 @@ export const upsertEmail = internalMutation({
       labels: args.labels,
       isRead: args.isRead,
       isStarred: args.isStarred,
+      isArchived: false,
       receivedAt: args.receivedAt,
       inReplyTo: args.inReplyTo,
       references: args.references,

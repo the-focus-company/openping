@@ -49,7 +49,7 @@ export const ingestEmailToGraphiti = internalAction({
       `Subject: ${email.subject}`,
       `Date: ${new Date(email.receivedAt).toISOString()}`,
       "",
-      email.bodyPlain.slice(0, 3000),
+      (email.bodyPlain ?? "").slice(0, 3000),
     ]
       .filter(Boolean)
       .join("\n");

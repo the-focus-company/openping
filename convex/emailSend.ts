@@ -174,9 +174,9 @@ export const sendEmail = action({
 
     try {
       if (account.provider === "gmail") {
-        await sendViaGmail(account, draft);
+        await sendViaGmail(account as unknown as EmailAccount, draft as unknown as EmailDraft);
       } else if (account.provider === "outlook") {
-        await sendViaOutlook(account, draft);
+        await sendViaOutlook(account as unknown as EmailAccount, draft as unknown as EmailDraft);
       }
 
       await ctx.runMutation(internal.emailSend.markDraftStatus, {

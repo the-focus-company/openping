@@ -447,6 +447,20 @@ export function MessageList({
     }
   }, [isLoading, messages.length, scrollToBottom]);
 
+  // Re-scroll when the scroll container resizes (e.g. Tiptap composer mounts
+  // asynchronously and shrinks the message area)
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      if (isAtBottom()) {
+        scrollToBottom("instant");
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isAtBottom]);
+
   const handleScrollToBottom = () => {
     scrollToBottom("smooth");
     setShowNewMessages(false);

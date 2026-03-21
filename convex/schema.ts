@@ -59,6 +59,7 @@ export default defineSchema({
     workosOrgId: v.optional(v.string()),
     createdBy: v.optional(v.id("users")),
     integrations: v.optional(v.any()),
+    integrationConfig: v.optional(v.any()),
     industry: v.optional(v.string()),
     companySize: v.optional(v.string()),
     companyDescription: v.optional(v.string()),
@@ -83,6 +84,7 @@ export default defineSchema({
     channelId: v.id("channels"),
     userId: v.id("users"),
     lastReadAt: v.optional(v.number()),
+    unreadCount: v.optional(v.number()),
   })
     .index("by_channel", ["channelId"])
     .index("by_user", ["userId"])
@@ -339,18 +341,24 @@ export default defineSchema({
       v.literal("google"),
       v.literal("microsoft"),
       v.literal("imap"),
+      v.literal("gmail"),
+      v.literal("outlook"),
     ),
-    email: v.string(),
+    emailAddress: v.string(),
     accessToken: v.optional(v.string()),
     refreshToken: v.optional(v.string()),
     tokenExpiresAt: v.optional(v.number()),
     syncCursor: v.optional(v.string()),
     lastSyncedAt: v.optional(v.number()),
     isActive: v.boolean(),
+    pushChannelId: v.optional(v.string()),
+    pushExpiresAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
     .index("by_user_workspace", ["userId", "workspaceId"])
-    .index("by_email", ["email"]),
+    .index("by_workspace", ["workspaceId"])
+    .index("by_email", ["emailAddress"])
+    .index("by_push_channel", ["pushChannelId"]),
 
   emails: defineTable({
     emailAccountId: v.id("emailAccounts"),
@@ -362,12 +370,28 @@ export default defineSchema({
     to: v.array(v.string()),
     cc: v.optional(v.array(v.string())),
     subject: v.string(),
-    bodyPlain: v.string(),
+    bodyPlain: v.optional(v.string()),
     bodyHtml: v.optional(v.string()),
+    bodyText: v.optional(v.string()),
+    snippet: v.optional(v.string()),
     receivedAt: v.number(),
     isRead: v.boolean(),
     isArchived: v.boolean(),
+    isStarred: v.optional(v.boolean()),
     labels: v.optional(v.array(v.string())),
+    inReplyTo: v.optional(v.string()),
+    references: v.optional(v.array(v.string())),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          filename: v.string(),
+          mimeType: v.string(),
+          size: v.number(),
+          externalAttachmentId: v.string(),
+        }),
+      ),
+    ),
+    senderCategory: v.optional(v.string()),
     // AI classification fields
     eisenhowerQuadrant: v.optional(
       v.union(
@@ -377,6 +401,7 @@ export default defineSchema({
         v.literal("fyi"),
       ),
     ),
+    aiSummary: v.optional(v.string()),
     agentSummary: v.optional(v.string()),
     agentClassifiedAt: v.optional(v.number()),
     suggestedAction: v.optional(v.string()),
@@ -387,12 +412,18 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_unclassified", ["userId", "agentClassifiedAt"])
     .index("by_user_quadrant", ["userId", "eisenhowerQuadrant"])
+    .index("by_user_read", ["userId", "isRead"])
+    .index("by_user_archived", ["userId", "isArchived"])
     .index("by_thread", ["threadId"])
     .index("by_account", ["emailAccountId"])
     .index("by_external_id", ["externalId"])
     .index("by_reminder", ["reminderAt"])
     .searchIndex("search_body", {
       searchField: "bodyPlain",
+      filterFields: ["userId"],
+    })
+    .searchIndex("search_subject", {
+      searchField: "subject",
       filterFields: ["userId"],
     }),
 
@@ -445,6 +476,8 @@ export default defineSchema({
       ),
     ),
     agentExecutionResult: v.optional(v.string()),
+    delegatedTo: v.optional(v.id("users")),
+    snoozedUntil: v.optional(v.number()),
     expiresAt: v.optional(v.number()),
     createdAt: v.number(),
   })
@@ -453,80 +486,25 @@ export default defineSchema({
     .index("by_source_alert", ["sourceAlertId"])
     .index("by_source_summary", ["sourceSummaryId"]),
 
-  emailAccounts: defineTable({
+  emailSenderRules: defineTable({
     userId: v.id("users"),
     workspaceId: v.id("workspaces"),
-    provider: v.union(v.literal("gmail"), v.literal("outlook")),
-    email: v.string(),
-    accessToken: v.optional(v.string()),
-    refreshToken: v.optional(v.string()),
-    tokenExpiresAt: v.optional(v.number()),
-    syncCursor: v.optional(v.string()),
-    status: v.union(
-      v.literal("connected"),
-      v.literal("disconnected"),
-      v.literal("error"),
+    senderAddress: v.string(),
+    category: v.union(
+      v.literal("vip"),
+      v.literal("normal"),
+      v.literal("muted"),
     ),
-    lastSyncedAt: v.optional(v.number()),
+    autoArchive: v.optional(v.boolean()),
+    autoLabel: v.optional(v.string()),
+    suggestUnsubscribe: v.optional(v.boolean()),
+    notes: v.optional(v.string()),
     createdAt: v.number(),
+    updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_user_workspace", ["userId", "workspaceId"])
-    .index("by_workspace", ["workspaceId"]),
-
-  emails: defineTable({
-    userId: v.id("users"),
-    workspaceId: v.id("workspaces"),
-    emailAccountId: v.id("emailAccounts"),
-    externalId: v.string(),
-    threadId: v.string(),
-    subject: v.string(),
-    from: v.object({
-      name: v.optional(v.string()),
-      email: v.string(),
-    }),
-    to: v.array(
-      v.object({
-        name: v.optional(v.string()),
-        email: v.string(),
-      }),
-    ),
-    cc: v.optional(
-      v.array(
-        v.object({
-          name: v.optional(v.string()),
-          email: v.string(),
-        }),
-      ),
-    ),
-    snippet: v.string(),
-    bodyHtml: v.optional(v.string()),
-    bodyText: v.optional(v.string()),
-    receivedAt: v.number(),
-    isRead: v.boolean(),
-    isArchived: v.boolean(),
-    isStarred: v.boolean(),
-    labels: v.optional(v.array(v.string())),
-    eisenhowerQuadrant: v.optional(
-      v.union(
-        v.literal("urgent-important"),
-        v.literal("important"),
-        v.literal("urgent"),
-        v.literal("fyi"),
-      ),
-    ),
-    aiSummary: v.optional(v.string()),
-  })
-    .index("by_user", ["userId"])
-    .index("by_user_read", ["userId", "isRead"])
-    .index("by_user_archived", ["userId", "isArchived"])
-    .index("by_thread", ["userId", "threadId"])
-    .index("by_external_id", ["externalId"])
-    .index("by_user_quadrant", ["userId", "eisenhowerQuadrant"])
-    .searchIndex("search_subject", {
-      searchField: "subject",
-      filterFields: ["userId"],
-    }),
+    .index("by_user_sender", ["userId", "senderAddress"])
+    .index("by_user_category", ["userId", "category"]),
 
   emailDrafts: defineTable({
     userId: v.id("users"),
@@ -534,23 +512,24 @@ export default defineSchema({
     emailAccountId: v.id("emailAccounts"),
     threadId: v.optional(v.string()),
     inReplyTo: v.optional(v.id("emails")),
-    to: v.array(
-      v.object({
-        name: v.optional(v.string()),
-        email: v.string(),
-      }),
-    ),
-    cc: v.optional(
-      v.array(
-        v.object({
-          name: v.optional(v.string()),
-          email: v.string(),
-        }),
-      ),
-    ),
+    to: v.array(v.string()),
+    cc: v.optional(v.array(v.string())),
+    bcc: v.optional(v.array(v.string())),
     subject: v.string(),
+    body: v.optional(v.string()),
     bodyHtml: v.optional(v.string()),
     bodyText: v.optional(v.string()),
+    mode: v.optional(
+      v.union(
+        v.literal("compose"),
+        v.literal("reply"),
+        v.literal("reply_all"),
+        v.literal("forward"),
+      ),
+    ),
+    replyToEmailId: v.optional(v.id("emails")),
+    suggestedAction: v.optional(v.string()),
+    attachmentIds: v.optional(v.array(v.id("_storage"))),
     status: v.union(
       v.literal("draft"),
       v.literal("sending"),
@@ -562,4 +541,72 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_status", ["userId", "status"]),
+
+  // Agent platform tables
+  agents: defineTable({
+    workspaceId: v.id("workspaces"),
+    userId: v.id("users"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    systemPrompt: v.optional(v.string()),
+    color: v.optional(v.string()),
+    status: v.union(
+      v.literal("active"),
+      v.literal("inactive"),
+      v.literal("revoked"),
+    ),
+    lastActiveAt: v.optional(v.number()),
+    createdBy: v.id("users"),
+  })
+    .index("by_workspace", ["workspaceId"]),
+
+  agentApiTokens: defineTable({
+    agentId: v.id("agents"),
+    tokenHash: v.string(),
+    label: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    expiresAt: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_agent", ["agentId"]),
+
+  agentAuditLogs: defineTable({
+    agentId: v.id("agents"),
+    workspaceId: v.id("workspaces"),
+    action: v.string(),
+    resourceType: v.optional(v.string()),
+    resourceId: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    tokenPrefix: v.string(),
+    durationMs: v.optional(v.number()),
+    timestamp: v.number(),
+  })
+    .index("by_agent", ["agentId"])
+    .index("by_workspace", ["workspaceId"]),
+
+  agentChannelScopes: defineTable({
+    agentId: v.id("agents"),
+    channelId: v.id("channels"),
+    permissions: v.union(v.literal("read"), v.literal("read_write")),
+    grantedBy: v.id("users"),
+    grantedAt: v.number(),
+  })
+    .index("by_agent", ["agentId"])
+    .index("by_channel", ["channelId"])
+    .index("by_agent_channel", ["agentId", "channelId"]),
+
+  integrationRouting: defineTable({
+    channelId: v.id("channels"),
+    workspaceId: v.id("workspaces"),
+    integrationType: v.union(v.literal("github"), v.literal("linear")),
+    externalTarget: v.string(),
+    externalTargetLabel: v.optional(v.string()),
+    createdBy: v.id("users"),
+  })
+    .index("by_channel", ["channelId"])
+    .index("by_workspace", ["workspaceId"])
+    .index("by_workspace_type", ["workspaceId", "integrationType"])
+    .index("by_channel_type_target", ["channelId", "integrationType", "externalTarget"]),
 });

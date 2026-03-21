@@ -175,7 +175,7 @@ export const scanPRReviewNudges = internalAction({
 
     const now = Date.now();
     const stalePRs = openPRs.filter(
-      (pr) => now - pr.lastSyncedAt > PR_STALE_THRESHOLD_MS,
+      (pr: any) => now - pr.lastSyncedAt > PR_STALE_THRESHOLD_MS,
     );
 
     if (stalePRs.length === 0) {
@@ -268,15 +268,15 @@ export const scanPRReviewNudges = internalAction({
       // (in production, target only requested reviewers or domain experts)
       const targetUsers =
         requestedReviewers.length > 0
-          ? allUsers.filter((u) =>
+          ? allUsers.filter((u: any) =>
               requestedReviewers.some(
-                (reviewer) =>
+                (reviewer: string) =>
                   u.name.toLowerCase().includes(reviewer.toLowerCase()) ||
                   u.email.toLowerCase().includes(reviewer.toLowerCase()),
               ),
             )
           : allUsers.filter(
-              (u) => u.status === "active" && u.name !== pr.author,
+              (u: any) => u.status === "active" && u.name !== pr.author,
             );
 
       for (const user of targetUsers) {
@@ -335,7 +335,7 @@ export const scanBlockedTasks = internalAction({
 
     const now = Date.now();
     const staleTickets = inProgressTickets.filter(
-      (t) => now - t.lastSyncedAt > BLOCKED_TASK_THRESHOLD_MS,
+      (t: any) => now - t.lastSyncedAt > BLOCKED_TASK_THRESHOLD_MS,
     );
 
     if (staleTickets.length === 0) {
@@ -381,13 +381,13 @@ export const scanBlockedTasks = internalAction({
 
       // Try to find the assignee among workspace users
       const assigneeUser = allUsers.find(
-        (u) =>
+        (u: any) =>
           u.status === "active" &&
           (u.name.toLowerCase().includes(ticket.author.toLowerCase()) ||
             u.email.toLowerCase().includes(ticket.author.toLowerCase())),
       );
 
-      const targetUser = assigneeUser ?? allUsers.find((u) => u.status === "active");
+      const targetUser = assigneeUser ?? allUsers.find((u: any) => u.status === "active");
       if (!targetUser) continue;
 
       // Only alert users who are members of the target channel

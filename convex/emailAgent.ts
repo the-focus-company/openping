@@ -41,7 +41,7 @@ export const getThreadEmails = internalQuery({
       .map((e) => ({
         from: e.from,
         subject: e.subject,
-        bodyPlain: e.bodyPlain.slice(0, 500),
+        bodyPlain: (e.bodyPlain ?? "").slice(0, 500),
         receivedAt: e.receivedAt,
       }));
   },
@@ -168,7 +168,7 @@ export const classifyEmail = internalAction({
     const emails = await ctx.runQuery(internal.emailAgent.getPendingEmails, {
       limit: 100,
     });
-    const email = emails.find((e) => e._id === args.emailId);
+    const email = emails.find((e: { _id: string }) => e._id === args.emailId);
     if (!email) {
       console.warn(`[emailAgent] Email ${args.emailId} not found or already classified`);
       return;
@@ -193,7 +193,7 @@ export const classifyEmail = internalAction({
         {
           from: email.from,
           subject: email.subject,
-          bodyPlain: email.bodyPlain,
+          bodyPlain: email.bodyPlain ?? "",
         },
         threadContext,
         userName,

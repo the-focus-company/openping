@@ -547,7 +547,7 @@ export const getRecentClassifiedEmails = internalQuery({
         _id: e._id as string,
         from: e.from,
         subject: e.subject,
-        bodyPlain: e.bodyPlain.slice(0, 300),
+        bodyPlain: (e.bodyPlain ?? "").slice(0, 300),
         eisenhowerQuadrant: e.eisenhowerQuadrant,
         agentSummary: e.agentSummary,
       })),
