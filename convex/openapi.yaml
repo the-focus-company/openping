@@ -1,66 +1,1596 @@
-openapi: "3.0.3"
+openapi: 3.0.3
 info:
-  title: PING Platform – Convex API
-  version: "1.1.0"
-  description: |
-    Public API for the PING Platform, backed by [Convex](https://convex.dev).
-
-    ## How to call Convex functions
-
-    All **queries** and **mutations** are called as JSON-RPC style HTTP requests:
-
-    | Function type | Method | Path |
-    |---|---|---|
-    | Query | `POST` | `{CONVEX_URL}/api/query` |
-    | Mutation | `POST` | `{CONVEX_URL}/api/mutation` |
-
-    ### Request body shape
-
-    ```json
-    {
-      "path": "<module>:<function>",
-      "args": { ... },
-      "format": "json"
-    }
-    ```
-
-    ### Authentication
-
-    Pass a Bearer JWT token issued by WorkOS in the `Authorization` header:
-
-    ```
-    Authorization: Bearer <token>
-    ```
+  title: PING Platform Convex API
+  description: >
+    API documentation for the PING Platform backend powered by Convex.
+    Queries are invoked via `POST /api/query`, mutations via `POST /api/mutation`.
+    HTTP webhook routes are standard REST endpoints.
+  version: 1.0.0
 
 servers:
-  - url: "{convexUrl}"
-    description: Convex deployment URL
-    variables:
-      convexUrl:
-        default: https://your-deployment.convex.cloud
-        description: Your Convex deployment URL (NEXT_PUBLIC_CONVEX_URL)
+  - url: https://<your-deployment>.convex.cloud
+    description: Convex deployment
 
 security:
   - BearerAuth: []
+
+tags:
+  - name: Messages
+    description: Send and list messages in channels
+  - name: Channels
+    description: Create, manage, and browse channels
+  - name: Users
+    description: User lookup and management
+  - name: Workspaces
+    description: Workspace creation and lookup
+  - name: Conversations
+    description: Direct messages and group conversations
+  - name: Drafts
+    description: Message draft management
+  - name: Inbox
+    description: AI-generated inbox summaries
+  - name: Integrations
+    description: Integration objects (GitHub PRs, Linear tickets)
+  - name: Presence
+    description: Online presence and user status
+  - name: ProactiveAlerts
+    description: AI-generated proactive alerts
+  - name: Reactions
+    description: Emoji reactions on messages
+  - name: Typing
+    description: Typing indicators
+  - name: Webhooks
+    description: Inbound webhook endpoints (WorkOS, GitHub, Linear)
+
+paths:
+  # ── Messages ──────────────────────────────────────────────
+
+  "/api/mutation#messages:send":
+    post:
+      operationId: messages_send
+      summary: Send a message to a channel
+      tags: [Messages]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "messages:send"
+              args:
+                channelId: "k17abc123def456"
+                body: "Hello, world!"
+              format: json
+      responses:
+        "200":
+          description: The ID of the created message
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: string
+                        description: Convex document ID of the new message
+
+  "/api/query#messages:listByChannel":
+    post:
+      operationId: messages_listByChannel
+      summary: List messages in a channel (newest first)
+      tags: [Messages]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "messages:listByChannel"
+              args:
+                channelId: "k17abc123def456"
+                limit: 50
+              format: json
+      responses:
+        "200":
+          description: Array of message documents
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Message"
+
+  # ── Channels ──────────────────────────────────────────────
+
+  "/api/mutation#channels:create":
+    post:
+      operationId: channels_create
+      summary: Create a new public channel
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "channels:create"
+              args:
+                name: "design"
+                description: "Design team discussions"
+              format: json
+      responses:
+        "200":
+          description: The ID of the created channel
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: string
+                        description: Convex document ID
+
+  "/api/query#channels:list":
+    post:
+      operationId: channels_list
+      summary: List all non-archived public channels in the workspace
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "channels:list"
+              args: {}
+              format: json
+      responses:
+        "200":
+          description: Array of channels with membership and unread info
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: "#/components/schemas/Channel"
+                            - type: object
+                              properties:
+                                isMember:
+                                  type: boolean
+                                unreadCount:
+                                  type: number
+
+  "/api/query#channels:get":
+    post:
+      operationId: channels_get
+      summary: Get a single channel by ID
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "channels:get"
+              args:
+                channelId: "k17abc123def456"
+              format: json
+      responses:
+        "200":
+          description: The channel document
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        $ref: "#/components/schemas/Channel"
+
+  "/api/mutation#channels:join":
+    post:
+      operationId: channels_join
+      summary: Join a channel
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "channels:join"
+              args:
+                channelId: "k17abc123def456"
+              format: json
+      responses:
+        "200":
+          description: The channel-member document ID
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: string
+                        description: Convex document ID
+
+  "/api/mutation#channels:leave":
+    post:
+      operationId: channels_leave
+      summary: Leave a channel (cannot leave default channels)
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "channels:leave"
+              args:
+                channelId: "k17abc123def456"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/mutation#channels:archive":
+    post:
+      operationId: channels_archive
+      summary: Archive a channel (owner or admin only)
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "channels:archive"
+              args:
+                channelId: "k17abc123def456"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/mutation#channels:unarchive":
+    post:
+      operationId: channels_unarchive
+      summary: Unarchive a channel (owner or admin only)
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "channels:unarchive"
+              args:
+                channelId: "k17abc123def456"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/mutation#channels:invite":
+    post:
+      operationId: channels_invite
+      summary: Invite users to a channel
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "channels:invite"
+              args:
+                channelId: "k17abc123def456"
+                userIds:
+                  - "k17user111"
+                  - "k17user222"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/query#channels:listMembers":
+    post:
+      operationId: channels_listMembers
+      summary: List members of a channel
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "channels:listMembers"
+              args:
+                channelId: "k17abc123def456"
+              format: json
+      responses:
+        "200":
+          description: Array of channel member summaries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                            name:
+                              type: string
+                            avatarUrl:
+                              type: string
+                            role:
+                              type: string
+                              enum: [admin, member]
+                            lastSeenAt:
+                              type: number
+                            presenceStatus:
+                              type: string
+                              enum: [online, away, offline]
+
+  "/api/mutation#channels:update":
+    post:
+      operationId: channels_update
+      summary: Update a channel name or description (owner or admin only)
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "channels:update"
+              args:
+                channelId: "k17abc123def456"
+                name: "new-name"
+                description: "Updated description"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  # ── Users ─────────────────────────────────────────────────
+
+  "/api/query#users:getMe":
+    post:
+      operationId: users_getMe
+      summary: Get the currently authenticated user
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "users:getMe"
+              args: {}
+              format: json
+      responses:
+        "200":
+          description: The current user or null if unauthenticated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        $ref: "#/components/schemas/User"
+
+  "/api/query#users:getByWorkosId":
+    post:
+      operationId: users_getByWorkosId
+      summary: Look up a user by their WorkOS user ID
+      tags: [Users]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "users:getByWorkosId"
+              args:
+                workosUserId: "user_01ABC"
+              format: json
+      responses:
+        "200":
+          description: The user document or null
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        $ref: "#/components/schemas/User"
+
+  "/api/mutation#users:createOrUpdate":
+    post:
+      operationId: users_createOrUpdate
+      summary: Create or update a user record (upsert by WorkOS ID)
+      tags: [Users]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "users:createOrUpdate"
+              args:
+                workosUserId: "user_01ABC"
+                email: "alice@example.com"
+                name: "Alice"
+                avatarUrl: "https://example.com/avatar.png"
+              format: json
+      responses:
+        "200":
+          description: The user document ID
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: string
+                        description: Convex document ID
+
+  # ── Workspaces ────────────────────────────────────────────
+
+  "/api/mutation#workspaces:create":
+    post:
+      operationId: workspaces_create
+      summary: Create a new workspace
+      tags: [Workspaces]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "workspaces:create"
+              args:
+                name: "Acme Corp"
+                slug: "acme"
+              format: json
+      responses:
+        "200":
+          description: The workspace document ID
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: string
+                        description: Convex document ID
+
+  "/api/query#workspaces:getBySlug":
+    post:
+      operationId: workspaces_getBySlug
+      summary: Look up a workspace by slug
+      tags: [Workspaces]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "workspaces:getBySlug"
+              args:
+                slug: "default"
+              format: json
+      responses:
+        "200":
+          description: The workspace document or null
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        $ref: "#/components/schemas/Workspace"
+
+  # ── Conversations ─────────────────────────────────────────
+
+  "/api/mutation#conversations:getOrCreateDM":
+    post:
+      operationId: conversations_getOrCreateDM
+      summary: Get or create a direct-message channel with another user
+      tags: [Conversations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "conversations:getOrCreateDM"
+              args:
+                userId: "k17user111"
+              format: json
+      responses:
+        "200":
+          description: The DM channel ID
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: string
+                        description: Convex document ID
+
+  "/api/mutation#conversations:createGroup":
+    post:
+      operationId: conversations_createGroup
+      summary: Create a group conversation
+      tags: [Conversations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "conversations:createGroup"
+              args:
+                name: "Project Alpha"
+                memberIds:
+                  - "k17user111"
+                  - "k17user222"
+              format: json
+      responses:
+        "200":
+          description: The group channel ID
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: string
+                        description: Convex document ID
+
+  "/api/query#conversations:list":
+    post:
+      operationId: conversations_list
+      summary: List all DM and group conversations for the current user
+      tags: [Conversations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "conversations:list"
+              args: {}
+              format: json
+      responses:
+        "200":
+          description: Array of conversations with participants and last message
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                            name:
+                              type: string
+                            type:
+                              type: string
+                              enum: [dm, group]
+                            participants:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  _id:
+                                    type: string
+                                  name:
+                                    type: string
+                                  avatarUrl:
+                                    type: string
+                            lastMessage:
+                              type: object
+                              nullable: true
+                              properties:
+                                body:
+                                  type: string
+                                authorId:
+                                  type: string
+                                _creationTime:
+                                  type: number
+                            unreadCount:
+                              type: number
+
+  "/api/mutation#conversations:addMembers":
+    post:
+      operationId: conversations_addMembers
+      summary: Add members to a group conversation
+      tags: [Conversations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "conversations:addMembers"
+              args:
+                channelId: "k17abc123def456"
+                userIds:
+                  - "k17user333"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/mutation#conversations:removeMember":
+    post:
+      operationId: conversations_removeMember
+      summary: Remove a member from a group conversation (or leave)
+      tags: [Conversations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "conversations:removeMember"
+              args:
+                channelId: "k17abc123def456"
+                userId: "k17user333"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/query#conversations:getParticipants":
+    post:
+      operationId: conversations_getParticipants
+      summary: Get participants of a conversation
+      tags: [Conversations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "conversations:getParticipants"
+              args:
+                channelId: "k17abc123def456"
+              format: json
+      responses:
+        "200":
+          description: Array of participant summaries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                            name:
+                              type: string
+                            avatarUrl:
+                              type: string
+                            role:
+                              type: string
+                              enum: [admin, member]
+                            lastSeenAt:
+                              type: number
+
+  # ── Drafts ────────────────────────────────────────────────
+
+  "/api/mutation#drafts:save":
+    post:
+      operationId: drafts_save
+      summary: Save or update a message draft for a channel
+      tags: [Drafts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "drafts:save"
+              args:
+                channelId: "k17abc123def456"
+                body: "Draft message text"
+              format: json
+      responses:
+        "200":
+          description: The draft document ID
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: string
+                        description: Convex document ID
+
+  "/api/query#drafts:getForChannel":
+    post:
+      operationId: drafts_getForChannel
+      summary: Get the active draft for a channel
+      tags: [Drafts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "drafts:getForChannel"
+              args:
+                channelId: "k17abc123def456"
+              format: json
+      responses:
+        "200":
+          description: The draft document or null
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        $ref: "#/components/schemas/Draft"
+
+  "/api/query#drafts:getAll":
+    post:
+      operationId: drafts_getAll
+      summary: Get all active drafts for the current user
+      tags: [Drafts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "drafts:getAll"
+              args: {}
+              format: json
+      responses:
+        "200":
+          description: Array of active draft documents
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Draft"
+
+  "/api/mutation#drafts:dismiss":
+    post:
+      operationId: drafts_dismiss
+      summary: Dismiss a draft
+      tags: [Drafts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "drafts:dismiss"
+              args:
+                draftId: "k17draft111"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  # ── Inbox ─────────────────────────────────────────────────
+
+  "/api/query#inbox:getInbox":
+    post:
+      operationId: inbox_getInbox
+      summary: Get the user's inbox summaries
+      tags: [Inbox]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "inbox:getInbox"
+              args: {}
+              format: json
+      responses:
+        "200":
+          description: Array of inbox summaries enriched with channel info
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/InboxSummary"
+
+  "/api/mutation#inbox:markRead":
+    post:
+      operationId: inbox_markRead
+      summary: Mark an inbox summary as read
+      tags: [Inbox]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "inbox:markRead"
+              args:
+                summaryId: "k17summary111"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/mutation#inbox:archive":
+    post:
+      operationId: inbox_archive
+      summary: Archive an inbox summary
+      tags: [Inbox]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "inbox:archive"
+              args:
+                summaryId: "k17summary111"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  # ── Integrations ──────────────────────────────────────────
+
+  "/api/query#integrations:getByExternalId":
+    post:
+      operationId: integrations_getByExternalId
+      summary: Look up an integration object by its external ID
+      tags: [Integrations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "integrations:getByExternalId"
+              args:
+                externalId: "github_pr_acme/repo_42"
+              format: json
+      responses:
+        "200":
+          description: The integration object or null
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        $ref: "#/components/schemas/IntegrationObject"
+
+  "/api/query#integrations:listByWorkspace":
+    post:
+      operationId: integrations_listByWorkspace
+      summary: List integration objects for a workspace, optionally filtered by type
+      tags: [Integrations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "integrations:listByWorkspace"
+              args:
+                workspaceId: "k17ws111"
+                type: "github_pr"
+              format: json
+      responses:
+        "200":
+          description: Array of integration objects
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/IntegrationObject"
+
+  # ── Presence ──────────────────────────────────────────────
+
+  "/api/mutation#presence:heartbeat":
+    post:
+      operationId: presence_heartbeat
+      summary: Send a presence heartbeat (marks user as online)
+      tags: [Presence]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "presence:heartbeat"
+              args: {}
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/mutation#presence:setStatus":
+    post:
+      operationId: presence_setStatus
+      summary: Set a custom status message and emoji
+      tags: [Presence]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "presence:setStatus"
+              args:
+                statusMessage: "In a meeting"
+                statusEmoji: "calendar"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/mutation#presence:clearStatus":
+    post:
+      operationId: presence_clearStatus
+      summary: Clear the custom status message and emoji
+      tags: [Presence]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "presence:clearStatus"
+              args: {}
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/query#presence:getOnlineUsers":
+    post:
+      operationId: presence_getOnlineUsers
+      summary: Get all online users in the workspace
+      tags: [Presence]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "presence:getOnlineUsers"
+              args: {}
+              format: json
+      responses:
+        "200":
+          description: Array of online user summaries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                            name:
+                              type: string
+                            avatarUrl:
+                              type: string
+                            presenceStatus:
+                              type: string
+                              enum: [online, away, offline]
+                            statusMessage:
+                              type: string
+                            statusEmoji:
+                              type: string
+                            lastSeenAt:
+                              type: number
+
+  "/api/query#presence:getUserPresence":
+    post:
+      operationId: presence_getUserPresence
+      summary: Get a single user's presence status
+      tags: [Presence]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "presence:getUserPresence"
+              args:
+                userId: "k17user111"
+              format: json
+      responses:
+        "200":
+          description: User presence info
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: object
+                        properties:
+                          _id:
+                            type: string
+                          name:
+                            type: string
+                          avatarUrl:
+                            type: string
+                          presenceStatus:
+                            type: string
+                            enum: [online, offline]
+                          statusMessage:
+                            type: string
+                          statusEmoji:
+                            type: string
+                          lastSeenAt:
+                            type: number
+
+  # ── Proactive Alerts ──────────────────────────────────────
+
+  "/api/query#proactive:getAlerts":
+    post:
+      operationId: proactive_getAlerts
+      summary: Get proactive alerts for the current user
+      tags: [ProactiveAlerts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "proactive:getAlerts"
+              args:
+                status: "pending"
+              format: json
+      responses:
+        "200":
+          description: Array of proactive alert documents
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ProactiveAlert"
+
+  "/api/mutation#proactive:actOnAlert":
+    post:
+      operationId: proactive_actOnAlert
+      summary: Mark an alert as acted upon
+      tags: [ProactiveAlerts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "proactive:actOnAlert"
+              args:
+                alertId: "k17alert111"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/mutation#proactive:dismissAlert":
+    post:
+      operationId: proactive_dismissAlert
+      summary: Dismiss an alert
+      tags: [ProactiveAlerts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "proactive:dismissAlert"
+              args:
+                alertId: "k17alert111"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  # ── Reactions ─────────────────────────────────────────────
+
+  "/api/mutation#reactions:toggle":
+    post:
+      operationId: reactions_toggle
+      summary: Toggle an emoji reaction on a message
+      tags: [Reactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "reactions:toggle"
+              args:
+                messageId: "k17msg111"
+                emoji: "thumbsup"
+              format: json
+      responses:
+        "200":
+          description: The reaction ID if added, or null if removed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: string
+                        nullable: true
+                        description: Convex document ID or null
+
+  "/api/query#reactions:getByMessage":
+    post:
+      operationId: reactions_getByMessage
+      summary: Get grouped reactions for a single message
+      tags: [Reactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "reactions:getByMessage"
+              args:
+                messageId: "k17msg111"
+              format: json
+      responses:
+        "200":
+          description: Array of grouped reactions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            emoji:
+                              type: string
+                            count:
+                              type: number
+                            users:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  _id:
+                                    type: string
+                                  name:
+                                    type: string
+
+  "/api/query#reactions:getByMessages":
+    post:
+      operationId: reactions_getByMessages
+      summary: Get grouped reactions for multiple messages (batch)
+      tags: [Reactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "reactions:getByMessages"
+              args:
+                messageIds:
+                  - "k17msg111"
+                  - "k17msg222"
+              format: json
+      responses:
+        "200":
+          description: Map of message ID to reaction groups
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: object
+                        additionalProperties:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              emoji:
+                                type: string
+                              count:
+                                type: number
+                              userIds:
+                                type: array
+                                items:
+                                  type: string
+
+  # ── Typing ────────────────────────────────────────────────
+
+  "/api/mutation#typing:setTyping":
+    post:
+      operationId: typing_setTyping
+      summary: Set the typing indicator for the current user in a channel
+      tags: [Typing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "typing:setTyping"
+              args:
+                channelId: "k17abc123def456"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/mutation#typing:clearTyping":
+    post:
+      operationId: typing_clearTyping
+      summary: Clear the typing indicator for the current user in a channel
+      tags: [Typing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexMutationRequest"
+            example:
+              path: "typing:clearTyping"
+              args:
+                channelId: "k17abc123def456"
+              format: json
+      responses:
+        "200":
+          description: Success (void)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvexResponse"
+
+  "/api/query#typing:getTypingUsers":
+    post:
+      operationId: typing_getTypingUsers
+      summary: Get users currently typing in a channel
+      tags: [Typing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvexQueryRequest"
+            example:
+              path: "typing:getTypingUsers"
+              args:
+                channelId: "k17abc123def456"
+              format: json
+      responses:
+        "200":
+          description: Array of typing user summaries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConvexResponse"
+                  - type: object
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                            name:
+                              type: string
+                            avatarUrl:
+                              type: string
+
+  # ── Webhooks (HTTP routes) ────────────────────────────────
+
+  /webhooks/workos:
+    post:
+      operationId: webhooks_workos
+      summary: WorkOS webhook receiver (user sync events)
+      tags: [Webhooks]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: WorkOS webhook event payload
+      responses:
+        "200":
+          description: Acknowledgement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+
+  /webhooks/github:
+    post:
+      operationId: webhooks_github
+      summary: GitHub webhook receiver (PR and review events)
+      tags: [Webhooks]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: GitHub webhook event payload
+      responses:
+        "200":
+          description: Acknowledgement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+
+  /webhooks/linear:
+    post:
+      operationId: webhooks_linear
+      summary: Linear webhook receiver (issue events)
+      tags: [Webhooks]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Linear webhook event payload
+      responses:
+        "200":
+          description: Acknowledgement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
 
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
-      description: JWT issued by WorkOS
+      description: Convex auth token (JWT)
 
   schemas:
-    # ─── Base Convex request/response ───────────────────────────────────────────
+    # ── Convex envelope schemas ─────────────────────────────
+
     ConvexQueryRequest:
       type: object
       required: [path, args, format]
       properties:
         path:
           type: string
-          description: "Function reference in the form `module:functionName`"
-          example: "users:getMe"
+          description: "Convex function path (e.g. 'messages:listByChannel')"
         args:
           type: object
           description: Arguments to pass to the function
@@ -75,8 +1605,7 @@ components:
       properties:
         path:
           type: string
-          description: "Function reference in the form `module:functionName`"
-          example: "channels:create"
+          description: "Convex function path (e.g. 'messages:send')"
         args:
           type: object
           description: Arguments to pass to the function
@@ -92,16 +1621,24 @@ components:
           type: string
           enum: [success, error]
         value:
-          description: Return value of the function (on success)
+          description: The return value of the function (type varies)
         errorMessage:
           type: string
-          description: Error message (on error)
-        errorData:
-          description: Additional error data (on error)
+          description: Present when status is "error"
 
-    # ─── Domain models ───────────────────────────────────────────────────────────
+    # ── Domain model schemas (derived from schema.ts) ───────
+
     User:
       type: object
+      required:
+        - _id
+        - _creationTime
+        - workosUserId
+        - email
+        - name
+        - role
+        - workspaceId
+        - status
       properties:
         _id:
           type: string
@@ -112,31 +1649,41 @@ components:
           type: string
         email:
           type: string
-          format: email
         name:
           type: string
         avatarUrl:
           type: string
-          nullable: true
         role:
           type: string
           enum: [admin, member]
         workspaceId:
           type: string
-          description: ID of the workspace the user belongs to
+          description: Convex document ID
         status:
           type: string
           enum: [active, invited, deactivated]
         lastSeenAt:
           type: number
-          nullable: true
-          description: Unix epoch milliseconds
+        presenceStatus:
+          type: string
+          enum: [online, away, offline]
+        statusMessage:
+          type: string
+        statusEmoji:
+          type: string
 
     Workspace:
       type: object
+      required:
+        - _id
+        - _creationTime
+        - name
+        - slug
+        - createdBy
       properties:
         _id:
           type: string
+          description: Convex document ID
         _creationTime:
           type: number
         name:
@@ -145,67 +1692,57 @@ components:
           type: string
         workosOrgId:
           type: string
-          nullable: true
         createdBy:
           type: string
-          description: User ID of the creator
+          description: Convex document ID
         integrations:
           type: object
-          nullable: true
           additionalProperties: true
 
     Channel:
       type: object
+      required:
+        - _id
+        - _creationTime
+        - name
+        - workspaceId
+        - createdBy
+        - isDefault
+        - isArchived
       properties:
         _id:
           type: string
+          description: Convex document ID
         _creationTime:
           type: number
         name:
           type: string
         description:
           type: string
-          nullable: true
         workspaceId:
           type: string
+          description: Convex document ID
         createdBy:
           type: string
+          description: Convex document ID
         isDefault:
           type: boolean
         isArchived:
           type: boolean
-
-    ChannelWithMeta:
-      allOf:
-        - $ref: "#/components/schemas/Channel"
-        - type: object
-          properties:
-            isMember:
-              type: boolean
-            unreadCount:
-              type: integer
-
-    ChannelMember:
-      type: object
-      properties:
-        _id:
+        type:
           type: string
-          description: Convex document ID
-        _creationTime:
-          type: number
-        channelId:
-          type: string
-          description: Convex document ID
-        userId:
-          type: string
-          description: Convex document ID
-        lastReadAt:
-          type: number
-          nullable: true
-          description: Unix epoch milliseconds
+          enum: [public, dm, group]
 
     Message:
       type: object
+      required:
+        - _id
+        - _creationTime
+        - channelId
+        - authorId
+        - body
+        - type
+        - isEdited
       properties:
         _id:
           type: string
@@ -225,39 +1762,159 @@ components:
           enum: [user, bot, system, integration]
         integrationObjectId:
           type: string
-          nullable: true
-          description: Convex document ID referencing integrationObjects
+          description: Convex document ID
         citations:
           type: array
-          nullable: true
           items:
-            $ref: "#/components/schemas/Citation"
+            type: object
+            required: [text]
+            properties:
+              text:
+                type: string
+              sourceUrl:
+                type: string
+              sourceTitle:
+                type: string
         mentions:
           type: array
-          nullable: true
           items:
             type: string
         graphitiEpisodeId:
           type: string
-          nullable: true
         isEdited:
           type: boolean
 
-    Citation:
+    Draft:
       type: object
-      required: [text]
+      required:
+        - _id
+        - _creationTime
+        - userId
+        - channelId
+        - body
+        - contextSnapshot
+        - suggestedCompletion
+        - status
+        - createdAt
+        - updatedAt
       properties:
-        text:
+        _id:
           type: string
-        sourceUrl:
+          description: Convex document ID
+        _creationTime:
+          type: number
+        userId:
           type: string
-          nullable: true
-        sourceTitle:
+          description: Convex document ID
+        channelId:
           type: string
-          nullable: true
+          description: Convex document ID
+        body:
+          type: string
+        replyToMessageId:
+          type: string
+          description: Convex document ID
+        contextSnapshot:
+          type: string
+        suggestedCompletion:
+          type: string
+        status:
+          type: string
+          enum: [active, dismissed, sent]
+        createdAt:
+          type: number
+        updatedAt:
+          type: number
+
+    InboxSummary:
+      type: object
+      required:
+        - _id
+        - _creationTime
+        - userId
+        - channelId
+        - bullets
+        - messageCount
+        - periodStart
+        - periodEnd
+        - isRead
+        - isArchived
+      properties:
+        _id:
+          type: string
+          description: Convex document ID
+        _creationTime:
+          type: number
+        userId:
+          type: string
+          description: Convex document ID
+        channelId:
+          type: string
+          description: Convex document ID
+        bullets:
+          type: array
+          items:
+            type: object
+            required: [text, priority, relatedMessageIds]
+            properties:
+              text:
+                type: string
+              priority:
+                type: string
+                enum: [high, medium, low]
+              relatedMessageIds:
+                type: array
+                items:
+                  type: string
+                  description: Convex document ID
+        messageCount:
+          type: number
+        periodStart:
+          type: number
+        periodEnd:
+          type: number
+        isRead:
+          type: boolean
+        isArchived:
+          type: boolean
+        actionItems:
+          type: array
+          items:
+            type: object
+            required: [text]
+            properties:
+              text:
+                type: string
+              assignee:
+                type: string
+              relatedIntegrationObjectId:
+                type: string
+                description: Convex document ID
+        channel:
+          type: object
+          description: Enriched channel info (added by getInbox)
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+            description:
+              type: string
 
     IntegrationObject:
       type: object
+      required:
+        - _id
+        - _creationTime
+        - workspaceId
+        - type
+        - externalId
+        - title
+        - status
+        - url
+        - author
+        - metadata
+        - lastSyncedAt
       properties:
         _id:
           type: string
@@ -285,112 +1942,25 @@ components:
           additionalProperties: true
         lastSyncedAt:
           type: number
-          description: Unix epoch milliseconds
         graphitiEpisodeId:
           type: string
-          nullable: true
-
-    InboxBullet:
-      type: object
-      required: [text, priority, relatedMessageIds]
-      properties:
-        text:
-          type: string
-        priority:
-          type: string
-          enum: [high, medium, low]
-        relatedMessageIds:
-          type: array
-          items:
-            type: string
-            description: Convex document ID
-
-    ActionItem:
-      type: object
-      required: [text]
-      properties:
-        text:
-          type: string
-        assignee:
-          type: string
-          nullable: true
-        relatedIntegrationObjectId:
-          type: string
-          nullable: true
-          description: Convex document ID
-
-    InboxSummary:
-      type: object
-      properties:
-        _id:
-          type: string
-          description: Convex document ID
-        _creationTime:
-          type: number
-        userId:
-          type: string
-          description: Convex document ID
-        channelId:
-          type: string
-          description: Convex document ID
-        bullets:
-          type: array
-          items:
-            $ref: "#/components/schemas/InboxBullet"
-        messageCount:
-          type: number
-        periodStart:
-          type: number
-          description: Unix epoch milliseconds
-        periodEnd:
-          type: number
-          description: Unix epoch milliseconds
-        isRead:
-          type: boolean
-        isArchived:
-          type: boolean
-        actionItems:
-          type: array
-          nullable: true
-          items:
-            $ref: "#/components/schemas/ActionItem"
-
-    Draft:
-      type: object
-      properties:
-        _id:
-          type: string
-          description: Convex document ID
-        _creationTime:
-          type: number
-        userId:
-          type: string
-          description: Convex document ID
-        channelId:
-          type: string
-          description: Convex document ID
-        body:
-          type: string
-        replyToMessageId:
-          type: string
-          nullable: true
-          description: Convex document ID
-        contextSnapshot:
-          type: string
-        suggestedCompletion:
-          type: string
-        status:
-          type: string
-          enum: [active, dismissed, sent]
-        createdAt:
-          type: number
-          description: Unix epoch milliseconds
-        updatedAt:
-          type: number
-          description: Unix epoch milliseconds
 
     ProactiveAlert:
       type: object
+      required:
+        - _id
+        - _creationTime
+        - userId
+        - workspaceId
+        - type
+        - channelId
+        - title
+        - body
+        - suggestedAction
+        - priority
+        - status
+        - expiresAt
+        - createdAt
       properties:
         _id:
           type: string
@@ -415,11 +1985,9 @@ components:
           type: string
         sourceMessageId:
           type: string
-          nullable: true
           description: Convex document ID
         sourceIntegrationObjectId:
           type: string
-          nullable: true
           description: Convex document ID
         suggestedAction:
           type: string
@@ -431,371 +1999,5 @@ components:
           enum: [pending, acted, dismissed, expired]
         expiresAt:
           type: number
-          description: Unix epoch milliseconds
         createdAt:
           type: number
-          description: Unix epoch milliseconds
-
-    Session:
-      type: object
-      properties:
-        _id:
-          type: string
-          description: Convex document ID
-        _creationTime:
-          type: number
-        userId:
-          type: string
-          description: Convex document ID
-        workosSessionId:
-          type: string
-        expiresAt:
-          type: number
-          description: Unix epoch milliseconds
-
-    WorkOSWebhookBody:
-      type: object
-      required: [event, data]
-      properties:
-        event:
-          type: string
-          description: WorkOS event type
-          example: user.created
-        data:
-          type: object
-          description: Event payload (shape depends on event type)
-
-paths:
-  # ─── HTTP endpoints (true REST) ─────────────────────────────────────────────
-  /webhooks/workos:
-    post:
-      tags: [Webhooks]
-      summary: WorkOS webhook receiver
-      description: |
-        Receives events from WorkOS (user lifecycle, directory sync, etc.).
-        Currently handles: `user.created`, `user.updated`, `dsync.user.created`,
-        `dsync.user.deleted`.
-      security: []   # no JWT – webhook uses its own secret (TODO)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WorkOSWebhookBody"
-            examples:
-              userCreated:
-                summary: user.created event
-                value:
-                  event: user.created
-                  data:
-                    email: alice@example.com
-                    first_name: Alice
-                    last_name: Smith
-                    profile_picture_url: https://cdn.example.com/alice.jpg
-      responses:
-        "200":
-          description: Webhook received
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  received:
-                    type: boolean
-                    example: true
-
-  # ─── Users ───────────────────────────────────────────────────────────────────
-  /api/query#users:getMe:
-    post:
-      tags: [Users]
-      summary: "users:getMe — Get current authenticated user"
-      description: Returns the user record for the authenticated session. Returns `null` if not authenticated.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConvexQueryRequest"
-            example:
-              path: "users:getMe"
-              args: {}
-              format: json
-      responses:
-        "200":
-          description: User or null
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ConvexResponse"
-                  - type: object
-                    properties:
-                      value:
-                        oneOf:
-                          - $ref: "#/components/schemas/User"
-                          - type: "null"
-
-  /api/query#users:getByWorkosId:
-    post:
-      tags: [Users]
-      summary: "users:getByWorkosId — Look up user by WorkOS ID"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConvexQueryRequest"
-            example:
-              path: "users:getByWorkosId"
-              args:
-                workosUserId: "user_01H..."
-              format: json
-      responses:
-        "200":
-          description: User or null
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ConvexResponse"
-                  - type: object
-                    properties:
-                      value:
-                        oneOf:
-                          - $ref: "#/components/schemas/User"
-                          - type: "null"
-
-  /api/mutation#users:createOrUpdate:
-    post:
-      tags: [Users]
-      summary: "users:createOrUpdate — Upsert a user from WorkOS data"
-      description: |
-        Creates a new user or updates an existing one, matched by `workosUserId`.
-        New users are automatically added to the default workspace and its default channels.
-      security: []  # called from server-side / webhooks
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConvexMutationRequest"
-            example:
-              path: "users:createOrUpdate"
-              args:
-                workosUserId: "user_01H..."
-                email: alice@example.com
-                name: Alice Smith
-                avatarUrl: https://cdn.example.com/alice.jpg
-              format: json
-      responses:
-        "200":
-          description: ID of the created/updated user document
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ConvexResponse"
-                  - type: object
-                    properties:
-                      value:
-                        type: string
-                        description: User document ID
-
-  # ─── Workspaces ──────────────────────────────────────────────────────────────
-  /api/mutation#workspaces:create:
-    post:
-      tags: [Workspaces]
-      summary: "workspaces:create — Create a new workspace"
-      description: Requires authentication. Slug must be globally unique.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConvexMutationRequest"
-            example:
-              path: "workspaces:create"
-              args:
-                name: Acme Corp
-                slug: acme-corp
-              format: json
-      responses:
-        "200":
-          description: New workspace document ID
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ConvexResponse"
-                  - type: object
-                    properties:
-                      value:
-                        type: string
-                        description: Workspace document ID
-        "400":
-          description: Slug already taken
-
-  /api/query#workspaces:getBySlug:
-    post:
-      tags: [Workspaces]
-      summary: "workspaces:getBySlug — Get workspace by slug"
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConvexQueryRequest"
-            example:
-              path: "workspaces:getBySlug"
-              args:
-                slug: acme-corp
-              format: json
-      responses:
-        "200":
-          description: Workspace or null
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ConvexResponse"
-                  - type: object
-                    properties:
-                      value:
-                        oneOf:
-                          - $ref: "#/components/schemas/Workspace"
-                          - type: "null"
-
-  # ─── Channels ────────────────────────────────────────────────────────────────
-  /api/query#channels:list:
-    post:
-      tags: [Channels]
-      summary: "channels:list — List channels in the authenticated user's workspace"
-      description: Returns non-archived channels with membership status and unread count.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConvexQueryRequest"
-            example:
-              path: "channels:list"
-              args: {}
-              format: json
-      responses:
-        "200":
-          description: Array of channels with metadata
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ConvexResponse"
-                  - type: object
-                    properties:
-                      value:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/ChannelWithMeta"
-
-  /api/query#channels:get:
-    post:
-      tags: [Channels]
-      summary: "channels:get — Get a channel by ID"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConvexQueryRequest"
-            example:
-              path: "channels:get"
-              args:
-                channelId: "jd7abc123..."
-              format: json
-      responses:
-        "200":
-          description: Channel document or null
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ConvexResponse"
-                  - type: object
-                    properties:
-                      value:
-                        oneOf:
-                          - $ref: "#/components/schemas/Channel"
-                          - type: "null"
-
-  /api/mutation#channels:create:
-    post:
-      tags: [Channels]
-      summary: "channels:create — Create a new channel"
-      description: Name must be unique within the workspace. Creator is auto-joined.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConvexMutationRequest"
-            example:
-              path: "channels:create"
-              args:
-                name: general
-                description: General discussion
-              format: json
-      responses:
-        "200":
-          description: New channel document ID
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ConvexResponse"
-                  - type: object
-                    properties:
-                      value:
-                        type: string
-                        description: Channel document ID
-        "400":
-          description: Channel name already taken
-
-  /api/mutation#channels:join:
-    post:
-      tags: [Channels]
-      summary: "channels:join — Join a channel"
-      description: Idempotent — returns existing membership ID if already a member.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConvexMutationRequest"
-            example:
-              path: "channels:join"
-              args:
-                channelId: "jd7abc123..."
-              format: json
-      responses:
-        "200":
-          description: Channel member document ID
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ConvexResponse"
-                  - type: object
-                    properties:
-                      value:
-                        type: string
-                        description: ChannelMember document ID
-
-tags:
-  - name: Webhooks
-    description: Inbound webhook endpoints (server-to-server, no user auth)
-  - name: Users
-    description: User management
-  - name: Workspaces
-    description: Workspace management
-  - name: Channels
-    description: Channel operations
