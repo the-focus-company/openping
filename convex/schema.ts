@@ -59,24 +59,6 @@ export default defineSchema({
     workosOrgId: v.optional(v.string()),
     createdBy: v.optional(v.id("users")),
     integrations: v.optional(v.any()),
-    integrationConfig: v.optional(
-      v.object({
-        github: v.optional(
-          v.object({
-            connected: v.boolean(),
-            accountName: v.optional(v.string()),
-            connectedAt: v.optional(v.number()),
-          }),
-        ),
-        linear: v.optional(
-          v.object({
-            connected: v.boolean(),
-            orgName: v.optional(v.string()),
-            connectedAt: v.optional(v.number()),
-          }),
-        ),
-      }),
-    ),
     industry: v.optional(v.string()),
     companySize: v.optional(v.string()),
     companyDescription: v.optional(v.string()),
@@ -320,18 +302,49 @@ export default defineSchema({
     .index("by_message", ["messageId"])
     .index("by_message_user", ["messageId", "userId"]),
 
-  integrationRouting: defineTable({
-    channelId: v.id("channels"),
+  emailAccounts: defineTable({
+    userId: v.id("users"),
     workspaceId: v.id("workspaces"),
-    integrationType: v.union(v.literal("github"), v.literal("linear")),
-    /** For GitHub: "owner/repo"; for Linear: project ID or slug */
-    externalTarget: v.string(),
-    /** Human-readable label shown in the UI */
-    externalTargetLabel: v.optional(v.string()),
-    createdBy: v.id("users"),
+    provider: v.literal("gmail"),
+    email: v.string(),
+    accessToken: v.string(),
+    refreshToken: v.string(),
+    tokenExpiresAt: v.number(),
+    syncCursor: v.optional(v.string()),
+    status: v.union(
+      v.literal("active"),
+      v.literal("disconnected"),
+      v.literal("error"),
+    ),
+    lastSyncedAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
   })
-    .index("by_channel", ["channelId"])
+    .index("by_user", ["userId"])
     .index("by_workspace", ["workspaceId"])
-    .index("by_workspace_type", ["workspaceId", "integrationType"])
-    .index("by_channel_type_target", ["channelId", "integrationType", "externalTarget"]),
+    .index("by_status", ["status"])
+    .index("by_user_email", ["userId", "email"]),
+
+  emails: defineTable({
+    emailAccountId: v.id("emailAccounts"),
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    gmailId: v.string(),
+    threadId: v.string(),
+    subject: v.string(),
+    from: v.string(),
+    to: v.array(v.string()),
+    cc: v.optional(v.array(v.string())),
+    bcc: v.optional(v.array(v.string())),
+    body: v.string(),
+    snippet: v.optional(v.string()),
+    receivedAt: v.number(),
+    isRead: v.boolean(),
+    labels: v.array(v.string()),
+  })
+    .index("by_email_account", ["emailAccountId"])
+    .index("by_user", ["userId"])
+    .index("by_workspace", ["workspaceId"])
+    .index("by_gmail_id", ["gmailId"])
+    .index("by_thread", ["emailAccountId", "threadId"])
+    .index("by_received", ["emailAccountId", "receivedAt"]),
 });
