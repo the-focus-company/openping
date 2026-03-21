@@ -18,7 +18,11 @@ import {
   User,
   Building2,
   MessageSquare,
-
+  Check,
+  X,
+  UserPlus,
+  Clock,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -46,6 +50,14 @@ const PAGES = [
   { label: "Knowledge Graph", href: "/settings/knowledge-graph",  icon: GitBranch },
   { label: "Analytics",       href: "/settings/analytics",        icon: BarChart2 },
   { label: "Backoffice",      href: "/admin",                     icon: Shield },
+];
+
+const DECISIONS = [
+  { label: "Go to Inbox Decisions", href: "/inbox", icon: LayoutDashboard },
+  { label: "Approve Decision",      href: "/inbox", icon: Check,           shortcut: "Y" },
+  { label: "Reject Decision",       href: "/inbox", icon: X,               shortcut: "N" },
+  { label: "Delegate Decision",     href: "/inbox", icon: UserPlus,        shortcut: "⇧D" },
+  { label: "Snooze Decision",       href: "/inbox", icon: Clock,           shortcut: "S" },
 ];
 
 export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandPaletteProps) {
@@ -144,6 +156,16 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
             })}
           </CommandGroup>
         )}
+
+        <CommandGroup heading="Decisions">
+          {DECISIONS.map(({ label, href, icon: Icon, shortcut }) => (
+            <CommandItem key={label} onSelect={() => navigate(href)}>
+              <Icon className="h-3.5 w-3.5 text-white/40" />
+              <span>{label}</span>
+              {shortcut && <CommandShortcut>{shortcut}</CommandShortcut>}
+            </CommandItem>
+          ))}
+        </CommandGroup>
 
         <CommandGroup heading="Commands">
           <CommandItem
