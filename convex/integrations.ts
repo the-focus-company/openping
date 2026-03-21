@@ -39,6 +39,31 @@ function buildIntegrationMessageBody(
   return parts.filter(Boolean).join("\n");
 }
 
+/**
+ * Find a workspace whose `integrations.linearOrgId` matches the given Linear
+ * organization ID.  Falls back to the first workspace in the DB when no match
+ * is found so that single-workspace deployments work out of the box.
+ */
+export const findWorkspaceByLinearOrgId = internalQuery({
+  args: { linearOrgId: v.string() },
+  handler: async (ctx, args) => {
+    // Scan all workspaces – the table is small (one per tenant).
+    const workspaces = await ctx.db.query("workspaces").collect();
+
+    for (const ws of workspaces) {
+      const integrations = ws.integrations as
+        | { linearOrgId?: string }
+        | undefined;
+      if (integrations?.linearOrgId === args.linearOrgId) {
+        return ws;
+      }
+    }
+
+    // Fallback: return the first workspace (single-workspace deployments).
+    return workspaces[0] ?? null;
+  },
+});
+
 export const upsert = internalMutation({
   args: {
     workspaceId: v.id("workspaces"),
