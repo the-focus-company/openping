@@ -294,6 +294,18 @@ export const listMembers = query({
   },
 });
 
+export const memberCount = query({
+  args: { channelId: v.id("channels") },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx);
+    const members = await ctx.db
+      .query("channelMembers")
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+    return members.length;
+  },
+});
+
 export const update = mutation({
   args: {
     channelId: v.id("channels"),
