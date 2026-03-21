@@ -1,215 +1,143 @@
-/** Core types for the Knowledge Engine service. */
+/**
+ * Types for the Knowledge Engine service.
+ */
 
-// ---- Query types ----
+// ---------------------------------------------------------------------------
+// Integration ingestion (8LI-73 + 8LI-74)
+// ---------------------------------------------------------------------------
 
-export interface QueryRequest {
-  /** The search query text. */
-  query: string;
-  /** Optional group/channel IDs to scope the search. */
-  group_ids?: string[];
-  /** Maximum number of facts to return. */
-  max_facts?: number;
-  /** Conversation ID for follow-up question context. */
-  conversation_id?: string;
-  /** ISO date string — only return facts valid after this date. */
-  date_from?: string;
-  /** ISO date string — only return facts valid before this date. */
-  date_to?: string;
-  /** Filter results by specific channel ID. */
-  channel_id?: string;
-  /** Whether to include relevance scores in the response. */
-  include_scores?: boolean;
-}
+export type IntegrationType = "github_pr" | "linear_ticket" | "message";
 
-export interface Citation {
-  text: string;
-  source_title?: string;
-  source_url?: string;
-  relevance_score?: number;
-}
-
-export interface Fact {
-  uuid: string;
-  name: string;
-  fact: string;
-  valid_at: string | null;
-  invalid_at: string | null;
-  relevance_score?: number;
-}
-
-export interface QueryResponse {
-  facts: Fact[];
-  citations: Citation[];
-  conversation_id: string;
-}
-
-// ---- Conversation context ----
-
-export interface ConversationTurn {
-  query: string;
-  fact_ids: string[];
-  timestamp: string;
-}
-
-export interface ConversationContext {
-  id: string;
-  turns: ConversationTurn[];
-  created_at: string;
-  last_activity: string;
-}
-
-// ---- Bulk ingestion ----
-
-export interface BulkIngestItem {
-  content: string;
-  role_type: "user" | "assistant" | "system";
-  role: string;
-  timestamp: string;
-  source_description: string;
-  uuid?: string;
-  name?: string;
-  group_id?: string;
-}
-
-export interface BulkIngestRequest {
-  items: BulkIngestItem[];
-  group_id?: string;
-}
-
-export type BulkJobStatus = "pending" | "processing" | "completed" | "failed";
-
-export interface BulkJobProgress {
-  job_id: string;
-  status: BulkJobStatus;
-  total: number;
-  processed: number;
-  failed: number;
-  errors: Array<{ index: number; error: string }>;
-  started_at: string;
-  completed_at?: string;
-}
-
-// ---- GitHub history ingestion ----
-
-export interface GitHubCommit {
-  sha: string;
-  message: string;
-  author_name: string;
-  author_email: string;
-  timestamp: string;
-  url: string;
+/** Metadata attached to a GitHub PR. */
+export interface GitHubPRMetadata {
   repo: string;
-}
-
-export interface GitHubPR {
-  number: number;
-  title: string;
-  body: string;
-  author: string;
-  author_email?: string;
-  state: string;
-  created_at: string;
-  merged_at?: string;
-  closed_at?: string;
-  url: string;
-  repo: string;
+  prNumber: number;
+  baseBranch: string;
+  headBranch: string;
+  reviewers?: string[];
   labels?: string[];
+  additions?: number;
+  deletions?: number;
+  filesChanged?: number;
+  comments?: Array<{ author: string; body: string; createdAt: string }>;
 }
 
-export interface GitHubIssue {
-  number: number;
-  title: string;
-  body: string;
-  author: string;
-  author_email?: string;
-  state: string;
-  created_at: string;
-  closed_at?: string;
-  url: string;
-  repo: string;
-  labels?: string[];
-}
-
-export interface GitHubReviewComment {
-  id: number;
-  body: string;
-  author: string;
-  author_email?: string;
-  pr_number: number;
-  created_at: string;
-  url: string;
-  repo: string;
-  path?: string;
-}
-
-export interface GitHubHistoryRequest {
-  commits?: GitHubCommit[];
-  pull_requests?: GitHubPR[];
-  issues?: GitHubIssue[];
-  review_comments?: GitHubReviewComment[];
-  group_id?: string;
-}
-
-// ---- Linear history ingestion ----
-
-export interface LinearIssue {
-  id: string;
+/** Metadata attached to a Linear ticket. */
+export interface LinearTicketMetadata {
+  teamKey: string;
   identifier: string;
-  title: string;
-  description?: string;
-  assignee_name?: string;
-  assignee_email?: string;
-  creator_name?: string;
-  creator_email?: string;
-  state: string;
   priority: number;
-  created_at: string;
-  completed_at?: string;
-  cancelled_at?: string;
-  url: string;
-  team: string;
+  assignee?: string;
   labels?: string[];
+  estimate?: number;
+  project?: string;
   cycle?: string;
+  comments?: Array<{ author: string; body: string; createdAt: string }>;
 }
 
-export interface LinearComment {
-  id: string;
+/** Payload for POST /ingest/integration */
+export interface IngestIntegrationPayload {
+  workspaceId: string;
+  type: IntegrationType;
+  externalId: string;
+  title: string;
+  status: string;
+  url: string;
+  author: string;
+  body?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/** Payload for POST /ingest/batch — a burst of messages / items. */
+export interface IngestBatchPayload {
+  workspaceId: string;
+  groupId: string; // e.g. channelId or conversationId
+  items: IngestBatchItem[];
+}
+
+export interface IngestBatchItem {
+  type: IntegrationType;
+  externalId: string;
+  title: string;
   body: string;
-  author_name: string;
-  author_email?: string;
-  issue_id: string;
-  issue_identifier: string;
-  created_at: string;
+  author: string;
+  timestamp: string; // ISO-8601
+  metadata?: Record<string, unknown>;
 }
 
-export interface LinearHistoryRequest {
-  issues?: LinearIssue[];
-  comments?: LinearComment[];
-  group_id?: string;
-}
+// ---------------------------------------------------------------------------
+// Entity extraction (8LI-74)
+// ---------------------------------------------------------------------------
 
-// ---- Entity mapping ----
+export type EntityType = "Person" | "Topic" | "Decision" | "Technology";
 
-export interface PersonEntity {
+export interface ExtractedEntity {
   name: string;
-  emails: string[];
-  source: "github" | "linear" | "ping";
-  external_id?: string;
-}
-
-export interface EntityMapping {
-  canonical_name: string;
-  aliases: string[];
-  emails: string[];
-  sources: Array<{ source: string; external_id?: string }>;
+  type: EntityType;
   confidence: number;
 }
 
-// ---- Performance ----
+// ---------------------------------------------------------------------------
+// Query & citations (8LI-73 + 8LI-74)
+// ---------------------------------------------------------------------------
 
-export interface PerformanceResult {
+/** Payload for POST /query */
+export interface QueryPayload {
   query: string;
-  latency_ms: number;
-  episode_count: number;
-  fact_count: number;
+  workspaceId?: string;
+  groupId?: string;
+  limit?: number;
+  entityTypes?: EntityType[];
+}
+
+/** A single search result with citation info. */
+export interface SearchResult {
+  /** Content snippet. */
+  content: string;
+  /** Relevance score 0-1. */
+  score: number;
+  /** Source info for citations. */
+  source: {
+    type: IntegrationType;
+    externalId: string;
+    title: string;
+    url?: string;
+    author?: string;
+    timestamp?: string;
+  };
+  /** Entities extracted from this result. */
+  entities: ExtractedEntity[];
+}
+
+/** Response from POST /query */
+export interface QueryResponse {
+  results: SearchResult[];
+  /** Entities aggregated across all results. */
+  entities: ExtractedEntity[];
+  /** Time taken in ms. */
+  durationMs: number;
+}
+
+// ---------------------------------------------------------------------------
+// Graphiti upstream API shapes (the zepai/graphiti service)
+// ---------------------------------------------------------------------------
+
+export interface GraphitiEpisode {
+  uuid: string;
+  name: string;
+  content: string;
+  source: string;
+  source_description: string;
+  created_at: string;
+}
+
+export interface GraphitiSearchResult {
+  uuid: string;
+  content: string;
+  fact: string;
+  name?: string;
+  created_at: string;
+  source_description?: string;
+  score?: number;
+  episodes?: string[];
 }
