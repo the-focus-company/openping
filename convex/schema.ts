@@ -306,19 +306,12 @@ export default defineSchema({
     workspaceId: v.id("workspaces"),
     name: v.string(),
     description: v.optional(v.string()),
-    status: v.union(
-      v.literal("active"),
-      v.literal("inactive"),
-      v.literal("revoked"),
-    ),
-    createdBy: v.id("users"),
-    color: v.optional(v.string()),
-    systemPrompt: v.optional(v.string()),
     userId: v.id("users"),
-    lastActiveAt: v.optional(v.number()),
+    status: v.union(v.literal("active"), v.literal("disabled")),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
   })
     .index("by_workspace", ["workspaceId"])
-    .index("by_workspace_status", ["workspaceId", "status"])
     .index("by_user", ["userId"]),
 
   agentApiTokens: defineTable({
@@ -326,10 +319,10 @@ export default defineSchema({
     workspaceId: v.id("workspaces"),
     tokenHash: v.string(),
     tokenPrefix: v.string(),
-    label: v.string(),
+    name: v.string(),
     status: v.union(v.literal("active"), v.literal("revoked")),
-    createdBy: v.id("users"),
     lastUsedAt: v.optional(v.number()),
+    createdAt: v.number(),
     expiresAt: v.optional(v.number()),
   })
     .index("by_agent", ["agentId"])

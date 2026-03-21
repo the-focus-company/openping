@@ -1,35 +1,59 @@
-import { internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { internalQuery, internalMutation } from "./_generated/server";
 
-// GET /api/agent/v1/me
-export const getAgentSelf = internalQuery({
-  args: { agentId: v.id("agents") },
-  handler: async (ctx, args) => {
-    const agent = await ctx.db.get(args.agentId);
-    if (!agent) return null;
-    const workspace = await ctx.db.get(agent.workspaceId);
+/**
+ * Internal query: Get agent info by token hash.
+ */
+export const getAgentByTokenHash = internalQuery({
+  args: { tokenHash: v.string() },
+  handler: async (ctx, { tokenHash }) => {
+    const tokenRecord = await ctx.db
+      .query("agentApiTokens")
+      .withIndex("by_token_hash", (q) => q.eq("tokenHash", tokenHash))
+      .unique();
+
+    if (!tokenRecord || tokenRecord.status !== "active") {
+      return null;
+    }
+
+    if (tokenRecord.expiresAt && tokenRecord.expiresAt < Date.now()) {
+      return null;
+    }
+
+    const agent = await ctx.db.get(tokenRecord.agentId);
+    if (!agent || agent.status !== "active") {
+      return null;
+    }
+
+    const user = await ctx.db.get(agent.userId);
+    if (!user) {
+      return null;
+    }
+
     return {
-      id: agent._id,
-      name: agent.name,
-      description: agent.description,
-      status: agent.status,
-      workspaceName: workspace?.name,
+      agent: { _id: agent._id, name: agent.name, description: agent.description },
+      user: { _id: user._id, name: user.name, email: user.email },
+      workspaceId: agent.workspaceId,
+      tokenId: tokenRecord._id,
     };
   },
 });
 
-// GET /api/agent/v1/channels
-export const listAgentChannels = internalQuery({
+/**
+ * Internal query: List channels the agent's workspace has access to.
+ */
+export const listChannelsForWorkspace = internalQuery({
   args: { workspaceId: v.id("workspaces") },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { workspaceId }) => {
     const channels = await ctx.db
       .query("channels")
-      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
-      .take(100);
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+
     return channels
-      .filter((c) => !c.isArchived && c.type !== "dm")
+      .filter((c) => !c.isArchived)
       .map((c) => ({
-        id: c._id,
+        _id: c._id,
         name: c.name,
         description: c.description,
         type: c.type,
@@ -37,39 +61,48 @@ export const listAgentChannels = internalQuery({
   },
 });
 
-// GET /api/agent/v1/channel-messages
+/**
+ * Internal query: Read messages from a channel.
+ */
 export const readChannelMessages = internalQuery({
   args: {
     channelId: v.id("channels"),
     workspaceId: v.id("workspaces"),
-    limit: v.optional(v.number()),
+    limit: v.number(),
   },
-  handler: async (ctx, args) => {
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel || channel.workspaceId !== args.workspaceId) return null;
+  handler: async (ctx, { channelId, workspaceId, limit }) => {
+    const channel = await ctx.db.get(channelId);
+    if (!channel || channel.workspaceId !== workspaceId) {
+      throw new Error("Channel not found or access denied");
+    }
+
     const messages = await ctx.db
       .query("messages")
-      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .withIndex("by_channel", (q) => q.eq("channelId", channelId))
       .order("desc")
-      .take(args.limit ?? 50);
-    const result = [];
-    for (const msg of messages) {
-      const author = await ctx.db.get(msg.authorId);
-      result.push({
-        id: msg._id,
-        body: msg.body,
-        type: msg.type,
-        authorName: author?.name ?? "Unknown",
-        authorId: msg.authorId,
-        createdAt: msg._creationTime,
-        isEdited: msg.isEdited,
-      });
-    }
-    return result;
+      .take(limit);
+
+    const messagesWithAuthors = await Promise.all(
+      messages.map(async (msg) => {
+        const author = await ctx.db.get(msg.authorId);
+        return {
+          _id: msg._id,
+          body: msg.body,
+          type: msg.type,
+          authorName: author?.name ?? "Unknown",
+          authorId: msg.authorId,
+          _creationTime: msg._creationTime,
+        };
+      }),
+    );
+
+    return messagesWithAuthors.reverse();
   },
 });
 
-// POST /api/agent/v1/channel-messages
+/**
+ * Internal mutation: Send a message to a channel as an agent.
+ */
 export const sendChannelMessage = internalMutation({
   args: {
     channelId: v.id("channels"),
@@ -77,109 +110,155 @@ export const sendChannelMessage = internalMutation({
     authorId: v.id("users"),
     body: v.string(),
   },
-  handler: async (ctx, args) => {
-    const channel = await ctx.db.get(args.channelId);
-    if (!channel || channel.workspaceId !== args.workspaceId) {
-      throw new Error("Channel not found or not in workspace");
+  handler: async (ctx, { channelId, workspaceId, authorId, body }) => {
+    const channel = await ctx.db.get(channelId);
+    if (!channel || channel.workspaceId !== workspaceId) {
+      throw new Error("Channel not found or access denied");
     }
+
     const messageId = await ctx.db.insert("messages", {
-      channelId: args.channelId,
-      authorId: args.authorId,
-      body: args.body,
+      channelId,
+      authorId,
+      body,
       type: "bot",
       isEdited: false,
     });
+
     return { messageId };
   },
 });
 
-// GET /api/agent/v1/conversations
-export const listAgentConversations = internalQuery({
+/**
+ * Internal query: List DM conversations for an agent's workspace.
+ */
+export const listConversationsForUser = internalQuery({
   args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { userId }) => {
     const memberships = await ctx.db
       .query("directConversationMembers")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .take(50);
-    const conversations = [];
-    for (const m of memberships) {
-      const conv = await ctx.db.get(m.conversationId);
-      if (conv && !conv.isArchived) {
-        conversations.push({
-          id: conv._id,
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const conversations = await Promise.all(
+      memberships.map(async (m) => {
+        const conv = await ctx.db.get(m.conversationId);
+        if (!conv || conv.isArchived) return null;
+
+        const members = await ctx.db
+          .query("directConversationMembers")
+          .withIndex("by_conversation", (q) =>
+            q.eq("conversationId", conv._id),
+          )
+          .collect();
+
+        const memberNames = await Promise.all(
+          members.map(async (mem) => {
+            const user = await ctx.db.get(mem.userId);
+            return user?.name ?? "Unknown";
+          }),
+        );
+
+        return {
+          _id: conv._id,
           kind: conv.kind,
           name: conv.name,
-        });
-      }
-    }
-    return conversations;
+          members: memberNames,
+        };
+      }),
+    );
+
+    return conversations.filter(Boolean);
   },
 });
 
-// GET /api/agent/v1/conversation-messages
+/**
+ * Internal query: Read messages from a DM conversation.
+ */
 export const readConversationMessages = internalQuery({
   args: {
     conversationId: v.id("directConversations"),
     userId: v.id("users"),
-    limit: v.optional(v.number()),
+    limit: v.number(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { conversationId, userId, limit }) => {
+    // Verify the user is a member of this conversation
     const membership = await ctx.db
       .query("directConversationMembers")
       .withIndex("by_conversation_user", (q) =>
-        q
-          .eq("conversationId", args.conversationId)
-          .eq("userId", args.userId),
+        q.eq("conversationId", conversationId).eq("userId", userId),
       )
       .unique();
-    if (!membership) return null;
+
+    if (!membership) {
+      throw new Error("Not a member of this conversation");
+    }
+
     const messages = await ctx.db
       .query("directMessages")
       .withIndex("by_conversation", (q) =>
-        q.eq("conversationId", args.conversationId),
+        q.eq("conversationId", conversationId),
       )
       .order("desc")
-      .take(args.limit ?? 50);
-    const result = [];
-    for (const msg of messages) {
-      const author = await ctx.db.get(msg.authorId);
-      result.push({
-        id: msg._id,
-        body: msg.body,
-        type: msg.type,
-        authorName: author?.name ?? "Unknown",
-        authorId: msg.authorId,
-        createdAt: msg._creationTime,
-      });
-    }
-    return result;
+      .take(limit);
+
+    const messagesWithAuthors = await Promise.all(
+      messages.map(async (msg) => {
+        const author = await ctx.db.get(msg.authorId);
+        return {
+          _id: msg._id,
+          body: msg.body,
+          type: msg.type,
+          authorName: author?.name ?? "Unknown",
+          authorId: msg.authorId,
+          _creationTime: msg._creationTime,
+        };
+      }),
+    );
+
+    return messagesWithAuthors.reverse();
   },
 });
 
-// POST /api/agent/v1/conversation-messages
-export const sendConversationMessage = internalMutation({
+/**
+ * Internal mutation: Send a DM as an agent.
+ */
+export const sendDirectMessage = internalMutation({
   args: {
     conversationId: v.id("directConversations"),
     userId: v.id("users"),
     body: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { conversationId, userId, body }) => {
+    // Verify the user is a member of this conversation
     const membership = await ctx.db
       .query("directConversationMembers")
       .withIndex("by_conversation_user", (q) =>
-        q
-          .eq("conversationId", args.conversationId)
-          .eq("userId", args.userId),
+        q.eq("conversationId", conversationId).eq("userId", userId),
       )
       .unique();
-    if (!membership) throw new Error("Not a member of this conversation");
+
+    if (!membership) {
+      throw new Error("Not a member of this conversation");
+    }
+
     const messageId = await ctx.db.insert("directMessages", {
-      conversationId: args.conversationId,
-      authorId: args.userId,
-      body: args.body,
+      conversationId,
+      authorId: userId,
+      body,
       type: "bot",
       isEdited: false,
     });
+
     return { messageId };
+  },
+});
+
+/**
+ * Internal mutation: Update last-used timestamp on a token.
+ */
+export const touchToken = internalMutation({
+  args: { tokenId: v.id("agentApiTokens") },
+  handler: async (ctx, { tokenId }) => {
+    await ctx.db.patch(tokenId, { lastUsedAt: Date.now() });
   },
 });
