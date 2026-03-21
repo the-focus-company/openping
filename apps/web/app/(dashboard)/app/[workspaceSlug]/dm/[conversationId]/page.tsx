@@ -70,7 +70,6 @@ export default function DMPage({ params }: Props) {
       threadId: msg.threadId,
       alsoSentToChannel: msg.alsoSentToConversation,
       isEdited: msg.isEdited,
-      attachments: msg.attachments,
     }));
   }, [results]);
 
