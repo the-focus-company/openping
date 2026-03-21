@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
@@ -108,6 +108,11 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
   const inboxUnread = useQuery(api.inboxSummaries.unreadCount, isAuthenticated ? {} : "skip");
   const dmConversations = useQuery(api.directConversations.list, isAuthenticated ? {} : "skip");
   const user = useQuery(api.users.getMe, isAuthenticated ? {} : "skip");
+  const onlineUsers = useQuery(api.presence.getOnlineUsers, isAuthenticated ? {} : "skip");
+  const onlineUserIds = useMemo(
+    () => new Set(onlineUsers?.map((u) => u._id)),
+    [onlineUsers],
+  );
   const createChannel = useMutation(api.channels.create);
 
   const [addChannelOpen, setAddChannelOpen] = useState(false);
@@ -261,6 +266,10 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
                 ) : (
                   <User className="h-3.5 w-3.5 shrink-0 text-white/30" />
                 )}
+                <StatusDot
+                  variant={otherMembers.some((m) => onlineUserIds.has(m.userId)) ? "online" : "offline"}
+                  size="xs"
+                />
                 <span className="flex-1 truncate">{displayName}</span>
                 {conv.unreadCount > 0 && (
                   <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-ping-purple px-1 text-2xs font-medium text-white tabular-nums">

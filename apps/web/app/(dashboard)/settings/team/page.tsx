@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
-import { UserPlus, MoreHorizontal, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { UserPlus, MoreHorizontal, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Mail } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
@@ -13,7 +13,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,12 +69,16 @@ export default function TeamPage() {
   const rawUsers = useQuery(api.users.listAll);
   const updateRoleMutation = useMutation(api.users.updateRole);
   const deactivateMutation = useMutation(api.users.deactivate);
+  const inviteUserMutation = useMutation(api.users.inviteUser);
 
   const [tab, setTab] = useState("all");
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [roleTarget, setRoleTarget] = useState<TeamMember | null>(null);
   const [deprovisionOpen, setDeprovisionOpen] = useState(false);
   const [deprovisionTarget, setDeprovisionTarget] = useState<TeamMember | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
   const { toast } = useToast();
 
   const [sortCol, setSortCol] = useState<"name" | "email" | "role" | "status">("name");
@@ -117,6 +123,22 @@ export default function TeamPage() {
 
   const handleSync = () => {
     toast("Directory is automatically synced — Convex queries update in real time", "success");
+  };
+
+  const handleInvite = async () => {
+    const email = inviteEmail.trim();
+    if (!email) return;
+    setInviteLoading(true);
+    try {
+      await inviteUserMutation({ email });
+      const inviteLink = `${window.location.origin}/sign-in?email=${encodeURIComponent(email)}`;
+      toast(`Invite sent to ${email}. Share this link: ${inviteLink}`, "success");
+      setInviteOpen(false);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Failed to invite user", "error");
+    } finally {
+      setInviteLoading(false);
+    }
   };
 
   const handleChangeRole = async (id: Id<"users">, newRole: Role) => {
@@ -171,13 +193,11 @@ export default function TeamPage() {
           </button>
           <Button
             size="sm"
-            disabled
-            className="h-7 gap-1.5 bg-ping-purple text-xs text-white hover:bg-ping-purple-hover disabled:opacity-40"
-            title="Coming soon — requires WorkOS integration"
+            className="h-7 gap-1.5 bg-ping-purple text-xs text-white hover:bg-ping-purple-hover"
+            onClick={() => setInviteOpen(true)}
           >
             <UserPlus className="h-3 w-3" />
             Invite
-            <span className="ml-1 text-2xs opacity-60">Coming soon</span>
           </Button>
         </div>
       </div>
@@ -357,6 +377,60 @@ export default function TeamPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Member Dialog */}
+      <Dialog open={inviteOpen} onOpenChange={(open) => { setInviteOpen(open); if (!open) { setInviteEmail(""); } }}>
+        <DialogContent className="border-subtle bg-surface-2 sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">Invite a team member</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Enter their email address to send an invite to your workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleInvite(); }}
+            className="space-y-3 pt-1"
+          >
+            <div className="space-y-1.5">
+              <label htmlFor="invite-email" className="text-xs font-medium text-foreground">
+                Email address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="invite-email"
+                  type="email"
+                  required
+                  placeholder="teammate@company.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="h-8 bg-surface-3 border-subtle pl-8 text-xs placeholder:text-white/20"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setInviteOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="h-7 gap-1.5 bg-ping-purple text-xs text-white hover:bg-ping-purple-hover"
+                disabled={inviteLoading || !inviteEmail.trim()}
+              >
+                {inviteLoading ? "Sending..." : "Send invite"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

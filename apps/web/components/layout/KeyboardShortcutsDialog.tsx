@@ -10,19 +10,19 @@ interface KeyboardShortcutsDialogProps {
 
 const SHORTCUTS = [
   { section: "Navigation", items: [
-    { keys: "⌘ K", description: "Open command palette" },
-    { keys: "⌘ B", description: "Toggle sidebar" },
-    { keys: "G I", description: "Go to Inbox" },
-    { keys: "G T", description: "Go to Team" },
+    { keys: ["⌘", "K"], description: "Open command palette" },
+    { keys: ["⌘", "B"], description: "Toggle sidebar" },
+    { keys: ["G", "I"], description: "Go to Inbox" },
+    { keys: ["G", "T"], description: "Go to Team settings" },
   ]},
   { section: "Chat", items: [
-    { keys: "Enter", description: "Send message" },
-    { keys: "⇧ Enter", description: "New line" },
-    { keys: "@", description: "Mention user or agent" },
+    { keys: ["Enter"], description: "Send message" },
+    { keys: ["⇧", "Enter"], description: "New line" },
+    { keys: ["@"], description: "Mention user or agent" },
   ]},
   { section: "General", items: [
-    { keys: "Esc", description: "Close dialog / modal" },
-    { keys: "?", description: "Show keyboard shortcuts" },
+    { keys: ["Esc"], description: "Close dialog / modal" },
+    { keys: ["?"], description: "Show keyboard shortcuts" },
   ]},
 ];
 
@@ -42,9 +42,13 @@ export function KeyboardShortcutsDialog({ open, onOpenChange }: KeyboardShortcut
               </p>
               <div className="space-y-1.5">
                 {items.map(({ keys, description }) => (
-                  <div key={keys} className="flex items-center justify-between">
+                  <div key={keys.join("-")} className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">{description}</span>
-                    <Kbd>{keys}</Kbd>
+                    <div className="flex items-center gap-1">
+                      {keys.map((k) => (
+                        <Kbd key={k}>{k}</Kbd>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>

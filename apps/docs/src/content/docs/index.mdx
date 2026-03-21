@@ -13,41 +13,91 @@ import FeatureCard from "../../components/FeatureCard.astro";
 
 <Hero />
 
+<div class="ping-home-section">
+
+## Get Started
+
 <CardGrid>
   <FeatureCard
-    title="Getting Started"
-    description="Set up PING and send your first message"
-    href="/Platform/getting-started/introduction/"
-    icon="🚀"
+    title="Introduction"
+    description="Learn what PING is and how it works"
+    href={`${import.meta.env.BASE_URL}getting-started/introduction/`}
+    icon="📖"
   />
   <FeatureCard
+    title="Quickstart"
+    description="Set up PING and send your first message in minutes"
+    href={`${import.meta.env.BASE_URL}getting-started/quickstart/`}
+    icon="⚡"
+  />
+</CardGrid>
+
+## Explore
+
+<CardGrid>
+  <FeatureCard
     title="Product Features"
-    description="Copilot Inbox, Eisenhower Matrix, and more"
-    href="/Platform/features/copilot-inbox/"
+    description="Copilot Inbox, Eisenhower Matrix, AI Agents, and more"
+    href={`${import.meta.env.BASE_URL}features/copilot-inbox/`}
     icon="✨"
   />
   <FeatureCard
     title="Architecture"
-    description="System design and technical decisions"
-    href="/Platform/architecture/overview/"
+    description="System design, data model, and tech stack"
+    href={`${import.meta.env.BASE_URL}architecture/overview/`}
     icon="🏗️"
   />
   <FeatureCard
     title="API Reference"
-    description="Endpoints, authentication, and schemas"
-    href="/Platform/api/overview/"
-    icon="📡"
+    description="Endpoints, authentication, and request schemas"
+    href={`${import.meta.env.BASE_URL}api/overview/`}
+    icon="🔌"
   />
   <FeatureCard
     title="Integrations"
-    description="GitHub, Linear, and webhook setup"
-    href="/Platform/integrations/overview/"
+    description="Connect GitHub, Linear, and custom webhooks"
+    href={`${import.meta.env.BASE_URL}integrations/overview/`}
     icon="🔗"
   />
+</CardGrid>
+
+## Developers
+
+<CardGrid>
   <FeatureCard
-    title="Developer Guide"
-    description="Contributing and local development"
-    href="/Platform/developer-guide/contributing/"
+    title="Contributing"
+    description="How to contribute to the PING codebase"
+    href={`${import.meta.env.BASE_URL}developer-guide/contributing/`}
+    icon="🤝"
+  />
+  <FeatureCard
+    title="Local Development"
+    description="Set up your local environment and dev workflow"
+    href={`${import.meta.env.BASE_URL}developer-guide/local-development/`}
     icon="💻"
   />
 </CardGrid>
+
+</div>
+
+<style>{`
+  .ping-home-section {
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 3rem;
+  }
+
+  .ping-home-section h2 {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ping-text-muted);
+    margin: 2.5rem 0 0.75rem;
+    padding: 0;
+  }
+
+  .ping-home-section h2:first-child {
+    margin-top: 0;
+  }
+`}</style>

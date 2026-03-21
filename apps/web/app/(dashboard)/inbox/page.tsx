@@ -8,7 +8,8 @@ import type { Id } from "@convex/_generated/dataModel";
 import { InboxCard, type InboxItem, type EisenhowerQuadrant, QUADRANT_ORDER } from "@/components/inbox/InboxCard";
 import { DraftReminderCard } from "@/components/inbox/DraftReminderCard";
 import { UnansweredQuestionCard } from "@/components/inbox/UnansweredQuestionCard";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { InboxSkeleton } from "@/components/inbox/InboxSkeleton";
+import { CheckCircle2 } from "lucide-react";
 
 const SECTION_LABELS: Record<EisenhowerQuadrant, string> = {
   "urgent-important": "Do Now",
@@ -84,11 +85,7 @@ export default function InboxPage() {
   const isLoading = summaries === undefined || drafts === undefined;
 
   if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-white/20" />
-      </div>
-    );
+    return <InboxSkeleton />;
   }
 
   const totalCount = items.length + (drafts?.length ?? 0) + unansweredQuestions.length;

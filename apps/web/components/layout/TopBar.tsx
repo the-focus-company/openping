@@ -1,5 +1,6 @@
 "use client";
 
+import { type ReactNode } from "react";
 import { Menu, Search } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { TOPBAR_HEIGHT } from "@/lib/constants";
@@ -25,9 +26,10 @@ function titleFromPath(pathname: string): string {
 interface TopBarProps {
   onToggleSidebar: () => void;
   onOpenSearch?: () => void;
+  trailing?: ReactNode;
 }
 
-export function TopBar({ onToggleSidebar, onOpenSearch }: TopBarProps) {
+export function TopBar({ onToggleSidebar, onOpenSearch, trailing }: TopBarProps) {
   const title = titleFromPath(usePathname());
 
   return (
@@ -38,7 +40,7 @@ export function TopBar({ onToggleSidebar, onOpenSearch }: TopBarProps) {
       <div className="flex items-center gap-2">
         <button
           onClick={onToggleSidebar}
-          className="rounded p-1 text-white/30 transition-colors hover:bg-surface-3 hover:text-foreground md:hidden"
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground md:hidden"
         >
           <Menu className="h-4 w-4" />
         </button>
@@ -48,12 +50,13 @@ export function TopBar({ onToggleSidebar, onOpenSearch }: TopBarProps) {
       <div className="flex items-center gap-2">
         <button
           onClick={onOpenSearch}
-          className="hidden items-center gap-2 rounded border border-subtle px-2.5 py-1 text-xs text-white/35 transition-colors hover:border-white/10 hover:text-white/60 sm:flex"
+          className="hidden items-center gap-2 rounded border border-subtle px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground sm:flex"
         >
           <Search className="h-3 w-3" />
           <span>Search or jump to...</span>
           <Kbd>⌘K</Kbd>
         </button>
+        {trailing}
       </div>
     </header>
   );

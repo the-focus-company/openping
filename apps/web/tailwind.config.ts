@@ -59,10 +59,10 @@ const config: Config = {
           "purple-muted": "rgba(94,106,210,0.12)",
         },
         surface: {
-          0: "hsl(240 7% 6%)",
-          1: "hsl(240 6% 9%)",
-          2: "hsl(240 5% 11%)",
-          3: "hsl(240 4% 15%)",
+          0: "hsl(var(--surface-0))",
+          1: "hsl(var(--surface-1))",
+          2: "hsl(var(--surface-2))",
+          3: "hsl(var(--surface-3))",
         },
         status: {
           online:  "#22C55E",

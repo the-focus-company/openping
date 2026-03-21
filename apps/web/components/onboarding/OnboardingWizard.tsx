@@ -1,0 +1,127 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
+import { Loader2 } from "lucide-react";
+import { OnboardingLayout } from "./OnboardingLayout";
+import { OnboardingProgress } from "./OnboardingProgress";
+import { PersonalContextStep } from "./steps/PersonalContextStep";
+import { CompanyContextStep } from "./steps/CompanyContextStep";
+import { WorkspaceSetupStep } from "./steps/WorkspaceSetupStep";
+import { AiPrefsStep } from "./steps/AiPrefsStep";
+import { IntegrationsStep } from "./steps/IntegrationsStep";
+import { InviteTeamStep } from "./steps/InviteTeamStep";
+import { ChannelSelectionStep } from "./steps/ChannelSelectionStep";
+import { CommunicationPrefsStep } from "./steps/CommunicationPrefsStep";
+
+const ADMIN_LABELS = [
+  "Personal context",
+  "Company context",
+  "Workspace setup",
+  "AI preferences",
+  "Integrations",
+  "Invite team",
+];
+
+const MEMBER_LABELS = [
+  "Personal context",
+  "Join channels",
+  "AI preferences",
+  "Communication",
+];
+
+export function OnboardingWizard() {
+  const router = useRouter();
+  const [step, setStep] = useState(0);
+
+  const state = useQuery(api.onboarding.getOnboardingState);
+  const completeOnboarding = useMutation(api.onboarding.completeOnboarding);
+
+  if (state === undefined) {
+    return (
+      <OnboardingLayout>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-5 w-5 animate-spin text-ping-purple" />
+        </div>
+      </OnboardingLayout>
+    );
+  }
+
+  if (state.onboardingStatus === "completed" || !state.onboardingStatus) {
+    router.replace("/inbox");
+    return null;
+  }
+
+  const isAdmin = state.role === "admin";
+  const labels = isAdmin ? ADMIN_LABELS : MEMBER_LABELS;
+  const totalSteps = labels.length;
+
+  const handleNext = async () => {
+    if (step < totalSteps - 1) {
+      setStep((s) => s + 1);
+    } else {
+      await completeOnboarding();
+      router.replace("/inbox");
+    }
+  };
+
+  function renderStep() {
+    if (isAdmin) {
+      switch (step) {
+        case 0:
+          return (
+            <PersonalContextStep
+              userName={state.userName ?? ""}
+              role="admin"
+              onNext={handleNext}
+            />
+          );
+        case 1:
+          return (
+            <CompanyContextStep
+              workspaceName={state.workspaceName ?? ""}
+              onNext={handleNext}
+            />
+          );
+        case 2:
+          return <WorkspaceSetupStep onNext={handleNext} />;
+        case 3:
+          return <AiPrefsStep onNext={handleNext} />;
+        case 4:
+          return <IntegrationsStep onNext={handleNext} />;
+        case 5:
+          return <InviteTeamStep onNext={handleNext} />;
+        default:
+          return null;
+      }
+    }
+
+    switch (step) {
+      case 0:
+        return (
+          <PersonalContextStep
+            userName={state.userName ?? ""}
+            role="member"
+            onNext={handleNext}
+          />
+        );
+      case 1:
+        return <ChannelSelectionStep onNext={handleNext} />;
+      case 2:
+        return <AiPrefsStep onNext={handleNext} />;
+      case 3:
+        return <CommunicationPrefsStep onNext={handleNext} />;
+      default:
+        return null;
+    }
+  }
+
+  return (
+    <OnboardingLayout>
+      <OnboardingProgress currentStep={step} labels={labels} />
+      {renderStep()}
+    </OnboardingLayout>
+  );
+}
