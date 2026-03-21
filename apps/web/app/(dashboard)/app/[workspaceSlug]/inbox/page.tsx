@@ -6,21 +6,12 @@ import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { InboxCard, type InboxItem, type EisenhowerQuadrant, QUADRANT_ORDER } from "@/components/inbox/InboxCard";
+import { DecisionCard, type DecisionItem } from "@/components/inbox/DecisionCard";
+import { DecisionContext } from "@/components/inbox/DecisionContext";
 import { DraftReminderCard } from "@/components/inbox/DraftReminderCard";
 import { UnansweredQuestionCard } from "@/components/inbox/UnansweredQuestionCard";
-import { CheckCircle2, Loader2, Gavel, Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { useWorkspace } from "@/hooks/useWorkspace";
-
-const DECISION_TYPE_BADGE_COLORS: Record<string, string> = {
-  pr_review: "bg-blue-500/15 text-blue-400",
-  ticket_triage: "bg-amber-500/15 text-amber-400",
-  question_answer: "bg-green-500/15 text-green-400",
-  blocked_unblock: "bg-red-500/15 text-red-400",
-  fact_verify: "bg-purple-500/15 text-purple-400",
-  cross_team_ack: "bg-cyan-500/15 text-cyan-400",
-  channel_summary: "bg-white/10 text-white/50",
-};
 
 const SECTION_LABELS: Record<EisenhowerQuadrant, string> = {
   "urgent-important": "Do Now",
@@ -85,6 +76,22 @@ export default function InboxPage() {
     }));
   }, [summaries, router, markReadMutation, buildPath]);
 
+  const decisionItems: DecisionItem[] = useMemo(() => {
+    if (!decisions) return [];
+    return decisions.map((d) => ({
+      id: d._id,
+      type: d.type,
+      title: d.title,
+      summary: d.summary,
+      eisenhowerQuadrant: d.eisenhowerQuadrant,
+      status: d.status,
+      channelName: d.channelName ?? "unknown",
+      createdAt: new Date(d.createdAt),
+      agentExecutionStatus: d.agentExecutionStatus ?? undefined,
+      agentExecutionResult: d.agentExecutionResult ?? undefined,
+    }));
+  }, [decisions]);
+
   const handleMarkRead = (id: string) => {
     markReadMutation({ summaryId: id as Id<"inboxSummaries"> });
   };
@@ -97,6 +104,21 @@ export default function InboxPage() {
     dismissAlertMutation({ alertId: alertId as Id<"proactiveAlerts"> });
   };
 
+  const handleDecisionAction = (id: string, action: string, comment?: string) => {
+    if (action === "Snooze") {
+      snoozeMutation({
+        decisionId: id as Id<"decisions">,
+        snoozeUntil: Date.now() + 60 * 60 * 1000,
+      });
+    } else {
+      decideMutation({
+        decisionId: id as Id<"decisions">,
+        action,
+        comment,
+      });
+    }
+  };
+
   const isLoading = summaries === undefined || drafts === undefined || decisions === undefined;
 
   if (isLoading) {
@@ -107,7 +129,7 @@ export default function InboxPage() {
     );
   }
 
-  const totalCount = items.length + (drafts?.length ?? 0) + unansweredQuestions.length + (decisions?.length ?? 0);
+  const totalCount = items.length + (drafts?.length ?? 0) + unansweredQuestions.length + decisionItems.length;
 
   if (totalCount === 0) {
     return (
@@ -121,11 +143,18 @@ export default function InboxPage() {
     );
   }
 
-  // Sort summaries: Q1 → Q2 → Q3 → Q4, then by timestamp desc within each group
+  // Sort summaries: Q1 -> Q2 -> Q3 -> Q4, then by timestamp desc within each group
   const sortedItems = [...items].sort((a, b) => {
     const qDiff = QUADRANT_ORDER.indexOf(a.priority) - QUADRANT_ORDER.indexOf(b.priority);
     if (qDiff !== 0) return qDiff;
     return b.timestamp.getTime() - a.timestamp.getTime();
+  });
+
+  // Sort decisions by quadrant then creation time
+  const sortedDecisions = [...decisionItems].sort((a, b) => {
+    const qDiff = QUADRANT_ORDER.indexOf(a.eisenhowerQuadrant) - QUADRANT_ORDER.indexOf(b.eisenhowerQuadrant);
+    if (qDiff !== 0) return qDiff;
+    return b.createdAt.getTime() - a.createdAt.getTime();
   });
 
   return (
@@ -187,52 +216,22 @@ export default function InboxPage() {
         </div>
       )}
 
-      {/* Decisions */}
-      {decisions && decisions.length > 0 && (
+      {/* Decisions — using DecisionCard + DecisionContext components */}
+      {sortedDecisions.length > 0 && (
         <div>
           <div className="sticky top-0 z-10 border-b border-subtle bg-background/90 backdrop-blur-sm px-4 py-1.5">
             <span className="text-2xs font-medium uppercase tracking-widest text-white/25">
               Decisions
             </span>
           </div>
-          {decisions.map((decision) => (
-              <div
-                key={decision._id}
-                className="group flex flex-col gap-2 border-b border-subtle px-4 py-3"
-              >
-                <div className="flex items-center gap-2">
-                  <span className={cn(
-                    "rounded px-1.5 py-px text-2xs font-medium capitalize",
-                    DECISION_TYPE_BADGE_COLORS[decision.type] ?? "bg-white/10 text-white/50",
-                  )}>
-                    {decision.type.replace(/_/g, " ")}
-                  </span>
-                  {decision.channelName && (
-                    <>
-                      <span className="text-2xs text-white/25">·</span>
-                      <span className="text-2xs text-muted-foreground">#{decision.channelName}</span>
-                    </>
-                  )}
-                </div>
-                <p className="text-sm font-medium text-foreground">{decision.title}</p>
-                <p className="line-clamp-2 text-xs text-muted-foreground">{decision.summary}</p>
-                <div className="flex items-center gap-1.5 pt-1">
-                  <button
-                    onClick={() => decideMutation({ decisionId: decision._id, action: "approve" })}
-                    className="flex items-center gap-1 rounded bg-ping-purple px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-ping-purple-hover"
-                  >
-                    <Gavel className="h-3 w-3" />
-                    Decide
-                  </button>
-                  <button
-                    onClick={() => snoozeMutation({ decisionId: decision._id, snoozeUntil: Date.now() + 60 * 60 * 1000 })}
-                    className="flex items-center gap-1 rounded bg-surface-3 px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-white/10"
-                  >
-                    <Clock className="h-3 w-3" />
-                    Snooze
-                  </button>
-                </div>
-              </div>
+          {sortedDecisions.map((decision) => (
+            <DecisionCard
+              key={decision.id}
+              item={decision}
+              onAction={handleDecisionAction}
+            >
+              <DecisionContextLoader decisionId={decision.id as Id<"decisions">} />
+            </DecisionCard>
           ))}
         </div>
       )}
@@ -261,5 +260,51 @@ export default function InboxPage() {
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Loads context data for a decision via the getContext query.
+ * Rendered inside DecisionCard's children slot (expanded view).
+ */
+function DecisionContextLoader({ decisionId }: { decisionId: Id<"decisions"> }) {
+  const context = useQuery(api.decisions.getContext, { decisionId });
+
+  if (!context) {
+    return (
+      <div className="flex items-center justify-center py-4">
+        <Loader2 className="h-4 w-4 animate-spin text-white/20" />
+      </div>
+    );
+  }
+
+  return (
+    <DecisionContext
+      decisionId={decisionId}
+      isExpanded={true}
+      summary={context.decision.summary}
+      sourceMessages={context.relatedMessages.map((m) => ({
+        body: m.body,
+        authorName: m.authorName,
+        createdAt: m.createdAt,
+      }))}
+      integrationObjects={
+        context.sourceIntegrationObject
+          ? [
+              {
+                type: context.sourceIntegrationObject.type,
+                title: context.sourceIntegrationObject.title,
+                status: context.sourceIntegrationObject.status,
+                url: context.sourceIntegrationObject.url,
+              },
+            ]
+          : undefined
+      }
+      relatedDecisions={context.relatedPastDecisions.map((d) => ({
+        title: d.title,
+        outcome: d.outcome?.action ?? "unknown",
+        decidedAt: d.outcome?.decidedAt ?? d.createdAt,
+      }))}
+    />
   );
 }

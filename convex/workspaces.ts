@@ -84,6 +84,61 @@ export const setWorkosOrgId = internalMutation({
   },
 });
 
+export const connectIntegration = mutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    provider: v.union(v.literal("github"), v.literal("linear")),
+    accountName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAuth(ctx, args.workspaceId);
+    if (user.role !== "admin") {
+      throw new Error("Only admins can manage integrations");
+    }
+
+    const workspace = await ctx.db.get(args.workspaceId);
+    if (!workspace) throw new Error("Workspace not found");
+
+    const existing = workspace.integrationConfig ?? {};
+    const updated = {
+      ...existing,
+      [args.provider]: {
+        connected: true,
+        ...(args.provider === "github"
+          ? { accountName: args.accountName }
+          : { orgName: args.accountName }),
+        connectedAt: Date.now(),
+      },
+    };
+
+    await ctx.db.patch(args.workspaceId, { integrationConfig: updated });
+  },
+});
+
+export const disconnectIntegration = mutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    provider: v.union(v.literal("github"), v.literal("linear")),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAuth(ctx, args.workspaceId);
+    if (user.role !== "admin") {
+      throw new Error("Only admins can manage integrations");
+    }
+
+    const workspace = await ctx.db.get(args.workspaceId);
+    if (!workspace) throw new Error("Workspace not found");
+
+    const existing = workspace.integrationConfig ?? {};
+    const updated = {
+      ...existing,
+      [args.provider]: { connected: false },
+    };
+
+    await ctx.db.patch(args.workspaceId, { integrationConfig: updated });
+  },
+});
+
 export const getBySlug = query({
   args: { slug: v.string() },
   handler: async (ctx, args) => {

@@ -51,7 +51,7 @@ export const getOnlineUsers = query({
     const wsMembers = await ctx.db
       .query("workspaceMembers")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
-      .collect();
+      .take(1000);
 
     const users = await Promise.all(
       wsMembers.map(async (m) => {
@@ -103,7 +103,7 @@ export const decayPresence = internalMutation({
   args: {},
   handler: async (ctx) => {
     const cutoff = Date.now() - ONLINE_THRESHOLD_MS;
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").take(10000);
 
     for (const user of users) {
       if (

@@ -32,7 +32,7 @@ export async function createOrUpdateUserHandler(
   const pendingInvitation = await ctx.db
     .query("invitations")
     .withIndex("by_email", (q) => q.eq("email", args.email))
-    .collect();
+    .take(100);
   const invitation = pendingInvitation.find(
     (inv) => inv.status === "pending" && inv.expiresAt > Date.now(),
   );
@@ -311,7 +311,7 @@ export const listByWorkspace = internalQuery({
     const wsMembers = await ctx.db
       .query("workspaceMembers")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
-      .collect();
+      .take(1000);
 
     const users = await Promise.all(
       wsMembers.map(async (m) => {

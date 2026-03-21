@@ -88,13 +88,6 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Smooth micro-interactions */
-  *, *::before, *::after {
-    transition-property: background-color, border-color, color, opacity, box-shadow;
-    transition-duration: 100ms;
-    transition-timing-function: ease;
-  }
-
   /* Remove transition from layout-affecting properties */
   .no-transition {
     transition: none !important;

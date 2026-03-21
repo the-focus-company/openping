@@ -40,7 +40,7 @@ export const getAlerts = query({
         .withIndex("by_user_status", (q) =>
           q.eq("userId", user._id).eq("status", args.status!),
         )
-        .collect();
+        .take(100);
     }
 
     if (args.type) {
@@ -49,7 +49,7 @@ export const getAlerts = query({
         .withIndex("by_user_type", (q) =>
           q.eq("userId", user._id).eq("type", args.type!),
         )
-        .collect();
+        .take(100);
     }
 
     return await ctx.db
@@ -57,7 +57,7 @@ export const getAlerts = query({
       .withIndex("by_user_status", (q) =>
         q.eq("userId", user._id).eq("status", "pending"),
       )
-      .collect();
+      .take(100);
   },
 });
 
@@ -127,7 +127,7 @@ export const expireStaleAlerts = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
-    const allAlerts = await ctx.db.query("proactiveAlerts").collect();
+    const allAlerts = await ctx.db.query("proactiveAlerts").take(10000);
     let expiredCount = 0;
 
     for (const alert of allAlerts) {

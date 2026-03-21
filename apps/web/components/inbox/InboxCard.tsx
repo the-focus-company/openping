@@ -27,7 +27,7 @@ export interface InboxItem {
   isRead?: boolean;
 }
 
-const priorityConfig: Record<
+export const priorityConfig: Record<
   EisenhowerQuadrant,
   { borderColor: string; borderWidth: string; bg: string; label: string; textColor: string; dimmed: boolean; bold: boolean; pulse: boolean }
 > = {

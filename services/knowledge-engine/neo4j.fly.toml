@@ -8,6 +8,9 @@ primary_region = "waw"
   NEO4J_PLUGINS = '["apoc"]'
   NEO4J_server_memory_heap_initial__size = "512m"
   NEO4J_server_memory_heap_max__size = "512m"
+  NEO4J_server_memory_pagecache_size = "256m"
+  NEO4J_db_tx__timeout = "30s"
+  NEO4J_dbms_query__cache__size = "1000"
 
 # Neo4j HTTP browser (public, for admin access)
 [http_service]
@@ -37,4 +40,4 @@ primary_region = "waw"
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "1024mb"
+  memory = "2048mb"

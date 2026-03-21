@@ -5,16 +5,28 @@ services:
     environment:
       NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-pingdev2024}
       NEO4J_PLUGINS: '["apoc"]'
+      # Production Neo4j tuning
+      NEO4J_server_memory_heap_initial__size: ${NEO4J_HEAP_SIZE:-512m}
+      NEO4J_server_memory_heap_max__size: ${NEO4J_HEAP_SIZE:-512m}
+      NEO4J_server_memory_pagecache_size: ${NEO4J_PAGECACHE_SIZE:-256m}
+      NEO4J_db_tx__timeout: 30s
+      NEO4J_dbms_query__cache__size: 1000
+      NEO4J_server_threads_worker__count: 0
     ports:
       - "7474:7474"
       - "${NEO4J_PORT:-7687}:7687"
     volumes:
       - neo4j-data:/data
+      - neo4j-logs:/logs
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: ${NEO4J_MEMORY_LIMIT:-1g}
 
   graphiti:
     image: zepai/graphiti:latest
@@ -31,11 +43,36 @@ services:
       neo4j:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/healthcheck"]
-      interval: 10s
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/healthcheck || exit 1"]
+      interval: 15s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 3
+
+  knowledge-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      GRAPHITI_API_URL: http://graphiti:8000
+      NEO4J_URI: bolt://neo4j:${NEO4J_PORT:-7687}
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-pingdev2024}
+      PORT: "8001"
+      NODE_ENV: ${NODE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "8001:8001"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      graphiti:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
 volumes:
   neo4j-data:
+  neo4j-logs:

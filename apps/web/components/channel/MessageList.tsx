@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Bot, ChevronDown, Pin, Users, MessageSquare, SmilePlus, Pencil, Trash2 } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { RichTextComposer, type RichTextComposerHandle } from "@/components/channel/RichTextComposer";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -375,10 +376,32 @@ export function MessageList({
   onDeleteMessage,
 }: MessageListProps) {
   const [showNewMessages, setShowNewMessages] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<RichTextComposerHandle>(null);
   const prevMessageCountRef = useRef(messages.length);
+  const hasInitiallyScrolledRef = useRef(false);
+
+  // Pre-compute which messages should show avatars so the virtualizer can use it
+  const showAvatarFlags = useMemo(() => {
+    return messages.map((msg, i) => {
+      const prev = messages[i - 1];
+      return (
+        !prev ||
+        prev.author !== msg.author ||
+        msg.timestamp.getTime() - prev.timestamp.getTime() > 5 * 60 * 1000
+      );
+    });
+  }, [messages]);
+
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (index) => {
+      // Messages with avatars are taller due to the author header and top margin
+      return showAvatarFlags[index] ? 64 : 32;
+    },
+    overscan: 20,
+  });
 
   const isAtBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -386,7 +409,18 @@ export function MessageList({
     return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
   }, []);
 
-  // Auto-scroll when new messages arrive (only if at bottom)
+  const scrollToBottom = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      if (messages.length === 0) return;
+      virtualizer.scrollToIndex(messages.length - 1, {
+        align: "end",
+        behavior,
+      });
+    },
+    [virtualizer, messages.length]
+  );
+
+  // Auto-scroll when new messages arrive (only if already at bottom)
   useEffect(() => {
     const newCount = messages.length;
     const prevCount = prevMessageCountRef.current;
@@ -394,23 +428,27 @@ export function MessageList({
 
     if (newCount > prevCount) {
       if (isAtBottom()) {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        scrollToBottom("smooth");
         setShowNewMessages(false);
       } else {
         setShowNewMessages(true);
       }
     }
-  }, [messages, isAtBottom]);
+  }, [messages, isAtBottom, scrollToBottom]);
 
-  // Initial scroll to bottom
+  // Initial scroll to bottom once loading completes
   useEffect(() => {
-    if (!isLoading) {
-      bottomRef.current?.scrollIntoView({ behavior: "instant" });
+    if (!isLoading && messages.length > 0 && !hasInitiallyScrolledRef.current) {
+      hasInitiallyScrolledRef.current = true;
+      // Use requestAnimationFrame to ensure the virtualizer has rendered
+      requestAnimationFrame(() => {
+        scrollToBottom("instant");
+      });
     }
-  }, [isLoading]);
+  }, [isLoading, messages.length, scrollToBottom]);
 
   const handleScrollToBottom = () => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollToBottom("smooth");
     setShowNewMessages(false);
   };
 
@@ -422,8 +460,10 @@ export function MessageList({
     if (!content) return;
     onSend?.(content);
     // Scroll to bottom after send
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-  }, [onSend]);
+    setTimeout(() => scrollToBottom("smooth"), 50);
+  }, [onSend, scrollToBottom]);
+
+  const virtualItems = virtualizer.getVirtualItems();
 
   return (
     <div className="flex h-full flex-col">
@@ -478,32 +518,48 @@ export function MessageList({
             <p className="text-2xs text-foreground/20">Be the first to break the silence</p>
           </div>
         ) : (
-          messages.map((msg, i) => {
-            const prev = messages[i - 1];
-            const showAvatar =
-              !prev ||
-              prev.authorId !== msg.authorId ||
-              msg.timestamp.getTime() - prev.timestamp.getTime() > 5 * 60 * 1000;
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualItems.map((virtualRow) => {
+              const msg = messages[virtualRow.index];
+              const showAvatar = showAvatarFlags[virtualRow.index];
 
-            const msgWithReactions = reactionsByMessage?.[msg.id]
-              ? { ...msg, reactions: reactionsByMessage[msg.id] }
-              : msg;
+              const msgWithReactions = reactionsByMessage?.[msg.id]
+                ? { ...msg, reactions: reactionsByMessage[msg.id] }
+                : msg;
 
-            return (
-              <MessageItem
-                key={msg.id}
-                message={msgWithReactions}
-                showAvatar={showAvatar}
-                onOpenThread={onOpenThread}
-                onToggleReaction={onToggleReaction}
-                currentUserId={currentUserId}
-                onEditMessage={onEditMessage}
-                onDeleteMessage={onDeleteMessage}
-              />
-            );
-          })
+              return (
+                <div
+                  key={msg.id}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <MessageItem
+                    message={msgWithReactions}
+                    showAvatar={showAvatar}
+                    onOpenThread={onOpenThread}
+                    onToggleReaction={onToggleReaction}
+                    currentUserId={currentUserId}
+                    onEditMessage={onEditMessage}
+                    onDeleteMessage={onDeleteMessage}
+                  />
+                </div>
+              );
+            })}
+          </div>
         )}
-        <div ref={bottomRef} />
         </div>
       </div>
 

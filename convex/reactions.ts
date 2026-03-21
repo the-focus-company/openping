@@ -40,7 +40,7 @@ export const toggle = mutation({
       .withIndex("by_message_user", (q) =>
         q.eq("messageId", args.messageId).eq("userId", user._id),
       )
-      .collect();
+      .take(100);
 
     const existing = existingReactions.find((r) => r.emoji === args.emoji);
 
@@ -71,7 +71,7 @@ export const getByMessage = query({
     const reactions = await ctx.db
       .query("reactions")
       .withIndex("by_message", (q) => q.eq("messageId", args.messageId))
-      .collect();
+      .take(500);
 
     const grouped = groupReactionsByEmoji(reactions);
 
@@ -124,7 +124,7 @@ export const getByMessages = query({
         const reactions = await ctx.db
           .query("reactions")
           .withIndex("by_message", (q) => q.eq("messageId", messageId))
-          .collect();
+          .take(500);
 
         const grouped = groupReactionsByEmoji(reactions);
 

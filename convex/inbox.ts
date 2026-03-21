@@ -10,7 +10,7 @@ export const getInbox = query({
     const allSummaries = await ctx.db
       .query("inboxSummaries")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
+      .take(500);
 
     const summaries = allSummaries
       .filter((s) => !s.isArchived)

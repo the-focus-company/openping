@@ -11,7 +11,7 @@ export const list = query({
     const memberships = await ctx.db
       .query("directConversationMembers")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
+      .take(500);
 
     const conversations = await Promise.all(
       memberships.map(async (membership) => {
@@ -24,7 +24,7 @@ export const list = query({
           .withIndex("by_conversation", (q) =>
             q.eq("conversationId", conversation._id),
           )
-          .collect();
+          .take(50);
 
         const memberDetails = await Promise.all(
           members.map(async (m) => {
@@ -107,7 +107,7 @@ export const get = query({
       .withIndex("by_conversation", (q) =>
         q.eq("conversationId", conversation._id),
       )
-      .collect();
+      .take(50);
 
     const memberDetails = await Promise.all(
       members.map(async (m) => {
@@ -147,7 +147,7 @@ export const create = mutation({
       const myMemberships = await ctx.db
         .query("directConversationMembers")
         .withIndex("by_user", (q) => q.eq("userId", user._id))
-        .collect();
+        .take(500);
 
       for (const m of myMemberships) {
         const conv = await ctx.db.get(m.conversationId);

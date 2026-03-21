@@ -1,7 +1,7 @@
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 
 type EisenhowerQuadrant = "urgent-important" | "important" | "urgent" | "fyi";
 
@@ -16,6 +16,7 @@ interface SummaryBullet {
   text: string;
   priority: EisenhowerQuadrant;
   relatedMessageIds: string[];
+  mentionedUsers: string[];
 }
 
 interface GeneratedSummary {
@@ -23,46 +24,46 @@ interface GeneratedSummary {
   eisenhowerQuadrant: EisenhowerQuadrant;
 }
 
-async function classifyWithAI(
-  messages: Array<{ body: string; authorName: string; _id: string }>,
-  targetUserName: string,
-): Promise<GeneratedSummary> {
+interface ChannelMessages {
+  channelId: string;
+  channelName: string;
+  messages: Array<{ body: string; authorName: string; _id: string }>;
+}
+
+interface RawBullet {
+  text: string;
+  priority: string;
+  relatedMessageIndices?: number[];
+  mentionedUsers?: string[];
+}
+
+function computeTopQuadrant(bullets: SummaryBullet[]): EisenhowerQuadrant {
+  const ranks = bullets.map((b) => QUADRANT_ORDER.indexOf(b.priority));
+  const topRank = Math.min(...(ranks.length ? ranks : [3]));
+  return QUADRANT_ORDER[topRank] ?? "fyi";
+}
+
+function parseBullets(
+  rawBullets: RawBullet[],
+  messages: Array<{ _id: string }>,
+): SummaryBullet[] {
+  return rawBullets.map((b) => ({
+    text: b.text,
+    priority: (QUADRANT_ORDER.includes(b.priority as EisenhowerQuadrant)
+      ? b.priority
+      : "fyi") as EisenhowerQuadrant,
+    relatedMessageIds: (b.relatedMessageIndices ?? [])
+      .map((i) => messages[i]?._id)
+      .filter(Boolean),
+    mentionedUsers: b.mentionedUsers ?? [],
+  }));
+}
+
+async function callOpenAI(prompt: string): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY environment variable is not set");
   }
-
-  const messageText = messages
-    .slice(-30)
-    .map((m) => `[${m.authorName}]: ${m.body}`)
-    .join("\n");
-
-  const prompt = `You are an AI assistant that summarizes Slack-like channel messages using the Eisenhower Matrix.
-
-Classify each bullet into one of these quadrants:
-- "urgent-important": Blockers, incidents, direct requests needing action NOW (mentions of ${targetUserName}, prod issues, deadlines today)
-- "important": Decisions, architecture discussions, PRs awaiting review, strategic topics
-- "urgent": Time-sensitive FYI, meeting reminders, quick mentions
-- "fyi": General discussion, status updates, casual conversation
-
-Messages:
-${messageText}
-
-Respond with valid JSON only, no markdown:
-{
-  "bullets": [
-    {
-      "text": "one-sentence summary of the key point",
-      "priority": "urgent-important" | "important" | "urgent" | "fyi",
-      "relatedMessageIndices": [0, 1]
-    }
-  ]
-}
-
-Rules:
-- Generate 2-4 bullets covering the main topics
-- If ${targetUserName} is @mentioned in an "important" topic, promote it to "urgent-important"
-- Be concise and actionable`;
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -83,27 +84,160 @@ Rules:
   }
 
   const data = await response.json();
-  const raw = JSON.parse(data.choices[0].message.content);
-
-  const bullets: SummaryBullet[] = (raw.bullets ?? []).map(
-    (b: { text: string; priority: string; relatedMessageIndices?: number[] }) => ({
-      text: b.text,
-      priority: (QUADRANT_ORDER.includes(b.priority as EisenhowerQuadrant)
-        ? b.priority
-        : "fyi") as EisenhowerQuadrant,
-      relatedMessageIds: (b.relatedMessageIndices ?? [])
-        .map((i: number) => messages[i]?._id)
-        .filter(Boolean),
-    }),
-  );
-
-  // Overall card quadrant = highest priority bullet
-  const quadrantRanks = bullets.map((b) => QUADRANT_ORDER.indexOf(b.priority));
-  const topRank = Math.min(...(quadrantRanks.length ? quadrantRanks : [3]));
-  const eisenhowerQuadrant: EisenhowerQuadrant = QUADRANT_ORDER[topRank] ?? "fyi";
-
-  return { bullets, eisenhowerQuadrant };
+  return data.choices[0].message.content;
 }
+
+const QUADRANT_DESCRIPTIONS = `- "urgent-important": Blockers, incidents, production issues, deadlines today
+- "important": Decisions, architecture discussions, PRs awaiting review, strategic topics
+- "urgent": Time-sensitive FYI, meeting reminders, quick mentions
+- "fyi": General discussion, status updates, casual conversation`;
+
+const BULLET_RULES = `Rules:
+- Generate 2-4 bullets per channel covering the main topics
+- Include the list of user names explicitly @mentioned or called out in each bullet
+- Be concise and actionable`;
+
+const BULLET_SCHEMA = `{
+      "text": "one-sentence summary of the key point",
+      "priority": "urgent-important" | "important" | "urgent" | "fyi",
+      "relatedMessageIndices": [0, 1],
+      "mentionedUsers": ["Alice", "Bob"]
+    }`;
+
+function formatMessages(
+  messages: Array<{ body: string; authorName: string }>,
+): string {
+  return messages
+    .slice(-30)
+    .map((m) => `[${m.authorName}]: ${m.body}`)
+    .join("\n");
+}
+
+/**
+ * Generate a single base summary for one channel. Shared across all members.
+ */
+async function generateChannelSummary(
+  messages: Array<{ body: string; authorName: string; _id: string }>,
+  channelName: string,
+): Promise<GeneratedSummary> {
+  const prompt = `You are an AI assistant that summarizes Slack-like channel messages using the Eisenhower Matrix.
+
+Classify each bullet into one of these quadrants:
+${QUADRANT_DESCRIPTIONS}
+
+Channel: #${channelName}
+
+Messages:
+${formatMessages(messages)}
+
+Respond with valid JSON only, no markdown:
+{
+  "bullets": [
+    ${BULLET_SCHEMA}
+  ]
+}
+
+${BULLET_RULES}`;
+
+  const content = await callOpenAI(prompt);
+  const raw = JSON.parse(content);
+  const bullets = parseBullets(raw.bullets ?? [], messages);
+  return { bullets, eisenhowerQuadrant: computeTopQuadrant(bullets) };
+}
+
+/**
+ * Batch-summarize multiple low-activity channels in a single LLM call.
+ */
+async function generateBatchSummary(
+  channelsBatch: ChannelMessages[],
+): Promise<Map<string, GeneratedSummary>> {
+  const sections = channelsBatch.map((ch) => {
+    return `### Channel: #${ch.channelName} (id: ${ch.channelId})\n${formatMessages(ch.messages)}`;
+  });
+
+  const prompt = `You are an AI assistant that summarizes Slack-like channel messages using the Eisenhower Matrix.
+
+Classify each bullet into one of these quadrants:
+${QUADRANT_DESCRIPTIONS}
+
+Below are messages from multiple channels. Summarize each channel separately.
+
+${sections.join("\n\n")}
+
+Respond with valid JSON only, no markdown:
+{
+  "channels": {
+    "<channelId>": {
+      "bullets": [
+        ${BULLET_SCHEMA}
+      ]
+    }
+  }
+}
+
+${BULLET_RULES}`;
+
+  const content = await callOpenAI(prompt);
+  const raw = JSON.parse(content);
+
+  const results = new Map<string, GeneratedSummary>();
+  const channelsMap = raw.channels ?? {};
+
+  for (const ch of channelsBatch) {
+    const chRaw = channelsMap[ch.channelId];
+    if (!chRaw) continue;
+
+    const bullets = parseBullets(chRaw.bullets ?? [], ch.messages);
+    results.set(ch.channelId, {
+      bullets,
+      eisenhowerQuadrant: computeTopQuadrant(bullets),
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Personalise a shared channel summary for a specific user.
+ * Promotes bullets where the user is mentioned, and adjusts overall quadrant
+ * based on user role (admins get higher priority for "important" items).
+ */
+function personalizeForUser(
+  baseSummary: GeneratedSummary,
+  userName: string,
+  userRole: string,
+): GeneratedSummary {
+  const personalizedBullets: SummaryBullet[] = baseSummary.bullets.map((b) => {
+    const bullet = { ...b };
+    const isUserMentioned = b.mentionedUsers.some(
+      (name) => name.toLowerCase() === userName.toLowerCase(),
+    );
+
+    // Promote priority if user is mentioned in a lower-priority bullet
+    if (isUserMentioned) {
+      const currentIdx = QUADRANT_ORDER.indexOf(bullet.priority);
+      if (currentIdx > 0) {
+        bullet.priority = QUADRANT_ORDER[currentIdx - 1]!;
+      }
+    }
+
+    // Admins see "important" items promoted so they never miss strategic decisions
+    if (userRole === "admin" && bullet.priority === "important") {
+      bullet.priority = "urgent-important";
+    }
+
+    return bullet;
+  });
+
+  return {
+    bullets: personalizedBullets,
+    eisenhowerQuadrant: computeTopQuadrant(personalizedBullets),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Convex queries / mutations
+// ---------------------------------------------------------------------------
 
 export const getActiveChannels = internalQuery({
   args: {},
@@ -118,7 +252,7 @@ export const getActiveChannels = internalQuery({
         const memberRows = await ctx.db
           .query("channelMembers")
           .withIndex("by_channel", (q) => q.eq("channelId", channel._id))
-          .collect();
+          .take(500);
 
         const members = (
           await Promise.all(memberRows.map((m) => ctx.db.get(m.userId)))
@@ -157,6 +291,42 @@ export const getRecentMessages = internalQuery({
         };
       }),
     );
+  },
+});
+
+/**
+ * Get the latest summary period end for a channel so we can skip channels
+ * with no new messages since the last run.
+ */
+export const getLastSummaryTime = internalQuery({
+  args: { channelId: v.id("channels") },
+  handler: async (ctx, args) => {
+    const latest = await ctx.db
+      .query("inboxSummaries")
+      .withIndex("by_channel_period", (q) => q.eq("channelId", args.channelId))
+      .order("desc")
+      .first();
+    return latest?.periodEnd ?? null;
+  },
+});
+
+/**
+ * Look up workspace role and AI preferences for a user.
+ */
+export const getUserRoleAndPrefs = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const [membership, user] = await Promise.all([
+      ctx.db
+        .query("workspaceMembers")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .first(),
+      ctx.db.get(args.userId),
+    ]);
+    return {
+      role: membership?.role ?? "member",
+      aiPrefs: user?.aiPrefs ?? null,
+    };
   },
 });
 
@@ -201,16 +371,40 @@ export const writeSummary = internalMutation({
   },
 });
 
+// ---------------------------------------------------------------------------
+// Main cron entry point
+// ---------------------------------------------------------------------------
+
+/** Channels with <= this many messages are batched into a single LLM call. */
+const LOW_ACTIVITY_THRESHOLD = 10;
+/** Max channels per single batch LLM call. */
+const MAX_BATCH_SIZE = 5;
+
 export const generateChannelSummaries = internalAction({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
-    const windowMs = 15 * 60 * 1000; // 15-minute window
+    const windowMs = 15 * 60 * 1000;
     const periodStart = now - windowMs;
 
     const channels = await ctx.runQuery(internal.summaries.getActiveChannels, {});
 
+    // 1. Fetch messages for all channels & skip those with no new activity
+    const channelData: Array<{
+      channelId: Id<"channels">;
+      channelName: string;
+      messages: Array<{ body: string; authorName: string; _id: string }>;
+      members: Array<{ _id: Id<"users">; name: string }>;
+    }> = [];
+
     for (const channel of channels) {
+      // Check if we already generated a summary for this period before fetching messages
+      const lastSummaryTime = await ctx.runQuery(
+        internal.summaries.getLastSummaryTime,
+        { channelId: channel._id },
+      );
+      if (lastSummaryTime !== null && lastSummaryTime >= periodStart) continue;
+
       const messages = await ctx.runQuery(internal.summaries.getRecentMessages, {
         channelId: channel._id,
         since: periodStart,
@@ -218,34 +412,257 @@ export const generateChannelSummaries = internalAction({
 
       if (messages.length < 3) continue;
 
-      for (const member of channel.members) {
-        try {
-          const summary = await classifyWithAI(messages, member.name);
+      channelData.push({
+        channelId: channel._id,
+        channelName: channel.name,
+        messages,
+        members: channel.members,
+      });
+    }
 
-          // Sort bullets Q1 → Q2 → Q3 → Q4
-          const sortedBullets = [...summary.bullets].sort(
+    // 2. Separate high-activity vs low-activity channels
+    const highActivity = channelData.filter(
+      (ch) => ch.messages.length > LOW_ACTIVITY_THRESHOLD,
+    );
+    const lowActivity = channelData.filter(
+      (ch) => ch.messages.length <= LOW_ACTIVITY_THRESHOLD,
+    );
+
+    // 3. Generate one summary per high-activity channel (1 LLM call each)
+    const summaryMap = new Map<string, GeneratedSummary>();
+
+    for (const ch of highActivity) {
+      try {
+        const summary = await generateChannelSummary(ch.messages, ch.channelName);
+        summaryMap.set(ch.channelId as string, summary);
+      } catch (err) {
+        console.error(
+          `[summaries] Failed to summarize channel ${ch.channelId}:`,
+          err,
+        );
+      }
+    }
+
+    // 4. Batch low-activity channels into groups and summarize together
+    for (let i = 0; i < lowActivity.length; i += MAX_BATCH_SIZE) {
+      const batch = lowActivity.slice(i, i + MAX_BATCH_SIZE);
+      const batchInput: ChannelMessages[] = batch.map((ch) => ({
+        channelId: ch.channelId as string,
+        channelName: ch.channelName,
+        messages: ch.messages,
+      }));
+
+      try {
+        const batchResults = await generateBatchSummary(batchInput);
+        for (const [channelId, summary] of batchResults) {
+          summaryMap.set(channelId, summary);
+        }
+      } catch (err) {
+        console.error("[summaries] Batch summary failed, falling back to individual calls:", err);
+        for (const ch of batch) {
+          try {
+            const summary = await generateChannelSummary(ch.messages, ch.channelName);
+            summaryMap.set(ch.channelId as string, summary);
+          } catch (innerErr) {
+            console.error(
+              `[summaries] Fallback failed for channel ${ch.channelId}:`,
+              innerErr,
+            );
+          }
+        }
+      }
+    }
+
+    // 5. Personalise per user and write summaries
+    for (const ch of channelData) {
+      const baseSummary = summaryMap.get(ch.channelId as string);
+      if (!baseSummary) continue;
+
+      for (const member of ch.members) {
+        try {
+          const { role } = await ctx.runQuery(
+            internal.summaries.getUserRoleAndPrefs,
+            { userId: member._id },
+          );
+
+          const personalised = personalizeForUser(baseSummary, member.name, role);
+
+          const sortedBullets = [...personalised.bullets].sort(
             (a, b) =>
-              QUADRANT_ORDER.indexOf(a.priority) - QUADRANT_ORDER.indexOf(b.priority),
+              QUADRANT_ORDER.indexOf(a.priority) -
+              QUADRANT_ORDER.indexOf(b.priority),
           );
 
           await ctx.runMutation(internal.summaries.writeSummary, {
             userId: member._id,
-            channelId: channel._id,
-            eisenhowerQuadrant: summary.eisenhowerQuadrant,
+            channelId: ch.channelId,
+            eisenhowerQuadrant: personalised.eisenhowerQuadrant,
             bullets: sortedBullets.map((b) => ({
-              ...b,
+              text: b.text,
+              priority: b.priority,
               relatedMessageIds: b.relatedMessageIds as Id<"messages">[],
             })),
-            messageCount: messages.length,
+            messageCount: ch.messages.length,
             periodStart,
             periodEnd: now,
           });
         } catch (err) {
           console.error(
-            `[summaries] Failed for user ${member._id} in channel ${channel._id}:`,
+            `[summaries] Failed for user ${member._id} in channel ${ch.channelId}:`,
             err,
           );
         }
+      }
+    }
+  },
+});
+
+// ─── Email summaries (8LI-130) ────────────────────────────────────────────────
+
+export const getRecentClassifiedEmails = internalQuery({
+  args: { since: v.number() },
+  handler: async (ctx, args) => {
+    const emails = await ctx.db
+      .query("emails")
+      .filter((q) =>
+        q.and(
+          q.neq(q.field("agentClassifiedAt"), undefined),
+          q.gte(q.field("agentClassifiedAt"), args.since),
+          q.eq(q.field("isArchived"), false),
+        ),
+      )
+      .take(200);
+
+    // Group by userId
+    const byUser = new Map<string, Array<Doc<"emails">>>();
+    for (const email of emails) {
+      const key = email.userId as string;
+      if (!byUser.has(key)) byUser.set(key, []);
+      byUser.get(key)!.push(email);
+    }
+
+    return Array.from(byUser.entries()).map(([userId, userEmails]) => ({
+      userId: userId as Id<"users">,
+      emails: userEmails.map((e) => ({
+        _id: e._id as string,
+        from: e.from,
+        subject: e.subject,
+        bodyPlain: e.bodyPlain.slice(0, 300),
+        eisenhowerQuadrant: e.eisenhowerQuadrant,
+        agentSummary: e.agentSummary,
+      })),
+    }));
+  },
+});
+
+export const writeEmailSummary = internalMutation({
+  args: {
+    userId: v.id("users"),
+    channelId: v.id("channels"),
+    eisenhowerQuadrant: v.union(
+      v.literal("urgent-important"),
+      v.literal("important"),
+      v.literal("urgent"),
+      v.literal("fyi"),
+    ),
+    bullets: v.array(
+      v.object({
+        text: v.string(),
+        priority: v.union(
+          v.literal("urgent-important"),
+          v.literal("important"),
+          v.literal("urgent"),
+          v.literal("fyi"),
+        ),
+        relatedMessageIds: v.array(v.id("messages")),
+      }),
+    ),
+    messageCount: v.number(),
+    periodStart: v.number(),
+    periodEnd: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("inboxSummaries", {
+      userId: args.userId,
+      channelId: args.channelId,
+      eisenhowerQuadrant: args.eisenhowerQuadrant,
+      bullets: args.bullets,
+      messageCount: args.messageCount,
+      periodStart: args.periodStart,
+      periodEnd: args.periodEnd,
+      isRead: false,
+      isArchived: false,
+      actionItems: [],
+    });
+  },
+});
+
+export const generateEmailSummaries = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const windowMs = 15 * 60 * 1000;
+    const periodStart = now - windowMs;
+
+    const userGroups = await ctx.runQuery(
+      internal.summaries.getRecentClassifiedEmails,
+      { since: periodStart },
+    );
+
+    for (const group of userGroups) {
+      if (group.emails.length < 1) continue;
+
+      // Aggregate email quadrants into a single inbox summary
+      const quadrantCounts: Record<string, number> = {};
+      const bullets: Array<{
+        text: string;
+        priority: EisenhowerQuadrant;
+        relatedMessageIds: Id<"messages">[];
+      }> = [];
+
+      for (const email of group.emails) {
+        const q = email.eisenhowerQuadrant ?? "fyi";
+        quadrantCounts[q] = (quadrantCounts[q] ?? 0) + 1;
+
+        bullets.push({
+          text: email.agentSummary ?? `${email.subject} from ${email.from}`,
+          priority: q as EisenhowerQuadrant,
+          relatedMessageIds: [],
+        });
+      }
+
+      // Sort bullets by quadrant priority
+      const sortedBullets = [...bullets].sort(
+        (a, b) =>
+          QUADRANT_ORDER.indexOf(a.priority) -
+          QUADRANT_ORDER.indexOf(b.priority),
+      );
+
+      // Overall quadrant = highest priority among emails
+      const topQuadrant = sortedBullets[0]?.priority ?? "fyi";
+
+      // Find user's default channel for the summary
+      const channelMembership = await ctx.runQuery(
+        internal.emailAgent.getUserDefaultChannel,
+        { userId: group.userId },
+      );
+      if (!channelMembership) continue;
+
+      try {
+        await ctx.runMutation(internal.summaries.writeEmailSummary, {
+          userId: group.userId,
+          channelId: channelMembership.channelId,
+          eisenhowerQuadrant: topQuadrant,
+          bullets: sortedBullets.slice(0, 5),
+          messageCount: group.emails.length,
+          periodStart,
+          periodEnd: now,
+        });
+      } catch (err) {
+        console.error(
+          `[summaries] Failed email summary for user ${group.userId}:`,
+          err,
+        );
       }
     }
   },

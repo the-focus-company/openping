@@ -238,6 +238,7 @@ export const decide = mutation({
         delegatedTo: args.delegatedTo,
         decidedAt: now,
       },
+      delegatedTo: args.delegatedTo,
       agentExecutionStatus: "pending",
     });
 
@@ -266,6 +267,7 @@ export const snooze = mutation({
 
     await ctx.db.patch(args.decisionId, {
       status: "snoozed",
+      snoozedUntil: args.snoozeUntil,
       expiresAt: args.snoozeUntil,
     });
   },

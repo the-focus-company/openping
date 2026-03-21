@@ -18,7 +18,7 @@ export const listMyWorkspaces = query({
     const memberships = await ctx.db
       .query("workspaceMembers")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
+      .take(50);
 
     const workspaces = await Promise.all(
       memberships.map(async (m) => {
@@ -45,7 +45,7 @@ export const listMembers = query({
     const memberships = await ctx.db
       .query("workspaceMembers")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
-      .collect();
+      .take(1000);
 
     const members = await Promise.all(
       memberships.map(async (m) => {
@@ -221,7 +221,7 @@ export const listInvites = query({
     const invites = await ctx.db
       .query("invitations")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
-      .collect();
+      .take(500);
 
     return invites.filter((i) => i.status === "pending" && i.expiresAt > Date.now());
   },
@@ -233,7 +233,7 @@ export const listByWorkspace = internalQuery({
     const memberships = await ctx.db
       .query("workspaceMembers")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
-      .collect();
+      .take(1000);
 
     const members = await Promise.all(
       memberships.map(async (m) => {

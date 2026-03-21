@@ -24,15 +24,24 @@ export const send = mutation({
       messageId,
     });
 
-    // Update sender's lastReadAt
-    const membership = await ctx.db
+    // Update sender's lastReadAt and reset their unreadCount,
+    // then increment unreadCount for all other channel members.
+    const allMembers = await ctx.db
       .query("channelMembers")
-      .withIndex("by_channel_user", (q) =>
-        q.eq("channelId", args.channelId).eq("userId", user._id),
-      )
-      .unique();
-    if (membership) {
-      await ctx.db.patch(membership._id, { lastReadAt: Date.now() });
+      .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
+      .collect();
+
+    for (const member of allMembers) {
+      if (member.userId === user._id) {
+        await ctx.db.patch(member._id, {
+          lastReadAt: Date.now(),
+          unreadCount: 0,
+        });
+      } else {
+        await ctx.db.patch(member._id, {
+          unreadCount: (member.unreadCount ?? 0) + 1,
+        });
+      }
     }
 
     return messageId;

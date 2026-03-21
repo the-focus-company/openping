@@ -41,6 +41,8 @@ tags:
     description: Typing indicators
   - name: Webhooks
     description: Inbound webhook endpoints (WorkOS, GitHub, Linear)
+  - name: Agent API
+    description: REST endpoints for external AI agent connectivity (Claude Code, Codex, etc.)
 
 paths:
   # ── Messages ──────────────────────────────────────────────
@@ -1574,12 +1576,224 @@ paths:
                   received:
                     type: boolean
 
+  # ── Agent API ────────────────────────────────────────────
+
+  /api/agent/v1/me:
+    get:
+      operationId: agent_me
+      summary: Get agent identity
+      tags: [Agent API]
+      security:
+        - AgentBearerAuth: []
+      responses:
+        "200":
+          description: Agent identity info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      status:
+                        type: string
+                  workspace:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+
+  /api/agent/v1/channels:
+    get:
+      operationId: agent_listChannels
+      summary: List accessible channels
+      tags: [Agent API]
+      security:
+        - AgentBearerAuth: []
+      responses:
+        "200":
+          description: Array of channels the agent can access
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channels:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Channel"
+
+  /api/agent/v1/channel-messages:
+    get:
+      operationId: agent_readChannelMessages
+      summary: Read channel messages
+      tags: [Agent API]
+      security:
+        - AgentBearerAuth: []
+      parameters:
+        - name: channelId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Array of messages from the channel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Message"
+    post:
+      operationId: agent_sendChannelMessage
+      summary: Send message to channel
+      tags: [Agent API]
+      security:
+        - AgentBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channelId, body]
+              properties:
+                channelId:
+                  type: string
+                body:
+                  type: string
+      responses:
+        "200":
+          description: The created message ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messageId:
+                    type: string
+
+  /api/agent/v1/conversations:
+    get:
+      operationId: agent_listConversations
+      summary: List agent conversations
+      tags: [Agent API]
+      security:
+        - AgentBearerAuth: []
+      responses:
+        "200":
+          description: Array of direct conversations the agent participates in
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        name:
+                          type: string
+                        kind:
+                          type: string
+
+  /api/agent/v1/conversation-messages:
+    get:
+      operationId: agent_readConversationMessages
+      summary: Read conversation messages
+      tags: [Agent API]
+      security:
+        - AgentBearerAuth: []
+      parameters:
+        - name: conversationId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Array of direct messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        body:
+                          type: string
+                        authorId:
+                          type: string
+                        type:
+                          type: string
+    post:
+      operationId: agent_sendConversationMessage
+      summary: Send direct message
+      tags: [Agent API]
+      security:
+        - AgentBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversationId, body]
+              properties:
+                conversationId:
+                  type: string
+                body:
+                  type: string
+      responses:
+        "200":
+          description: The created message ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messageId:
+                    type: string
+
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       description: Convex auth token (JWT)
+    AgentBearerAuth:
+      type: http
+      scheme: bearer
+      description: Agent API token (ping_ag_...)
 
   schemas:
     # ── Convex envelope schemas ─────────────────────────────

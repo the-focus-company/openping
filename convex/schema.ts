@@ -332,6 +332,70 @@ export default defineSchema({
     .index("by_message", ["messageId"])
     .index("by_message_user", ["messageId", "userId"]),
 
+  emailAccounts: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    provider: v.union(
+      v.literal("google"),
+      v.literal("microsoft"),
+      v.literal("imap"),
+    ),
+    email: v.string(),
+    accessToken: v.optional(v.string()),
+    refreshToken: v.optional(v.string()),
+    tokenExpiresAt: v.optional(v.number()),
+    syncCursor: v.optional(v.string()),
+    lastSyncedAt: v.optional(v.number()),
+    isActive: v.boolean(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_workspace", ["userId", "workspaceId"])
+    .index("by_email", ["email"]),
+
+  emails: defineTable({
+    emailAccountId: v.id("emailAccounts"),
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    externalId: v.string(),
+    threadId: v.optional(v.string()),
+    from: v.string(),
+    to: v.array(v.string()),
+    cc: v.optional(v.array(v.string())),
+    subject: v.string(),
+    bodyPlain: v.string(),
+    bodyHtml: v.optional(v.string()),
+    receivedAt: v.number(),
+    isRead: v.boolean(),
+    isArchived: v.boolean(),
+    labels: v.optional(v.array(v.string())),
+    // AI classification fields
+    eisenhowerQuadrant: v.optional(
+      v.union(
+        v.literal("urgent-important"),
+        v.literal("important"),
+        v.literal("urgent"),
+        v.literal("fyi"),
+      ),
+    ),
+    agentSummary: v.optional(v.string()),
+    agentClassifiedAt: v.optional(v.number()),
+    suggestedAction: v.optional(v.string()),
+    reminderAt: v.optional(v.number()),
+    delegateTo: v.optional(v.id("users")),
+    graphitiEpisodeId: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_unclassified", ["userId", "agentClassifiedAt"])
+    .index("by_user_quadrant", ["userId", "eisenhowerQuadrant"])
+    .index("by_thread", ["threadId"])
+    .index("by_account", ["emailAccountId"])
+    .index("by_external_id", ["externalId"])
+    .index("by_reminder", ["reminderAt"])
+    .searchIndex("search_body", {
+      searchField: "bodyPlain",
+      filterFields: ["userId"],
+    }),
+
   decisions: defineTable({
     userId: v.id("users"),
     workspaceId: v.id("workspaces"),
@@ -388,4 +452,114 @@ export default defineSchema({
     .index("by_user_quadrant", ["userId", "eisenhowerQuadrant"])
     .index("by_source_alert", ["sourceAlertId"])
     .index("by_source_summary", ["sourceSummaryId"]),
+
+  emailAccounts: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    provider: v.union(v.literal("gmail"), v.literal("outlook")),
+    email: v.string(),
+    accessToken: v.optional(v.string()),
+    refreshToken: v.optional(v.string()),
+    tokenExpiresAt: v.optional(v.number()),
+    syncCursor: v.optional(v.string()),
+    status: v.union(
+      v.literal("connected"),
+      v.literal("disconnected"),
+      v.literal("error"),
+    ),
+    lastSyncedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_workspace", ["userId", "workspaceId"])
+    .index("by_workspace", ["workspaceId"]),
+
+  emails: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    emailAccountId: v.id("emailAccounts"),
+    externalId: v.string(),
+    threadId: v.string(),
+    subject: v.string(),
+    from: v.object({
+      name: v.optional(v.string()),
+      email: v.string(),
+    }),
+    to: v.array(
+      v.object({
+        name: v.optional(v.string()),
+        email: v.string(),
+      }),
+    ),
+    cc: v.optional(
+      v.array(
+        v.object({
+          name: v.optional(v.string()),
+          email: v.string(),
+        }),
+      ),
+    ),
+    snippet: v.string(),
+    bodyHtml: v.optional(v.string()),
+    bodyText: v.optional(v.string()),
+    receivedAt: v.number(),
+    isRead: v.boolean(),
+    isArchived: v.boolean(),
+    isStarred: v.boolean(),
+    labels: v.optional(v.array(v.string())),
+    eisenhowerQuadrant: v.optional(
+      v.union(
+        v.literal("urgent-important"),
+        v.literal("important"),
+        v.literal("urgent"),
+        v.literal("fyi"),
+      ),
+    ),
+    aiSummary: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_read", ["userId", "isRead"])
+    .index("by_user_archived", ["userId", "isArchived"])
+    .index("by_thread", ["userId", "threadId"])
+    .index("by_external_id", ["externalId"])
+    .index("by_user_quadrant", ["userId", "eisenhowerQuadrant"])
+    .searchIndex("search_subject", {
+      searchField: "subject",
+      filterFields: ["userId"],
+    }),
+
+  emailDrafts: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    emailAccountId: v.id("emailAccounts"),
+    threadId: v.optional(v.string()),
+    inReplyTo: v.optional(v.id("emails")),
+    to: v.array(
+      v.object({
+        name: v.optional(v.string()),
+        email: v.string(),
+      }),
+    ),
+    cc: v.optional(
+      v.array(
+        v.object({
+          name: v.optional(v.string()),
+          email: v.string(),
+        }),
+      ),
+    ),
+    subject: v.string(),
+    bodyHtml: v.optional(v.string()),
+    bodyText: v.optional(v.string()),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("sending"),
+      v.literal("sent"),
+      v.literal("failed"),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_status", ["userId", "status"]),
 });

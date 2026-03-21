@@ -39,4 +39,22 @@ crons.interval(
   internal.typing.cleanupExpired,
 );
 
+crons.interval(
+  "classify-pending-emails",
+  { minutes: 5 },
+  internal.emailAgent.classifyPendingEmails,
+);
+
+crons.interval(
+  "check-email-reminders",
+  { minutes: 1 },
+  internal.emailAgent.checkReminders,
+);
+
+crons.interval(
+  "generate-email-summaries",
+  { minutes: 15 },
+  internal.summaries.generateEmailSummaries,
+);
+
 export default crons;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, Power, Bot } from "lucide-react";
+import { Settings, Power, Bot, Key } from "lucide-react";
 import { StatusDot } from "@/components/ui/status-dot";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,31 +11,39 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import type { Id } from "@convex/_generated/dataModel";
 
 export interface Agent {
-  id: string;
+  _id: Id<"agents">;
+  _creationTime: number;
   name: string;
-  description: string;
-  status: "active" | "inactive";
-  scopes: string[];
-  queryCount: number;
-  color: string;
+  description?: string;
+  status: "active" | "inactive" | "revoked";
+  color?: string;
+  systemPrompt?: string;
+  lastActiveAt?: number;
+  createdBy: Id<"users">;
+  agentUserName?: string;
+  agentUserEmail?: string;
 }
 
 interface AgentCardProps {
   agent: Agent;
-  onToggle?: (id: string, status: "active" | "inactive") => void;
-  onConfigure?: (id: string) => void;
+  onToggle?: (id: Id<"agents">, status: "active" | "inactive") => void;
+  onConfigure?: (id: Id<"agents">) => void;
+  onGenerateToken?: (id: Id<"agents">) => void;
 }
 
-export function AgentCard({ agent, onToggle, onConfigure }: AgentCardProps) {
+export function AgentCard({ agent, onToggle, onConfigure, onGenerateToken }: AgentCardProps) {
   const isActive = agent.status === "active";
+  const color = agent.color || "#5E6AD2";
 
   return (
     <div
       className={cn(
         "group flex flex-col rounded border border-subtle bg-surface-1 p-4",
-        "transition-all duration-150 hover:border-foreground/10 hover:bg-surface-2"
+        "transition-all duration-150 hover:border-foreground/10 hover:bg-surface-2",
+        agent.status === "revoked" && "opacity-50"
       )}
     >
       {/* Header */}
@@ -43,16 +51,16 @@ export function AgentCard({ agent, onToggle, onConfigure }: AgentCardProps) {
         <div className="flex items-center gap-3">
           <div
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-            style={{ backgroundColor: `${agent.color}20`, border: `1px solid ${agent.color}30` }}
+            style={{ backgroundColor: `${color}20`, border: `1px solid ${color}30` }}
           >
-            <Bot className="h-4 w-4" style={{ color: agent.color }} />
+            <Bot className="h-4 w-4" style={{ color }} />
           </div>
           <div>
             <p className="text-sm font-medium text-foreground">{agent.name}</p>
             <div className="flex items-center gap-1.5">
               <StatusDot variant={isActive ? "online" : "offline"} size="xs" />
               <span className="text-2xs text-muted-foreground">
-                {isActive ? "Active" : "Inactive"}
+                {agent.status === "revoked" ? "Revoked" : isActive ? "Active" : "Inactive"}
               </span>
             </div>
           </div>
@@ -60,53 +68,55 @@ export function AgentCard({ agent, onToggle, onConfigure }: AgentCardProps) {
       </div>
 
       {/* Description */}
-      <p className="mt-3 text-xs leading-relaxed text-muted-foreground line-clamp-2">
-        {agent.description}
-      </p>
-
-      {/* Meta */}
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {agent.scopes.map((scope) => (
-          <span
-            key={scope}
-            className="rounded border border-subtle bg-surface-3 px-1.5 py-px text-2xs text-foreground/50"
-          >
-            #{scope}
-          </span>
-        ))}
-      </div>
+      {agent.description && (
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground line-clamp-2">
+          {agent.description}
+        </p>
+      )}
 
       {/* Footer */}
-      <div className="mt-4 flex items-center justify-between border-t border-subtle pt-3">
-        <span className="text-2xs text-muted-foreground">
-          {agent.queryCount.toLocaleString()} queries today
-        </span>
-        <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 gap-1 px-2 text-2xs text-muted-foreground hover:text-foreground"
-            onClick={() => onToggle?.(agent.id, isActive ? "inactive" : "active")}
-          >
-            <Power className="h-2.5 w-2.5" />
-            {isActive ? "Disable" : "Enable"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 gap-1 border-subtle px-2 text-2xs hover:border-foreground/15"
-            onClick={() => onConfigure?.(agent.id)}
-          >
-            <Settings className="h-2.5 w-2.5" />
-            Configure
-          </Button>
+      {agent.status !== "revoked" && (
+        <div className="mt-4 flex items-center justify-between border-t border-subtle pt-3">
+          <span className="text-2xs text-muted-foreground">
+            {agent.lastActiveAt
+              ? `Last active ${new Date(agent.lastActiveAt).toLocaleDateString()}`
+              : "Never connected"}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 gap-1 px-2 text-2xs text-muted-foreground hover:text-foreground"
+              onClick={() => onGenerateToken?.(agent._id)}
+            >
+              <Key className="h-2.5 w-2.5" />
+              Token
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 gap-1 px-2 text-2xs text-muted-foreground hover:text-foreground"
+              onClick={() => onToggle?.(agent._id, isActive ? "inactive" : "active")}
+            >
+              <Power className="h-2.5 w-2.5" />
+              {isActive ? "Disable" : "Enable"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 gap-1 border-subtle px-2 text-2xs hover:border-foreground/15"
+              onClick={() => onConfigure?.(agent._id)}
+            >
+              <Settings className="h-2.5 w-2.5" />
+              Configure
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-const ALL_CHANNELS = ["general", "engineering", "design", "product", "private-salary", "exec"];
 const AGENT_COLORS = ["#5E6AD2", "#22C55E", "#F59E0B", "#EF4444", "#A855F7", "#3B82F6"];
 
 interface AgentConfigDialogProps {
@@ -114,53 +124,49 @@ interface AgentConfigDialogProps {
   mode: "edit" | "create";
   open: boolean;
   onClose: () => void;
-  onSave?: (agent: Agent) => void;
+  onSave?: (data: {
+    name: string;
+    description: string;
+    systemPrompt: string;
+    color: string;
+  }) => void;
 }
 
 export function AgentConfigDialog({ agent, mode, open, onClose, onSave }: AgentConfigDialogProps) {
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
-  const [scopes, setScopes] = useState<Set<string>>(new Set());
+  const [color, setColor] = useState(AGENT_COLORS[0]);
 
   useEffect(() => {
     if (open) {
       if (mode === "edit" && agent) {
         setName(agent.name);
+        setDescription(agent.description || "");
         setSystemPrompt(
-          `You are ${agent.name}, a helpful AI agent for the PING Platform. Answer questions concisely using the team's shared knowledge graph. Always cite sources.`
+          agent.systemPrompt ||
+            `You are ${agent.name}, a helpful AI agent for the PING Platform. Answer questions concisely using the team's shared knowledge graph. Always cite sources.`,
         );
-        setScopes(new Set(agent.scopes));
+        setColor(agent.color || AGENT_COLORS[0]);
       } else {
         setName("");
-        setSystemPrompt("You are a helpful AI agent for the PING Platform. Answer questions concisely using the team's shared knowledge graph. Always cite sources.");
-        setScopes(new Set(["general", "engineering", "product"]));
+        setDescription("");
+        setSystemPrompt(
+          "You are a helpful AI agent for the PING Platform. Answer questions concisely using the team's shared knowledge graph. Always cite sources.",
+        );
+        setColor(AGENT_COLORS[Math.floor(Math.random() * AGENT_COLORS.length)]);
       }
     }
   }, [open, mode, agent]);
 
-  const toggleScope = (ch: string) => {
-    setScopes((prev) => {
-      const next = new Set(prev);
-      if (next.has(ch)) next.delete(ch);
-      else next.add(ch);
-      return next;
-    });
-  };
-
   const handleSave = () => {
     if (!name.trim()) return;
-    const result: Agent = mode === "edit" && agent
-      ? { ...agent, name: name.trim(), scopes: Array.from(scopes) }
-      : {
-          id: String(Date.now()),
-          name: name.trim(),
-          description: systemPrompt.slice(0, 120),
-          status: "active",
-          scopes: Array.from(scopes),
-          queryCount: 0,
-          color: AGENT_COLORS[Math.floor(Math.random() * AGENT_COLORS.length)],
-        };
-    onSave?.(result);
+    onSave?.({
+      name: name.trim(),
+      description: description.trim() || systemPrompt.slice(0, 120),
+      systemPrompt,
+      color,
+    });
     onClose();
   };
 
@@ -188,6 +194,19 @@ export function AgentConfigDialog({ agent, mode, open, onClose, onSave }: AgentC
             />
           </div>
 
+          {/* Description */}
+          <div>
+            <label className="mb-1.5 block text-2xs font-medium uppercase tracking-widest text-white/40">
+              Description
+            </label>
+            <input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief description of what this agent does"
+              className="w-full rounded border border-subtle bg-surface-3 px-2.5 py-1.5 text-xs text-foreground placeholder:text-white/25 focus:border-white/20 focus:outline-none"
+            />
+          </div>
+
           {/* System prompt */}
           <div>
             <label className="mb-1.5 block text-2xs font-medium uppercase tracking-widest text-foreground/40">
@@ -201,32 +220,23 @@ export function AgentConfigDialog({ agent, mode, open, onClose, onSave }: AgentC
             />
           </div>
 
-          {/* Knowledge scope */}
+          {/* Color */}
           <div>
             <label className="mb-1.5 block text-2xs font-medium uppercase tracking-widest text-foreground/40">
-              Knowledge Scope
+              Color
             </label>
-            <p className="mb-2 text-2xs text-muted-foreground">
-              Channels this agent can access. Exclude sensitive channels.
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {ALL_CHANNELS.map((ch) => {
-                const included = scopes.has(ch);
-                return (
-                  <button
-                    key={ch}
-                    onClick={() => toggleScope(ch)}
-                    className={cn(
-                      "rounded border px-2 py-0.5 text-2xs transition-colors",
-                      included
-                        ? "border-ping-purple/40 bg-ping-purple/10 text-ping-purple"
-                        : "border-subtle bg-surface-3 text-foreground/30 hover:text-foreground/50"
-                    )}
-                  >
-                    #{ch}
-                  </button>
-                );
-              })}
+            <div className="flex gap-2">
+              {AGENT_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setColor(c)}
+                  className={cn(
+                    "h-6 w-6 rounded-full border-2 transition-all",
+                    color === c ? "border-foreground scale-110" : "border-transparent hover:border-foreground/30",
+                  )}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
             </div>
           </div>
 

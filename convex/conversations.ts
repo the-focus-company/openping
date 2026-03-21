@@ -30,7 +30,7 @@ export const getOrCreateDM = mutation({
     const myMemberships = await ctx.db
       .query("channelMembers")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
+      .take(1000);
 
     for (const membership of myMemberships) {
       const channel = await ctx.db.get(membership.channelId);
@@ -141,7 +141,7 @@ export const list = query({
     const myMemberships = await ctx.db
       .query("channelMembers")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
+      .take(1000);
 
     const conversations = await Promise.all(
       myMemberships.map(async (membership) => {
@@ -153,7 +153,7 @@ export const list = query({
         const allMembers = await ctx.db
           .query("channelMembers")
           .withIndex("by_channel", (q) => q.eq("channelId", channel._id))
-          .collect();
+          .take(100);
 
         const participants = (
           await Promise.all(
@@ -193,7 +193,7 @@ export const list = query({
               .eq("channelId", channel._id)
               .gt("_creationTime", lastReadAt),
           )
-          .collect();
+          .take(100);
 
         const sortTime = lastMessage
           ? lastMessage._creationTime
@@ -366,7 +366,7 @@ export const getParticipants = query({
     const members = await ctx.db
       .query("channelMembers")
       .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
-      .collect();
+      .take(1000);
 
     const participants = await Promise.all(
       members.map(async (member) => {
