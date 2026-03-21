@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CitationRow, type Citation } from "@/components/bot/CitationPill";
 import { cn } from "@/lib/utils";
+import { MentionPopover, type MentionUser } from "./MentionPopover";
 
 export interface Message {
   id: string;
@@ -135,6 +136,12 @@ export function MessageList({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevMessageCountRef = useRef(messages.length);
 
+  // Mention popover state
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionStartIndex, setMentionStartIndex] = useState<number | null>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
+
   const isAtBottom = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return true;
@@ -173,16 +180,88 @@ export function MessageList({
     if (isAtBottom()) setShowNewMessages(false);
   };
 
+  // Detect @ trigger in the textarea input
+  const detectMention = useCallback(
+    (value: string, cursorPos: number) => {
+      // Look backwards from cursor for an @ that starts a mention
+      const textBefore = value.slice(0, cursorPos);
+      const atIndex = textBefore.lastIndexOf("@");
+
+      if (atIndex === -1) {
+        setMentionOpen(false);
+        return;
+      }
+
+      // The @ must be at start of input or preceded by a space/newline
+      const charBefore = atIndex > 0 ? textBefore[atIndex - 1] : " ";
+      if (charBefore !== " " && charBefore !== "\n" && atIndex !== 0) {
+        setMentionOpen(false);
+        return;
+      }
+
+      // Text between @ and cursor must not contain spaces (simple filter query)
+      const queryText = textBefore.slice(atIndex + 1);
+      if (queryText.includes(" ")) {
+        setMentionOpen(false);
+        return;
+      }
+
+      setMentionStartIndex(atIndex);
+      setMentionQuery(queryText);
+      setMentionOpen(true);
+    },
+    []
+  );
+
+  const handleMentionSelect = useCallback(
+    (user: MentionUser) => {
+      if (mentionStartIndex === null) return;
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const before = input.slice(0, mentionStartIndex);
+      const after = input.slice(textarea.selectionStart);
+      const mention = `@${user.name} `;
+      const newValue = before + mention + after;
+
+      setInput(newValue);
+      setMentionOpen(false);
+      setMentionStartIndex(null);
+      setMentionQuery("");
+
+      // Restore cursor position after the inserted mention
+      const newCursorPos = before.length + mention.length;
+      requestAnimationFrame(() => {
+        textarea.focus();
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      });
+    },
+    [input, mentionStartIndex]
+  );
+
+  const handleDismissMention = useCallback(() => {
+    setMentionOpen(false);
+    setMentionStartIndex(null);
+    setMentionQuery("");
+  }, []);
+
   const handleSend = () => {
     const trimmed = input.trim();
     if (!trimmed) return;
     onSend?.(trimmed);
     setInput("");
+    setMentionOpen(false);
     // Scroll to bottom after send
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // When mention popover is open, let it handle arrow/enter/escape
+    if (mentionOpen) {
+      if (["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)) {
+        return; // MentionPopover's global keydown handler will capture this
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -255,12 +334,33 @@ export function MessageList({
 
       {/* Composer */}
       <div className="border-t border-subtle p-3">
-        <div className="flex items-end gap-2 rounded border border-subtle bg-surface-2 px-3 py-2 focus-within:border-white/15">
+        <div ref={composerRef} className="relative flex items-end gap-2 rounded border border-subtle bg-surface-2 px-3 py-2 focus-within:border-white/15">
+          {/* Mention popover — positioned above the composer */}
+          <MentionPopover
+            query={mentionQuery}
+            isOpen={mentionOpen}
+            position={{ top: 8, left: 0 }}
+            onSelect={handleMentionSelect}
+            onDismiss={handleDismissMention}
+          />
+
           <textarea
             ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              setInput(newValue);
+              detectMention(newValue, e.target.selectionStart);
+            }}
             onKeyDown={handleKeyDown}
+            onClick={(e) => {
+              // Re-check mention on click (cursor may have moved)
+              detectMention(input, e.currentTarget.selectionStart);
+            }}
+            onBlur={() => {
+              // Delay dismiss so click on popover item fires first
+              setTimeout(() => setMentionOpen(false), 150);
+            }}
             placeholder={isDM ? `Message ${channelName}...` : `Message #${channelName}... or @KnowledgeBot`}
             rows={1}
             className="max-h-32 flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-white/25 focus:outline-none"
@@ -275,8 +375,22 @@ export function MessageList({
             {!isDM && (
               <button
                 onClick={() => {
-                  setInput((prev) => prev + "@");
-                  textareaRef.current?.focus();
+                  const textarea = textareaRef.current;
+                  if (!textarea) return;
+                  const cursorPos = textarea.selectionStart;
+                  const before = input.slice(0, cursorPos);
+                  const after = input.slice(cursorPos);
+                  // Insert @ and trigger mention detection
+                  const needsSpace = before.length > 0 && !before.endsWith(" ") && !before.endsWith("\n");
+                  const prefix = needsSpace ? " @" : "@";
+                  const newValue = before + prefix + after;
+                  setInput(newValue);
+                  const newCursorPos = cursorPos + prefix.length;
+                  requestAnimationFrame(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(newCursorPos, newCursorPos);
+                    detectMention(newValue, newCursorPos);
+                  });
                 }}
                 className="rounded p-1 text-white/25 hover:bg-surface-3 hover:text-white/60"
               >
