@@ -2,6 +2,7 @@ import { query, mutation, internalQuery } from "./_generated/server";
 import { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { requireAuth } from "./auth";
 
 export async function createOrUpdateUserHandler(
   ctx: MutationCtx,
@@ -122,5 +123,26 @@ export const createOrUpdate = mutation({
   },
   handler: async (ctx, args) => {
     return await createOrUpdateUserHandler(ctx, args);
+  },
+});
+
+export const updateProfile = mutation({
+  args: {
+    name: v.string(),
+    notificationPrefs: v.optional(
+      v.object({
+        inboxNotifications: v.boolean(),
+        proactiveAlerts: v.boolean(),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAuth(ctx);
+    await ctx.db.patch(user._id, {
+      name: args.name,
+      ...(args.notificationPrefs !== undefined && {
+        notificationPrefs: args.notificationPrefs,
+      }),
+    });
   },
 });

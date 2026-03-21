@@ -18,6 +18,12 @@ export default defineSchema({
     presenceStatus: v.optional(v.union(v.literal("online"), v.literal("away"), v.literal("offline"))),
     statusMessage: v.optional(v.string()),
     statusEmoji: v.optional(v.string()),
+    notificationPrefs: v.optional(
+      v.object({
+        inboxNotifications: v.boolean(),
+        proactiveAlerts: v.boolean(),
+      }),
+    ),
   })
     .index("by_workos_id", ["workosUserId"])
     .index("by_email", ["email"])
