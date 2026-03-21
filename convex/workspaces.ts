@@ -24,6 +24,26 @@ export const create = mutation({
   },
 });
 
+export const get = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireAuth(ctx);
+    return await ctx.db.get(user.workspaceId);
+  },
+});
+
+export const update = mutation({
+  args: {
+    name: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAuth(ctx);
+    if (args.name !== undefined) {
+      await ctx.db.patch(user.workspaceId, { name: args.name });
+    }
+  },
+});
+
 export const getBySlug = query({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
