@@ -1,4 +1,4 @@
-import { internalQuery } from "./_generated/server";
+import { internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 export async function hashToken(raw: string): Promise<string> {
@@ -16,7 +16,6 @@ export const validateToken = internalQuery({
       .query("agentApiTokens")
       .withIndex("by_token_hash", (q) => q.eq("tokenHash", args.tokenHash))
       .unique();
-
     if (!token || token.status !== "active") return null;
     if (token.expiresAt && token.expiresAt < Date.now()) return null;
 
@@ -27,5 +26,12 @@ export const validateToken = internalQuery({
     if (!agentUser) return null;
 
     return { agent, agentUser, token };
+  },
+});
+
+export const updateTokenLastUsed = internalMutation({
+  args: { tokenId: v.id("agentApiTokens") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.tokenId, { lastUsedAt: Date.now() });
   },
 });

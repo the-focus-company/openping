@@ -111,12 +111,9 @@ export default defineSchema({
     mentions: v.optional(v.array(v.string())),
     graphitiEpisodeId: v.optional(v.string()),
     isEdited: v.boolean(),
-    threadParentId: v.optional(v.id("messages")),
-    replyCount: v.optional(v.number()),
   })
     .index("by_channel", ["channelId"])
     .index("by_author", ["authorId"])
-    .index("by_thread_parent", ["threadParentId"])
     .searchIndex("search_body", {
       searchField: "body",
       filterFields: ["channelId"],
@@ -305,38 +302,37 @@ export default defineSchema({
     .index("by_message", ["messageId"])
     .index("by_message_user", ["messageId", "userId"]),
 
-  decisions: defineTable({
-    userId: v.id("users"),
+  agents: defineTable({
     workspaceId: v.id("workspaces"),
-    type: v.union(
-      v.literal("inbox_summary"),
-      v.literal("proactive_alert"),
-      v.literal("draft"),
-      v.literal("integration"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    status: v.union(
+      v.literal("active"),
+      v.literal("inactive"),
+      v.literal("revoked"),
     ),
-    sourceId: v.optional(v.string()),
-    action: v.union(
-      v.literal("approved"),
-      v.literal("rejected"),
-      v.literal("delegated"),
-      v.literal("snoozed"),
-      v.literal("archived"),
-    ),
-    delegatedTo: v.optional(v.id("users")),
-    snoozedUntil: v.optional(v.number()),
-    quadrant: v.optional(
-      v.union(
-        v.literal("urgent-important"),
-        v.literal("important"),
-        v.literal("urgent"),
-        v.literal("fyi"),
-      ),
-    ),
-    decidedAt: v.number(),
-    decisionTimeMs: v.optional(v.number()),
+    createdBy: v.id("users"),
+    color: v.optional(v.string()),
+    systemPrompt: v.optional(v.string()),
+    userId: v.id("users"),
+    lastActiveAt: v.optional(v.number()),
   })
-    .index("by_user", ["userId"])
-    .index("by_user_decided", ["userId", "decidedAt"])
     .index("by_workspace", ["workspaceId"])
-    .index("by_workspace_decided", ["workspaceId", "decidedAt"]),
+    .index("by_workspace_status", ["workspaceId", "status"])
+    .index("by_user", ["userId"]),
+
+  agentApiTokens: defineTable({
+    agentId: v.id("agents"),
+    workspaceId: v.id("workspaces"),
+    tokenHash: v.string(),
+    tokenPrefix: v.string(),
+    label: v.string(),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    createdBy: v.id("users"),
+    lastUsedAt: v.optional(v.number()),
+    expiresAt: v.optional(v.number()),
+  })
+    .index("by_agent", ["agentId"])
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_workspace", ["workspaceId"]),
 });
