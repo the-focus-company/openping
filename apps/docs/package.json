@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "astro": "^5.7",
-    "@astrojs/starlight": "^0.34"
+    "@astrojs/starlight": "^0.34",
+    "zod": "^3.25.0"
   }
 }
