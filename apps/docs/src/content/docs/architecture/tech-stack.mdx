@@ -1,0 +1,136 @@
+---
+title: Technology Stack
+description: Detailed breakdown of every technology used in PING and why each was chosen.
+sidebar:
+  order: 2
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+PING uses a modern, opinionated stack optimized for real-time collaboration, AI integration, and rapid development.
+
+## Frontend
+
+| Technology | Version | Purpose |
+|---|---|---|
+| **Next.js** | 15 | App Router framework with React Server Components |
+| **React** | 19 | UI library with concurrent features |
+| **TypeScript** | Strict | Type safety across the full stack |
+| **Tailwind CSS** | 4 | Utility-first CSS framework |
+| **Radix UI** | Latest | Accessible headless component primitives |
+| **cmdk** | Latest | Command palette (Cmd+K) interface |
+
+### Why Next.js 15 with App Router
+
+Next.js provides the routing, server-side rendering, and middleware layers needed for a production communication platform. The App Router enables React Server Components for initial page loads while the `convex/react` bindings handle real-time client-side state. Route groups cleanly separate auth flows (`(auth)/`) from the main dashboard (`(dashboard)/`).
+
+### Why Tailwind CSS 4
+
+Tailwind provides rapid UI development with consistent design tokens. Version 4 brings native CSS cascade layers, improved performance, and simplified configuration. Combined with Radix UI for accessible component primitives, this avoids building a custom design system from scratch.
+
+### Why cmdk
+
+The command palette is central to PING's UX -- users can quickly navigate channels, search messages, and trigger actions without leaving the keyboard. `cmdk` provides an unstyled, composable foundation for this.
+
+## Backend
+
+| Technology | Version | Purpose |
+|---|---|---|
+| **Convex** | ^1.34 | Serverless backend: database, functions, real-time sync |
+
+### Why Convex
+
+Convex replaces an entire backend stack in a single service:
+
+- **Real-time database** — Automatic WebSocket push to all connected clients. No need for Redis pub/sub, a WebSocket server, or polling.
+- **Serverless functions** — Queries (read), mutations (write), and actions (side effects) run as TypeScript functions with full type safety.
+- **Optimistic updates** — Built into the `convex/react` bindings. Writes appear instantly in the sender's UI.
+- **Full-text search** — Native search indexes on any text field (used for message search).
+- **Vector search** — Built-in vector storage for semantic search and AI retrieval.
+- **CRON scheduling** — Periodic jobs for AI summaries and proactive scans.
+- **File storage** — Managed file uploads and serving.
+
+<Aside type="note">
+Convex functions are defined in the `convex/` directory at the repository root (not inside `apps/`). This is the standard Convex convention for monorepo setups.
+</Aside>
+
+This eliminates the need for separate services like PostgreSQL, Redis, Socket.io, and a CRON scheduler, dramatically reducing operational complexity.
+
+## Authentication
+
+| Technology | Purpose |
+|---|---|
+| **WorkOS** | SSO, SAML, OAuth, directory sync |
+
+### Why WorkOS
+
+WorkOS provides enterprise-grade authentication out of the box:
+
+- **Google OAuth** for quick developer onboarding
+- **SAML/SSO** for enterprise customers (no custom implementation needed)
+- **Directory Sync (SCIM)** for automatic user provisioning
+- **SOC 2 compliance** inherited from the identity layer
+
+Convex verifies WorkOS-issued JWTs using RS256 signatures fetched from the WorkOS JWKS endpoint. The auth configuration supports two JWT issuer patterns to handle both SSO and user management flows. See the [Authentication page](/Platform/architecture/authentication/) for full details.
+
+## AI and Intelligence
+
+| Technology | Purpose |
+|---|---|
+| **OpenAI** | LLM for summarization, ranking, and alert generation |
+| **Vercel AI SDK** | ^6.0 — Unified interface for AI model calls |
+| **Graphiti** | Temporal knowledge graph for company memory |
+
+### Why Vercel AI SDK
+
+The Vercel AI SDK (`ai` package) provides a standardized interface for calling LLMs from serverless functions. It supports streaming, tool use, and model switching (OpenAI primary, with fallback capability). This avoids direct OpenAI SDK coupling and enables future model swaps.
+
+### Why Graphiti
+
+Graphiti builds a temporal semantic graph of all workspace communication. Unlike simple RAG (retrieval-augmented generation), Graphiti understands how facts evolve over time -- it knows that "we decided on PostgreSQL in Q2" was superseded by "we switched to Convex in Q3". This powers:
+
+- **@KnowledgeBot** — Answers questions with cited, time-aware sources
+- **Proactive fact-checking** — Detects when a discussion contradicts established knowledge
+- **Cross-team context syncing** — Surfaces relevant decisions from other channels
+
+## Build and Deployment
+
+| Technology | Purpose |
+|---|---|
+| **Turborepo** | ^2.8 — Monorepo build orchestration with caching |
+| **pnpm** | ^10.28 — Fast, disk-efficient package manager |
+| **Vercel** | Frontend hosting with edge network |
+| **Convex Cloud** | Backend hosting (managed) |
+
+### Why Turborepo + pnpm
+
+Turborepo provides intelligent build caching and task orchestration across the monorepo. Combined with pnpm workspaces, it enables:
+
+- **Parallel builds** — Independent packages build simultaneously
+- **Dependency-aware ordering** — `"dependsOn": ["^build"]` ensures shared packages build before apps
+- **Remote caching** — Build artifacts can be shared across CI and developer machines
+- **Minimal disk usage** — pnpm's content-addressable storage deduplicates dependencies
+
+The build pipeline passes through environment variables for Convex and WorkOS configuration:
+
+```json
+{
+  "build": {
+    "dependsOn": ["^build"],
+    "outputs": [".next/**", "dist/**"],
+    "env": [
+      "NEXT_PUBLIC_CONVEX_URL",
+      "WORKOS_CLIENT_ID",
+      "WORKOS_API_KEY",
+      "WORKOS_COOKIE_PASSWORD",
+      "NEXT_PUBLIC_WORKOS_REDIRECT_URI"
+    ]
+  }
+}
+```
+
+### Deployment Architecture
+
+- **Frontend** — Deployed to Vercel, which handles SSR, edge caching, and CDN distribution. Configuration lives in `vercel.json` at the repo root.
+- **Backend** — Convex Cloud manages the database, serverless function runtime, and WebSocket infrastructure. No server provisioning or scaling configuration needed.
+- **Documentation** — Astro Starlight static site, deployable to GitHub Pages or any static host.

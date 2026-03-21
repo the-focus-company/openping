@@ -1,0 +1,168 @@
+---
+title: Authentication
+description: How PING authenticates users with WorkOS, verifies JWTs in Convex, and protects routes.
+sidebar:
+  order: 4
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+PING uses WorkOS for authentication, providing enterprise-ready SSO and OAuth from day one. JWTs issued by WorkOS are verified by the Convex backend on every function call.
+
+## Overview
+
+```
+User                  Next.js               WorkOS              Convex
+─────────────────────────────────────────────────────────────────────────
+1. Click Login  ──►  Redirect to     ──►   OAuth/SSO
+                     WorkOS login           provider
+                                              │
+2. Callback     ◄──  /callback       ◄──   JWT + user info
+                     page receives          │
+                     auth token             │
+                                              │
+3. API calls    ──►  Include JWT     ──►   Verify JWT
+                     in Convex              via JWKS
+                     client config          endpoint
+                                              │
+4. Authorized   ◄──  Real-time       ◄──   Function
+                     data updates           executes
+```
+
+## WorkOS Integration
+
+WorkOS handles the identity layer, supporting:
+
+- **Google OAuth** — Default login method for quick onboarding
+- **SAML/SSO** — Enterprise single sign-on (configurable per workspace via WorkOS organization)
+- **Directory Sync (SCIM)** — Automatic user provisioning and deprovisioning
+
+## JWT Verification in Convex
+
+The Convex backend verifies WorkOS JWTs using RS256 signatures. The auth configuration in `convex/auth.config.ts` registers two JWT providers to handle different WorkOS issuer patterns:
+
+```typescript
+const authConfig = {
+  providers: [
+    {
+      type: "customJwt",
+      issuer: "https://api.workos.com/",
+      algorithm: "RS256",
+      jwks: `https://api.workos.com/sso/jwks/${clientId}`,
+    },
+    {
+      type: "customJwt",
+      issuer: `https://api.workos.com/user_management/${clientId}`,
+      algorithm: "RS256",
+      jwks: `https://api.workos.com/sso/jwks/${clientId}`,
+    },
+  ],
+};
+```
+
+The first provider handles SSO-issued tokens. The second handles tokens from WorkOS User Management (email/password and OAuth flows). Both use the same JWKS endpoint for key verification.
+
+## Authentication Helper
+
+Every Convex function that requires authentication uses the `requireAuth` helper defined in `convex/auth.ts`:
+
+```typescript
+export async function requireAuth(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_workos_id", (q) =>
+      q.eq("workosUserId", identity.subject)
+    )
+    .unique();
+
+  if (!user) throw new Error("User not found");
+  return user;
+}
+```
+
+This function:
+1. Extracts the JWT identity from the request context
+2. Looks up the corresponding user in the database via the `by_workos_id` index
+3. Returns the full user document for use in the function body
+4. Throws an error if the token is missing or the user does not exist
+
+<Aside type="caution">
+**Security: never accept `userId` as a function argument.** Always derive the current user from `ctx.auth.getUserIdentity()`. Accepting a user ID as a parameter would allow any authenticated user to impersonate another user by passing their ID.
+</Aside>
+
+## Channel Access Control
+
+Beyond authentication, PING enforces channel-level authorization using the `requireChannelMember` helper:
+
+```typescript
+export async function requireChannelMember(
+  ctx: QueryCtx | MutationCtx,
+  channelId: Id<"channels">,
+  userId: Id<"users">,
+): Promise<Doc<"channelMembers">> {
+  const membership = await ctx.db
+    .query("channelMembers")
+    .withIndex("by_channel_user", (q) =>
+      q.eq("channelId", channelId).eq("userId", userId),
+    )
+    .unique();
+
+  if (!membership) throw new Error("Not a member of this channel");
+  return membership;
+}
+```
+
+This checks the `channelMembers` table to verify the user has been added to the channel before allowing reads or writes.
+
+## Identity Fields
+
+<Aside type="caution">
+**Use `identity.tokenIdentifier` (not `identity.subject`) for unique user identification in Convex.** The `tokenIdentifier` combines the issuer and subject to create a globally unique key, which is important when multiple JWT providers are configured.
+</Aside>
+
+The `identity` object returned by `ctx.auth.getUserIdentity()` contains:
+
+| Field | Description |
+|---|---|
+| `subject` | The WorkOS user ID (used to look up the user in the `users` table) |
+| `tokenIdentifier` | Globally unique key combining issuer + subject |
+| `email` | User's email from the JWT claims |
+| `name` | User's display name from the JWT claims |
+
+## Route Protection
+
+On the frontend, Next.js middleware protects dashboard routes. The middleware checks for a valid session before allowing access to any `(dashboard)` route, redirecting unauthenticated users to the login page.
+
+Protected routes:
+- `/inbox` — Copilot Inbox
+- `/channel/[channelId]` — Channel view
+- `/dm/[dmId]` — Direct messages
+- `/settings` — Workspace settings
+
+Public routes:
+- `/login` — Login page
+- `/callback` — OAuth callback handler
+
+## Token Refresh
+
+WorkOS JWTs have a limited lifetime. The Convex client automatically handles token refresh by:
+
+1. Storing the refresh token in an HTTP-only cookie (managed by the Next.js server)
+2. Using the `WORKOS_COOKIE_PASSWORD` environment variable to encrypt the cookie
+3. Refreshing the access token transparently before it expires
+
+The `sessions` table in the database tracks active server-side sessions, linking each to a `workosSessionId` with an `expiresAt` timestamp for cleanup.
+
+## Environment Variables
+
+The auth system requires the following environment variables:
+
+| Variable | Purpose |
+|---|---|
+| `WORKOS_CLIENT_ID` | WorkOS application client ID |
+| `WORKOS_API_KEY` | WorkOS API key for server-side calls |
+| `WORKOS_COOKIE_PASSWORD` | Encryption key for session cookies |
+| `NEXT_PUBLIC_WORKOS_REDIRECT_URI` | OAuth callback URL |

@@ -1,0 +1,323 @@
+---
+title: Data Model
+description: Complete reference for the PING database schema, including all tables, fields, relationships, and indexes.
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+PING's data model is defined in `convex/schema.ts` using the Convex schema definition API. The database contains 15 tables covering users, workspaces, messaging, AI features, and integrations.
+
+## Entity Relationship Overview
+
+```
+workspaces
+  ├── users (workspaceId → workspaces)
+  │     ├── channelMembers (userId → users)
+  │     ├── directConversationMembers (userId → users)
+  │     ├── inboxSummaries (userId → users)
+  │     ├── proactiveAlerts (userId → users)
+  │     ├── drafts (userId → users)
+  │     ├── sessions (userId → users)
+  │     ├── reactions (userId → users)
+  │     └── typingIndicators (userId → users)
+  ├── channels (workspaceId → workspaces)
+  │     ├── messages (channelId → channels)
+  │     ├── channelMembers (channelId → channels)
+  │     └── typingIndicators (channelId → channels)
+  ├── directConversations (workspaceId → workspaces)
+  │     ├── directMessages (conversationId → directConversations)
+  │     └── directConversationMembers (conversationId → directConversations)
+  ├── integrationObjects (workspaceId → workspaces)
+  └── proactiveAlerts (workspaceId → workspaces)
+```
+
+## Tables
+
+### `users`
+
+User profiles linked to WorkOS identity. Each user belongs to exactly one workspace.
+
+| Field | Type | Description |
+|---|---|---|
+| `workosUserId` | `string` | WorkOS user identifier |
+| `email` | `string` | User email address |
+| `name` | `string` | Display name |
+| `avatarUrl` | `string?` | Profile image URL |
+| `role` | `"admin" \| "member"` | Workspace role |
+| `workspaceId` | `Id<"workspaces">` | Parent workspace |
+| `status` | `"active" \| "invited" \| "deactivated"` | Account status |
+| `lastSeenAt` | `number?` | Last activity timestamp |
+| `presenceStatus` | `"online" \| "offline"?` | Real-time presence |
+| `statusMessage` | `string?` | Custom status text |
+| `statusEmoji` | `string?` | Custom status emoji |
+| `notificationPrefs` | `object?` | Notification settings (`inboxNotifications`, `proactiveAlerts`) |
+
+**Indexes:**
+- `by_workos_id` — Lookup by WorkOS user ID (used in auth flow)
+- `by_email` — Lookup by email address
+- `by_workspace` — List all users in a workspace
+
+### `workspaces`
+
+Multi-tenant workspace containers. Users, channels, and all content are scoped to a workspace.
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | Workspace display name |
+| `slug` | `string` | URL-safe identifier |
+| `workosOrgId` | `string?` | WorkOS organization ID for SSO |
+| `createdBy` | `Id<"users">?` | Creator reference |
+| `integrations` | `any?` | Integration configuration blob |
+
+**Indexes:**
+- `by_slug` — Lookup by URL slug
+- `by_workos_org` — Lookup by WorkOS organization ID
+
+### `channels`
+
+Communication channels within a workspace. Supports public channels, DMs, and group types.
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | Channel name (e.g., `#engineering`) |
+| `description` | `string?` | Channel description |
+| `workspaceId` | `Id<"workspaces">` | Parent workspace |
+| `createdBy` | `Id<"users">` | Creator |
+| `isDefault` | `boolean` | Whether users auto-join this channel |
+| `isArchived` | `boolean` | Archived status |
+| `type` | `"public" \| "dm" \| "group"?` | Channel type |
+
+**Indexes:**
+- `by_workspace` — List all channels in a workspace
+- `by_workspace_name` — Lookup by workspace + channel name (unique constraint)
+
+### `channelMembers`
+
+Tracks which users belong to which channels and their read state.
+
+| Field | Type | Description |
+|---|---|---|
+| `channelId` | `Id<"channels">` | Channel reference |
+| `userId` | `Id<"users">` | Member reference |
+| `lastReadAt` | `number?` | Timestamp of last read message (for unread counts) |
+
+**Indexes:**
+- `by_channel` — List all members of a channel
+- `by_user` — List all channels a user belongs to
+- `by_channel_user` — Lookup specific membership (used for access control)
+
+### `messages`
+
+Channel messages with support for full-text search, citations, and integration references.
+
+| Field | Type | Description |
+|---|---|---|
+| `channelId` | `Id<"channels">` | Parent channel |
+| `authorId` | `Id<"users">` | Message author |
+| `body` | `string` | Message content |
+| `type` | `"user" \| "bot" \| "system" \| "integration"` | Message source type |
+| `integrationObjectId` | `Id<"integrationObjects">?` | Linked integration (PR, ticket) |
+| `citations` | `array?` | AI-generated source citations (text, sourceUrl, sourceTitle) |
+| `mentions` | `string[]?` | Mentioned user identifiers |
+| `graphitiEpisodeId` | `string?` | Knowledge graph episode reference |
+| `isEdited` | `boolean` | Whether the message has been edited |
+
+**Indexes:**
+- `by_channel` — List messages in a channel (chronological)
+- `by_author` — List messages by a specific user
+
+**Search Indexes:**
+- `search_body` — Full-text search on `body`, filterable by `channelId`
+
+<Aside type="tip">
+The `search_body` index enables fast message search across channels. Queries can filter by `channelId` to scope search to a specific channel, or omit the filter for workspace-wide search.
+</Aside>
+
+### `directConversations`
+
+Direct message conversations supporting 1:1, group, and agent-assisted variants.
+
+| Field | Type | Description |
+|---|---|---|
+| `workspaceId` | `Id<"workspaces">` | Parent workspace |
+| `kind` | `"1to1" \| "group" \| "agent_1to1" \| "agent_group"` | Conversation type |
+| `name` | `string?` | Display name (for group conversations) |
+| `createdBy` | `Id<"users">` | Conversation creator |
+| `isArchived` | `boolean` | Archived status |
+
+**Indexes:**
+- `by_workspace` — List all DM conversations in a workspace
+
+The `agent_1to1` and `agent_group` kinds indicate that an AI agent participates in the conversation, enabling bot-assisted DMs and group chats.
+
+### `directConversationMembers`
+
+Membership tracking for direct conversations, including agent participants.
+
+| Field | Type | Description |
+|---|---|---|
+| `conversationId` | `Id<"directConversations">` | Parent conversation |
+| `userId` | `Id<"users">` | Member reference |
+| `isAgent` | `boolean` | Whether this member is an AI agent |
+| `lastReadAt` | `number?` | Last read timestamp |
+
+**Indexes:**
+- `by_conversation` — List all members of a conversation
+- `by_user` — List all conversations a user belongs to
+- `by_conversation_user` — Lookup specific membership
+
+### `directMessages`
+
+Messages within direct conversations.
+
+| Field | Type | Description |
+|---|---|---|
+| `conversationId` | `Id<"directConversations">` | Parent conversation |
+| `authorId` | `Id<"users">` | Message author |
+| `body` | `string` | Message content |
+| `type` | `"user" \| "bot" \| "system"` | Message source type |
+| `isEdited` | `boolean` | Whether the message has been edited |
+
+**Indexes:**
+- `by_conversation` — List messages in a conversation
+- `by_author` — List messages by a specific user
+
+### `integrationObjects`
+
+External references to GitHub PRs, Linear tickets, and other integration data. These are rendered as actionable cards in the UI.
+
+| Field | Type | Description |
+|---|---|---|
+| `workspaceId` | `Id<"workspaces">` | Parent workspace |
+| `type` | `"github_pr" \| "linear_ticket"` | Integration source |
+| `externalId` | `string` | ID in the external system |
+| `title` | `string` | Display title |
+| `status` | `string` | Current status (e.g., "open", "merged") |
+| `url` | `string` | Link to the external resource |
+| `author` | `string` | Author in the external system |
+| `metadata` | `any` | Additional integration-specific data |
+| `lastSyncedAt` | `number` | Last webhook sync timestamp |
+| `graphitiEpisodeId` | `string?` | Knowledge graph reference |
+
+**Indexes:**
+- `by_workspace` — List all integration objects in a workspace
+- `by_workspace_type` — Filter by workspace + type (e.g., all GitHub PRs)
+- `by_external_id` — Lookup by external system ID (for webhook deduplication)
+
+### `inboxSummaries`
+
+AI-generated inbox cards ranked by the Eisenhower Matrix. Each summary covers a time period for a specific channel and user.
+
+| Field | Type | Description |
+|---|---|---|
+| `userId` | `Id<"users">` | Target user |
+| `channelId` | `Id<"channels">` | Source channel |
+| `eisenhowerQuadrant` | `"urgent-important" \| "important" \| "urgent" \| "fyi"` | Overall priority |
+| `bullets` | `array` | Ranked summary points (text, priority, relatedMessageIds) |
+| `messageCount` | `number` | Number of messages in the period |
+| `periodStart` | `number` | Period start timestamp |
+| `periodEnd` | `number` | Period end timestamp |
+| `isRead` | `boolean` | Whether the user has seen this summary |
+| `isArchived` | `boolean` | Whether the user archived this summary |
+| `actionItems` | `array?` | Extracted action items (text, assignee, relatedIntegrationObjectId) |
+
+**Indexes:**
+- `by_user` — List all summaries for a user
+- `by_user_read` — Filter by user + read status (for unread inbox)
+- `by_user_channel` — Filter by user + channel
+- `by_channel_period` — Lookup by channel + time period
+
+Each bullet within a summary carries its own Eisenhower priority, and each links back to the source `messages` that generated it via `relatedMessageIds`.
+
+### `proactiveAlerts`
+
+AI-driven notifications that surface important events before the user asks.
+
+| Field | Type | Description |
+|---|---|---|
+| `userId` | `Id<"users">` | Target user |
+| `workspaceId` | `Id<"workspaces">` | Parent workspace |
+| `type` | See below | Alert category |
+| `channelId` | `Id<"channels">` | Related channel |
+| `sourceChannelId` | `Id<"channels">?` | Originating channel (for cross-team sync) |
+| `title` | `string` | Alert title |
+| `body` | `string` | Alert description |
+| `sourceMessageId` | `Id<"messages">?` | Triggering message |
+| `sourceIntegrationObjectId` | `Id<"integrationObjects">?` | Related integration object |
+| `suggestedAction` | `string` | AI-suggested next step |
+| `priority` | `"high" \| "medium" \| "low"` | Alert priority |
+| `status` | `"pending" \| "acted" \| "dismissed" \| "expired"` | Lifecycle state |
+| `expiresAt` | `number` | Auto-expiry timestamp |
+| `createdAt` | `number` | Creation timestamp |
+
+**Alert types:** `unanswered_question`, `pr_review_nudge`, `incident_route`, `blocked_task`, `fact_check`, `cross_team_sync`
+
+**Indexes:**
+- `by_user_status` — Filter by user + status (e.g., pending alerts)
+- `by_user_type` — Filter by user + alert type
+- `by_workspace_type` — Filter by workspace + alert type
+
+### `drafts`
+
+Persisted message drafts with AI-generated completion suggestions.
+
+| Field | Type | Description |
+|---|---|---|
+| `userId` | `Id<"users">` | Draft author |
+| `channelId` | `Id<"channels">` | Target channel |
+| `body` | `string` | Draft content |
+| `replyToMessageId` | `Id<"messages">?` | Message being replied to |
+| `contextSnapshot` | `string` | Captured conversation context at draft time |
+| `suggestedCompletion` | `string` | AI-generated completion |
+| `status` | `"active" \| "dismissed" \| "sent"` | Draft lifecycle |
+| `createdAt` | `number` | Creation timestamp |
+| `updatedAt` | `number` | Last modification timestamp |
+
+**Indexes:**
+- `by_user` — List all drafts for a user
+- `by_user_channel` — Filter by user + channel
+- `by_user_status` — Filter by user + status (e.g., active drafts)
+
+### `sessions`
+
+Server-side session tracking linked to WorkOS session IDs.
+
+| Field | Type | Description |
+|---|---|---|
+| `userId` | `Id<"users">` | Session owner |
+| `workosSessionId` | `string` | WorkOS session identifier |
+| `expiresAt` | `number` | Session expiry timestamp |
+
+**Indexes:**
+- `by_session_id` — Lookup by WorkOS session ID
+- `by_user` — List all sessions for a user
+
+### `typingIndicators`
+
+Real-time typing presence for channels.
+
+| Field | Type | Description |
+|---|---|---|
+| `channelId` | `Id<"channels">` | Channel where typing occurs |
+| `userId` | `Id<"users">` | User who is typing |
+| `expiresAt` | `number` | Auto-expiry for stale indicators |
+
+**Indexes:**
+- `by_channel` — List all typing indicators in a channel
+- `by_channel_user` — Lookup specific user's typing state in a channel
+
+### `reactions`
+
+Emoji reactions on channel messages.
+
+| Field | Type | Description |
+|---|---|---|
+| `messageId` | `Id<"messages">` | Target message |
+| `userId` | `Id<"users">` | User who reacted |
+| `emoji` | `string` | Emoji character |
+
+**Indexes:**
+- `by_message` — List all reactions on a message
+- `by_message_user` — Lookup specific user's reaction on a message (for toggle behavior)
