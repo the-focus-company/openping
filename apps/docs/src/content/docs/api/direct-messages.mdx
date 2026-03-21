@@ -1,6 +1,281 @@
 ---
-title: Direct Messages API
-description: API reference for direct message operations.
+title: Direct Messages
+description: API reference for direct conversations and messages in PING.
+sidebar:
+  order: 5
 ---
 
-Content coming soon.
+import { Aside } from "@astrojs/starlight/components";
+
+Direct messages (DMs) in PING support multiple conversation types: one-on-one, group, and agent-based conversations. Each conversation has its own member list, unread tracking, and message history.
+
+## Conversation types
+
+| Kind | Description |
+|------|-------------|
+| `1to1` | Standard one-on-one conversation between two users |
+| `group` | Group conversation with multiple human participants |
+| `agent_1to1` | One-on-one conversation with an AI agent |
+| `agent_group` | Group conversation that includes AI agent members |
+
+---
+
+## List conversations
+
+Retrieve all direct conversations for the authenticated user, sorted by most recent activity. Includes member details, unread counts, and the last message preview.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `directConversations:list`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "directConversations:list",
+    "args": {},
+    "format": "json"
+  }'
+```
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": [
+    {
+      "_id": "jd7conv01...",
+      "_creationTime": 1711234567890,
+      "workspaceId": "jd7xyz789...",
+      "kind": "1to1",
+      "name": null,
+      "createdBy": "jd7user01...",
+      "isArchived": false,
+      "members": [
+        {
+          "userId": "jd7user01...",
+          "name": "Alice Smith",
+          "avatarUrl": "https://cdn.example.com/alice.jpg",
+          "isAgent": false
+        },
+        {
+          "userId": "jd7user02...",
+          "name": "Bob Jones",
+          "avatarUrl": null,
+          "isAgent": false
+        }
+      ],
+      "unreadCount": 2,
+      "lastMessage": {
+        "body": "Hey, are you available?",
+        "authorName": "Bob Jones",
+        "timestamp": 1711234600000
+      },
+      "myLastReadAt": 1711234500000
+    }
+  ]
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `_id` | `string` | Conversation document ID |
+| `kind` | `string` | Conversation type: `1to1`, `group`, `agent_1to1`, `agent_group` |
+| `name` | `string?` | Optional conversation name (used for groups) |
+| `members` | `array` | List of members with user details |
+| `members[].isAgent` | `boolean` | Whether this member is an AI agent |
+| `unreadCount` | `number` | Number of unread messages |
+| `lastMessage` | `object?` | Preview of the most recent message |
+
+---
+
+## Get conversation
+
+Retrieve a single conversation by ID, including full member details.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `directConversations:get`
+- **Auth:** Required (must be a member)
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `conversationId` | `Id<"directConversations">` | Yes | Conversation document ID |
+
+---
+
+## Create conversation
+
+Create a new direct conversation. For `1to1` conversations, if a conversation already exists between the two users, the existing conversation ID is returned instead of creating a duplicate.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `directConversations:create`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/mutation \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "directConversations:create",
+    "args": {
+      "kind": "1to1",
+      "memberIds": ["jd7user02..."]
+    },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `kind` | `string` | Yes | One of `1to1`, `group`, `agent_1to1`, `agent_group` |
+| `name` | `string` | No | Conversation name (typically used for groups) |
+| `memberIds` | `Id<"users">[]` | Yes | User IDs to add (excluding the creator, who is added automatically) |
+| `agentMemberIds` | `Id<"users">[]` | No | Agent user IDs to add (marked with `isAgent: true`) |
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": "jd7conv01..."
+}
+```
+
+<Aside type="tip">
+For `1to1` conversations, the API is idempotent. If a non-archived 1:1 conversation already exists between you and the target user, the existing conversation ID is returned.
+</Aside>
+
+---
+
+## List direct messages
+
+Retrieve messages from a conversation with cursor-based pagination. Messages are returned in reverse chronological order with author details.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `directMessages:list`
+- **Auth:** Required (must be a member)
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "directMessages:list",
+    "args": {
+      "conversationId": "jd7conv01...",
+      "paginationOpts": {
+        "numItems": 25,
+        "cursor": null
+      }
+    },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `conversationId` | `Id<"directConversations">` | Yes | Conversation to fetch messages from |
+| `paginationOpts.numItems` | `number` | Yes | Number of messages per page |
+| `paginationOpts.cursor` | `string?` | Yes | Pagination cursor (`null` for the first page) |
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": {
+    "page": [
+      {
+        "_id": "jd7dm01...",
+        "_creationTime": 1711234567890,
+        "conversationId": "jd7conv01...",
+        "authorId": "jd7user02...",
+        "body": "Hey, are you available?",
+        "type": "user",
+        "isEdited": false,
+        "author": {
+          "name": "Bob Jones",
+          "avatarUrl": null
+        },
+        "isAgent": false
+      }
+    ],
+    "isDone": true,
+    "continueCursor": "eyJ..."
+  }
+}
+```
+
+---
+
+## Send direct message
+
+Send a message in a direct conversation. The message type is automatically set to `bot` if the sender is an agent member, or `user` otherwise. The sender's `lastReadAt` is updated automatically.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `directMessages:send`
+- **Auth:** Required (must be a member)
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/mutation \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "directMessages:send",
+    "args": {
+      "conversationId": "jd7conv01...",
+      "body": "Sure, let me check on that."
+    },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `conversationId` | `Id<"directConversations">` | Yes | Conversation to send the message in |
+| `body` | `string` | Yes | Message content |
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": "jd7dm02..."
+}
+```
+
+---
+
+## Mark conversation read
+
+Mark all messages in a conversation as read for the current user.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `directConversations:markRead`
+- **Auth:** Required
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `conversationId` | `Id<"directConversations">` | Yes | Conversation to mark as read |

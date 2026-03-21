@@ -1,6 +1,215 @@
 ---
 title: Webhooks
-description: Set up webhooks for real-time event notifications.
+description: Webhook architecture, HTTP endpoints, and custom integration guide for PING.
+sidebar:
+  order: 4
 ---
 
-Content coming soon.
+import { Aside } from "@astrojs/starlight/components";
+
+PING uses webhooks to receive events from external services. All webhook endpoints are defined as Convex HTTP actions and are accessible at your Convex deployment URL.
+
+## Webhook architecture
+
+Webhooks in PING follow this flow:
+
+1. An external service sends an HTTP POST to a PING webhook endpoint
+2. The Convex HTTP action parses the payload and verifies authenticity
+3. The handler calls internal mutations to create or update records
+4. IntegrationObjects and messages are created as needed
+5. AI processing runs asynchronously to generate summaries and alerts
+
+```
+External Service
+      │
+      ▼  HTTP POST
+┌─────────────────────┐
+│  Convex HTTP Action  │  (defined in http.ts)
+│  - Parse payload     │
+│  - Verify signature  │
+│  - Route by event    │
+└─────────┬───────────┘
+          │
+          ▼  runMutation / runAction
+┌─────────────────────┐
+│  Internal functions  │
+│  - Upsert records    │
+│  - Create messages   │
+│  - Trigger AI jobs   │
+└─────────────────────┘
+```
+
+## Registered endpoints
+
+The following webhook endpoints are defined in `convex/http.ts`:
+
+| Path | Method | Service | Auth |
+|------|--------|---------|------|
+| `/webhooks/workos` | POST | WorkOS | Webhook secret |
+
+<Aside type="tip">
+Additional webhook endpoints for GitHub and Linear are configured as your workspace integrations are set up. The base pattern is `/webhooks/{service}`.
+</Aside>
+
+## WorkOS webhook
+
+The WorkOS webhook handler processes user lifecycle events:
+
+### Supported events
+
+| Event | Description |
+|-------|-------------|
+| `user.created` | A new user signed up via WorkOS |
+| `user.updated` | A user's profile was updated in WorkOS |
+
+### Payload format
+
+```json
+{
+  "event": "user.created",
+  "data": {
+    "id": "user_01H...",
+    "email": "alice@example.com",
+    "first_name": "Alice",
+    "last_name": "Smith",
+    "profile_picture_url": "https://cdn.example.com/alice.jpg"
+  }
+}
+```
+
+### Handling
+
+When a `user.created` or `user.updated` event is received:
+
+1. The handler calls `users:createOrUpdate` to upsert the user
+2. For new users, a workspace and default `#general` channel are provisioned
+3. A WorkOS organization is created for the new workspace
+
+### Response
+
+All webhook endpoints return a `200` response with:
+
+```json
+{
+  "received": true
+}
+```
+
+## Building custom integrations
+
+You can extend PING with custom webhook integrations by adding new HTTP routes.
+
+### Step 1: Define the HTTP route
+
+Add a new route in `convex/http.ts`:
+
+```typescript
+import { httpRouter } from "convex/server";
+import { httpAction } from "./_generated/server";
+
+const http = httpRouter();
+
+http.route({
+  path: "/webhooks/my-service",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+
+    // Verify webhook signature
+    const signature = request.headers.get("X-Signature");
+    // ... verification logic ...
+
+    // Process the event
+    await ctx.runMutation(internal.myIntegration.processEvent, {
+      type: body.type,
+      data: body.data,
+    });
+
+    return new Response(
+      JSON.stringify({ received: true }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }),
+});
+```
+
+### Step 2: Create the mutation handler
+
+```typescript
+// convex/myIntegration.ts
+import { internalMutation } from "./_generated/server";
+import { v } from "convex/values";
+
+export const processEvent = internalMutation({
+  args: {
+    type: v.string(),
+    data: v.any(),
+  },
+  handler: async (ctx, args) => {
+    // Create or update an IntegrationObject
+    await ctx.db.insert("integrationObjects", {
+      workspaceId: "...",
+      type: "my_service_item",
+      externalId: args.data.id,
+      title: args.data.title,
+      status: args.data.status,
+      url: args.data.url,
+      author: args.data.author,
+      metadata: args.data,
+      lastSyncedAt: Date.now(),
+    });
+  },
+});
+```
+
+### Step 3: Configure the external service
+
+Point your external service's webhook to:
+
+```
+https://your-deployment.convex.cloud/webhooks/my-service
+```
+
+## Webhook verification
+
+<Aside type="caution">
+Always verify webhook signatures before processing payloads. Unverified webhooks are a security risk -- an attacker could send fake events to manipulate your workspace data.
+</Aside>
+
+Each integration service uses its own signature scheme:
+
+| Service | Header | Algorithm |
+|---------|--------|-----------|
+| WorkOS | `WorkOS-Signature` | HMAC-SHA256 |
+| GitHub | `X-Hub-Signature-256` | HMAC-SHA256 |
+| Linear | `Linear-Signature` | HMAC-SHA256 |
+
+### Verification example
+
+```typescript
+import { createHmac } from "crypto";
+
+function verifyWebhook(
+  payload: string,
+  signature: string,
+  secret: string
+): boolean {
+  const expected = createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex");
+  return signature === `sha256=${expected}`;
+}
+```
+
+## Error handling
+
+If a webhook handler throws an error, Convex returns a `500` status code. Most webhook providers will retry failed deliveries with exponential backoff. Design your handlers to be idempotent so that retries do not create duplicate data.
+
+| Best practice | Description |
+|--------------|-------------|
+| Idempotent handlers | Use `externalId` to detect and skip duplicate events |
+| Fast responses | Return `200` quickly; use `ctx.scheduler.runAfter` for heavy processing |
+| Error logging | Log errors for debugging without exposing internals in the response |

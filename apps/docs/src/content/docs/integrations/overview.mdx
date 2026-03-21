@@ -1,6 +1,99 @@
 ---
 title: Integrations Overview
-description: Overview of available integrations in PING.
+description: How PING connects to external services like GitHub and Linear.
+sidebar:
+  order: 1
 ---
 
-Content coming soon.
+import { Aside } from "@astrojs/starlight/components";
+
+PING integrates with external development tools to surface relevant information directly in your workspace. Pull requests, tickets, and other external entities appear as native cards in your inbox and channels.
+
+## Architecture
+
+PING's integration system is built around three core concepts:
+
+1. **Webhooks** receive events from external services (GitHub, Linear, etc.)
+2. **IntegrationObjects** store normalized references to external entities
+3. **Proactive Alerts** use AI to detect actionable items from integration data
+
+```
+External Service ──webhook──▶ Convex HTTP endpoint
+                                     │
+                                     ▼
+                            IntegrationObjects table
+                                     │
+                                     ▼
+                          ┌──────────┴──────────┐
+                          │                     │
+                     Inbox Cards          Proactive Alerts
+                   (AI summaries)       (nudges & blockers)
+```
+
+## IntegrationObjects table
+
+All external entities are stored in the `integrationObjects` table with a unified schema:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | `string` | Entity type: `github_pr` or `linear_ticket` |
+| `externalId` | `string` | Unique identifier from the external service |
+| `title` | `string` | Human-readable title |
+| `status` | `string` | Current status (e.g., `open`, `merged`, `closed`) |
+| `url` | `string` | Link back to the external service |
+| `author` | `string` | Author name or username |
+| `metadata` | `object` | Service-specific data (labels, reviewers, etc.) |
+| `lastSyncedAt` | `number` | When the object was last updated (Unix epoch ms) |
+
+### Example IntegrationObject
+
+```json
+{
+  "_id": "jd7intobj01...",
+  "type": "github_pr",
+  "externalId": "org/repo#142",
+  "title": "Refactor auth middleware",
+  "status": "open",
+  "url": "https://github.com/org/repo/pull/142",
+  "author": "alice",
+  "metadata": {
+    "reviewers": ["bob", "charlie"],
+    "labels": ["auth", "refactor"],
+    "additions": 245,
+    "deletions": 89
+  },
+  "lastSyncedAt": 1711234567890
+}
+```
+
+## Native cards
+
+Integration objects are rendered as rich cards in the PING inbox and within channels. When a message has an `integrationObjectId`, the UI displays:
+
+- The external entity's title and status
+- A direct link to the external service
+- Contextual metadata (reviewers, labels, etc.)
+- AI-generated action items related to the integration
+
+## How messages link to integrations
+
+Messages of type `integration` include an `integrationObjectId` that references the `integrationObjects` table. When listing messages, the full integration object is joined and returned alongside the message.
+
+## Supported integrations
+
+| Service | Object type | Features |
+|---------|------------|----------|
+| [GitHub](/Platform/integrations/github/) | `github_pr` | PR lifecycle events, review nudges, stale PR detection |
+| [Linear](/Platform/integrations/linear/) | `linear_ticket` | Ticket updates, blocker detection |
+| [Custom webhooks](/Platform/integrations/webhooks/) | Any | Build your own integrations via HTTP endpoints |
+
+## Integration setup flow
+
+<Aside type="tip">
+Integration configuration is managed at the workspace level through the **Settings > Integrations** panel. Each integration stores its credentials and configuration in the workspace's `integrations` field.
+</Aside>
+
+1. Navigate to **Settings > Integrations** in your PING workspace
+2. Select the service you want to connect
+3. Follow the service-specific setup guide to configure webhooks
+4. PING begins receiving events and creating IntegrationObjects automatically

@@ -1,6 +1,361 @@
 ---
-title: Channels API
-description: API reference for channel operations.
+title: Channels
+description: API reference for channel operations in PING.
+sidebar:
+  order: 3
 ---
 
-Content coming soon.
+import { Aside } from "@astrojs/starlight/components";
+
+Channels are the primary communication spaces in PING. They belong to a workspace and support public messaging with membership tracking and unread counts.
+
+## List channels
+
+Retrieve all non-archived public channels in the authenticated user's workspace, including membership status and unread counts.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `channels:list`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "channels:list",
+    "args": {},
+    "format": "json"
+  }'
+```
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": [
+    {
+      "_id": "jd7abc123...",
+      "_creationTime": 1711234567890,
+      "name": "general",
+      "description": "General discussion",
+      "workspaceId": "jd7xyz789...",
+      "createdBy": "jd7user01...",
+      "isDefault": true,
+      "isArchived": false,
+      "isMember": true,
+      "unreadCount": 3
+    }
+  ]
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `_id` | `string` | Convex document ID |
+| `name` | `string` | Channel name |
+| `description` | `string?` | Channel description |
+| `workspaceId` | `string` | Workspace the channel belongs to |
+| `createdBy` | `string` | User ID of the creator |
+| `isDefault` | `boolean` | Whether this is the default channel |
+| `isArchived` | `boolean` | Whether the channel is archived |
+| `isMember` | `boolean` | Whether the current user is a member |
+| `unreadCount` | `number` | Number of unread messages for the current user |
+
+---
+
+## Get channel
+
+Retrieve a single channel by ID.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `channels:get`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "channels:get",
+    "args": { "channelId": "jd7abc123..." },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channelId` | `Id<"channels">` | Yes | The channel document ID |
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": {
+    "_id": "jd7abc123...",
+    "name": "general",
+    "description": "General discussion",
+    "workspaceId": "jd7xyz789...",
+    "createdBy": "jd7user01...",
+    "isDefault": true,
+    "isArchived": false
+  }
+}
+```
+
+<Aside type="tip">
+For DM-type and group-type channels, only members can retrieve the channel. Public channels are accessible to any authenticated user in the workspace.
+</Aside>
+
+---
+
+## Create channel
+
+Create a new public channel in the user's workspace. The creator is automatically added as a member.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `channels:create`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/mutation \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "channels:create",
+    "args": {
+      "name": "engineering",
+      "description": "Engineering team discussions"
+    },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | `string` | Yes | Channel name (must be unique in the workspace) |
+| `description` | `string` | No | Channel description |
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": "jd7newchannel..."
+}
+```
+
+The `value` is the new channel's document ID.
+
+<Aside type="caution">
+Channel names must be unique within a workspace. If the name is already taken, the API returns an error with the message `"Channel name already taken"`.
+</Aside>
+
+---
+
+## Update channel
+
+Update a channel's name or description. Only the channel creator or a workspace admin can update a channel.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `channels:update`
+- **Auth:** Required (creator or admin)
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/mutation \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "channels:update",
+    "args": {
+      "channelId": "jd7abc123...",
+      "name": "eng-general",
+      "description": "Updated description"
+    },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channelId` | `Id<"channels">` | Yes | The channel to update |
+| `name` | `string` | No | New channel name |
+| `description` | `string` | No | New channel description |
+
+---
+
+## Join channel
+
+Join a public channel. This operation is idempotent -- calling it when already a member returns the existing membership ID.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `channels:join`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/mutation \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "channels:join",
+    "args": { "channelId": "jd7abc123..." },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channelId` | `Id<"channels">` | Yes | The channel to join |
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": "jd7member01..."
+}
+```
+
+---
+
+## Leave channel
+
+Leave a channel. Cannot leave default channels.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `channels:leave`
+- **Auth:** Required
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channelId` | `Id<"channels">` | Yes | The channel to leave |
+
+---
+
+## Mark read
+
+Mark all messages in a channel as read for the current user.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `channels:markRead`
+- **Auth:** Required
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channelId` | `Id<"channels">` | Yes | The channel to mark as read |
+
+---
+
+## List members
+
+List all members of a channel with their profile information.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `channels:listMembers`
+- **Auth:** Required
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channelId` | `Id<"channels">` | Yes | The channel to list members for |
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": [
+    {
+      "_id": "jd7user01...",
+      "name": "Alice Smith",
+      "avatarUrl": "https://cdn.example.com/alice.jpg",
+      "role": "admin",
+      "lastSeenAt": 1711234567890
+    }
+  ]
+}
+```
+
+---
+
+## Invite members
+
+Invite users to a channel. The caller must be a member of the channel. Users already in the channel are silently skipped.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `channels:invite`
+- **Auth:** Required (must be a member)
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channelId` | `Id<"channels">` | Yes | The channel to invite to |
+| `userIds` | `Id<"users">[]` | Yes | Array of user IDs to invite |
+
+---
+
+## Archive / Unarchive
+
+Archive or unarchive a channel. Only the creator or a workspace admin can archive channels. Default channels cannot be archived.
+
+- **Endpoint:** `POST /api/mutation`
+- **Functions:** `channels:archive`, `channels:unarchive`
+- **Auth:** Required (creator or admin)
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channelId` | `Id<"channels">` | Yes | The channel to archive or unarchive |
+
+---
+
+## Member count
+
+Get the number of members in a channel.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `channels:memberCount`
+- **Auth:** Required
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channelId` | `Id<"channels">` | Yes | The channel to count members for |
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": 12
+}
+```

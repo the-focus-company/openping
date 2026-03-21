@@ -1,6 +1,136 @@
 ---
 title: GitHub Integration
-description: Connect PING with GitHub for PR reviews and notifications.
+description: Connect GitHub to PING for PR tracking, review nudges, and stale PR detection.
+sidebar:
+  order: 2
 ---
 
-Content coming soon.
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+The GitHub integration brings pull request lifecycle events into PING. PRs appear as native cards in your inbox, and PING's AI generates proactive alerts for reviews that need attention.
+
+## Features
+
+- **PR cards in inbox**: Open, reviewed, and merged PRs appear as rich cards
+- **Review nudges**: AI detects PRs waiting on your review and surfaces them as alerts
+- **Stale PR detection**: PRs that have been open without activity are flagged
+- **Status tracking**: PR status updates automatically sync to PING
+
+## Setup guide
+
+<Steps>
+1. **Open workspace settings**
+
+   Navigate to **Settings > Integrations > GitHub** in your PING workspace.
+
+   {/* Screenshot: settings-integrations-github.png */}
+
+2. **Create a GitHub webhook**
+
+   In your GitHub repository (or organization), go to **Settings > Webhooks > Add webhook**.
+
+   Set the following values:
+
+   | Field | Value |
+   |-------|-------|
+   | Payload URL | `https://your-deployment.convex.cloud/webhooks/github` |
+   | Content type | `application/json` |
+   | Secret | Your webhook secret (configured in PING settings) |
+   | Events | Select: Pull requests, Pull request reviews |
+
+3. **Configure the webhook secret**
+
+   Copy the webhook secret from GitHub and paste it into the PING integration settings. This secret is used to verify that incoming webhooks are genuinely from GitHub.
+
+4. **Test the connection**
+
+   Create or update a pull request in your repository. You should see a new card appear in your PING inbox within a few seconds.
+</Steps>
+
+## Supported events
+
+| GitHub event | Action | What happens in PING |
+|-------------|--------|---------------------|
+| `pull_request` | `opened` | Creates a new `github_pr` IntegrationObject; posts a card in the configured channel |
+| `pull_request` | `closed` / `merged` | Updates the PR status; updates the inbox card |
+| `pull_request` | `review_requested` | Triggers a `pr_review_nudge` proactive alert for the reviewer |
+| `pull_request_review` | `submitted` | Updates PR metadata with review status |
+
+## PR cards in the inbox
+
+When a PR is opened or updated, PING creates or updates an IntegrationObject of type `github_pr`:
+
+```json
+{
+  "type": "github_pr",
+  "externalId": "acme/webapp#142",
+  "title": "Refactor auth middleware",
+  "status": "open",
+  "url": "https://github.com/acme/webapp/pull/142",
+  "author": "alice",
+  "metadata": {
+    "reviewers": ["bob", "charlie"],
+    "labels": ["auth", "refactor"],
+    "additions": 245,
+    "deletions": 89,
+    "draft": false
+  }
+}
+```
+
+This object is linked to messages of type `integration` in the relevant channel, rendering as a rich card with:
+
+- PR title and number
+- Author and reviewer avatars
+- Status badge (open, merged, closed)
+- Line change summary
+- Direct link to GitHub
+
+## Proactive alerts
+
+PING's AI engine monitors GitHub integration objects and generates proactive alerts:
+
+### PR review nudge
+
+When a PR has been waiting for your review, PING creates a `pr_review_nudge` alert:
+
+```json
+{
+  "type": "pr_review_nudge",
+  "title": "PR #142 needs your review",
+  "body": "Alice opened 'Refactor auth middleware' 2 days ago and requested your review.",
+  "suggestedAction": "Review the PR on GitHub",
+  "priority": "high",
+  "sourceIntegrationObjectId": "jd7intobj01..."
+}
+```
+
+### Stale PR detection
+
+PRs that have been open without activity for an extended period are flagged:
+
+```json
+{
+  "type": "blocked_task",
+  "title": "PR #138 may be stale",
+  "body": "This PR has had no activity for 5 days. Consider following up or closing it.",
+  "suggestedAction": "Check PR status",
+  "priority": "medium"
+}
+```
+
+## Webhook payload format
+
+PING expects GitHub webhook payloads in the standard GitHub format. The integration handler extracts the relevant fields and normalizes them into IntegrationObjects.
+
+<Aside type="caution">
+Make sure your webhook is configured to send `application/json` payloads, not `application/x-www-form-urlencoded`. PING cannot parse form-encoded payloads.
+</Aside>
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Webhooks not arriving | Verify the Payload URL matches your Convex deployment URL |
+| Events not creating cards | Check that you selected the correct event types in GitHub webhook settings |
+| Signature verification failing | Confirm the webhook secret matches between GitHub and PING settings |

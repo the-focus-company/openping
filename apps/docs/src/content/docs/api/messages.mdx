@@ -1,6 +1,202 @@
 ---
-title: Messages API
-description: API reference for message operations.
+title: Messages
+description: API reference for sending and retrieving messages in PING channels.
+sidebar:
+  order: 4
 ---
 
-Content coming soon.
+import { Aside } from "@astrojs/starlight/components";
+
+Messages are the core content within channels. PING supports user messages, bot messages, system messages, and integration messages (e.g., GitHub PR cards). Messages also support full-text search.
+
+## List messages
+
+Retrieve messages from a channel with cursor-based pagination. Messages are returned in reverse chronological order (newest first) and include author details and linked integration objects.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `messages:list`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "messages:list",
+    "args": {
+      "channelId": "jd7abc123...",
+      "paginationOpts": {
+        "numItems": 25,
+        "cursor": null
+      }
+    },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channelId` | `Id<"channels">` | Yes | The channel to fetch messages from |
+| `paginationOpts.numItems` | `number` | Yes | Number of messages per page |
+| `paginationOpts.cursor` | `string?` | Yes | Pagination cursor (`null` for the first page) |
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": {
+    "page": [
+      {
+        "_id": "jd7msg01...",
+        "_creationTime": 1711234567890,
+        "channelId": "jd7abc123...",
+        "authorId": "jd7user01...",
+        "body": "Hello, team!",
+        "type": "user",
+        "isEdited": false,
+        "integrationObjectId": null,
+        "author": {
+          "name": "Alice Smith",
+          "avatarUrl": "https://cdn.example.com/alice.jpg"
+        },
+        "integrationObject": null
+      }
+    ],
+    "isDone": false,
+    "continueCursor": "eyJ..."
+  }
+}
+```
+
+### Message fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `_id` | `string` | Message document ID |
+| `channelId` | `string` | Channel this message belongs to |
+| `authorId` | `string` | User ID of the author |
+| `body` | `string` | Message content |
+| `type` | `string` | One of `user`, `bot`, `system`, `integration` |
+| `isEdited` | `boolean` | Whether the message has been edited |
+| `integrationObjectId` | `string?` | Linked integration object (e.g., a GitHub PR) |
+| `citations` | `array?` | Source citations for AI-generated messages |
+| `mentions` | `array?` | User IDs mentioned in the message |
+| `author` | `object?` | Author name and avatar (joined from users table) |
+| `integrationObject` | `object?` | Full integration object if linked |
+
+---
+
+## Send message
+
+Send a message to a channel. The sender's `lastReadAt` is automatically updated so their own message does not count as unread.
+
+- **Endpoint:** `POST /api/mutation`
+- **Function:** `messages:send`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/mutation \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "messages:send",
+    "args": {
+      "channelId": "jd7abc123...",
+      "body": "Hello, team!"
+    },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channelId` | `Id<"channels">` | Yes | The channel to send the message to |
+| `body` | `string` | Yes | Message content |
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": "jd7msg01..."
+}
+```
+
+The `value` is the new message's document ID.
+
+<Aside type="tip">
+After a message is sent, it is automatically ingested into the Graphiti knowledge graph via a background job. This powers PING's AI features such as inbox summaries and proactive alerts.
+</Aside>
+
+---
+
+## Search messages
+
+Full-text search across all messages. Returns up to 10 matching results enriched with author and channel names.
+
+- **Endpoint:** `POST /api/query`
+- **Function:** `messages:search`
+- **Auth:** Required
+
+### Request
+
+```bash
+curl -X POST https://your-deployment.convex.cloud/api/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "path": "messages:search",
+    "args": {
+      "query": "deployment update"
+    },
+    "format": "json"
+  }'
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | `string` | Yes | Search query string |
+
+### Response
+
+```json
+{
+  "status": "success",
+  "value": [
+    {
+      "_id": "jd7msg01...",
+      "body": "The deployment update is ready for review",
+      "channelId": "jd7abc123...",
+      "channelName": "engineering",
+      "authorName": "Alice Smith",
+      "timestamp": 1711234567890
+    }
+  ]
+}
+```
+
+### Search result fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `_id` | `string` | Message document ID |
+| `body` | `string` | Message content |
+| `channelId` | `string` | Channel the message belongs to |
+| `channelName` | `string` | Human-readable channel name |
+| `authorName` | `string` | Name of the message author |
+| `timestamp` | `number` | Message creation time (Unix epoch ms) |
+
+<Aside type="tip">
+Search uses Convex's built-in full-text search index on the `body` field. It supports natural language queries and returns results ranked by relevance.
+</Aside>
