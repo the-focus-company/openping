@@ -301,4 +301,83 @@ export default defineSchema({
   })
     .index("by_message", ["messageId"])
     .index("by_message_user", ["messageId", "userId"]),
+
+  emailAccounts: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    provider: v.union(v.literal("gmail"), v.literal("outlook")),
+    email: v.string(),
+    accessToken: v.string(),
+    refreshToken: v.string(),
+    tokenExpiresAt: v.number(),
+    syncCursor: v.optional(v.string()),
+    status: v.union(
+      v.literal("active"),
+      v.literal("paused"),
+      v.literal("error"),
+    ),
+    lastSyncedAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_email", ["userId", "email"]),
+
+  emails: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    emailAccountId: v.id("emailAccounts"),
+    externalId: v.string(),
+    threadId: v.string(),
+    subject: v.string(),
+    from: v.string(),
+    to: v.array(v.string()),
+    cc: v.optional(v.array(v.string())),
+    bcc: v.optional(v.array(v.string())),
+    bodyPlain: v.string(),
+    bodyHtml: v.optional(v.string()),
+    receivedAt: v.number(),
+    isRead: v.boolean(),
+    isArchived: v.boolean(),
+    eisenhowerQuadrant: v.optional(
+      v.union(
+        v.literal("urgent-important"),
+        v.literal("important"),
+        v.literal("urgent"),
+        v.literal("fyi"),
+      ),
+    ),
+    agentSummary: v.optional(v.string()),
+    agentClassifiedAt: v.optional(v.number()),
+    suggestedAction: v.optional(v.string()),
+    reminderAt: v.optional(v.number()),
+    delegateTo: v.optional(v.string()),
+    graphitiEpisodeId: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_quadrant", ["userId", "eisenhowerQuadrant"])
+    .index("by_user_unread", ["userId", "isRead"])
+    .index("by_thread", ["threadId"])
+    .index("by_external_id", ["externalId"])
+    .searchIndex("search_body", {
+      searchField: "bodyPlain",
+      filterFields: ["userId", "subject"],
+    }),
+
+  emailDrafts: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    emailAccountId: v.id("emailAccounts"),
+    to: v.array(v.string()),
+    cc: v.optional(v.array(v.string())),
+    bcc: v.optional(v.array(v.string())),
+    subject: v.string(),
+    body: v.string(),
+    inReplyToEmailId: v.optional(v.id("emails")),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("sending"),
+      v.literal("sent"),
+      v.literal("failed"),
+    ),
+  })
+    .index("by_user", ["userId"]),
 });
