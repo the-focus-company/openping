@@ -8,6 +8,7 @@ import { api } from "@convex/_generated/api";
 import { navigateToWorkspace } from "@/lib/workspace-url";
 import {
   Inbox,
+  Mail,
   Plus,
   Search,
   Users,
@@ -125,6 +126,7 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
 
   const channels = useQuery(api.channels.list, isAuthenticated && workspaceId ? { workspaceId } : "skip");
   const inboxUnread = useQuery(api.inboxSummaries.unreadCount, isAuthenticated ? {} : "skip");
+  const emailUnread = useQuery(api.emails.unreadCount, isAuthenticated ? {} : "skip");
   const dmConversations = useQuery(api.directConversations.list, isAuthenticated ? {} : "skip");
   const user = useQuery(api.users.getMe, isAuthenticated ? {} : "skip");
   const onlineUsers = useQuery(api.presence.getOnlineUsers, isAuthenticated && workspaceId ? { workspaceId } : "skip");
@@ -261,6 +263,13 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
           kbd="G I"
           isActive={pathname.endsWith("/inbox")}
         />
+        <NavItem
+          href={buildPath("/email")}
+          icon={Mail}
+          label="Email"
+          badge={emailUnread ?? 0}
+          isActive={pathname.startsWith(buildPath("/email"))}
+        />
 
         {/* Direct Messages */}
         <SectionHeader
@@ -383,6 +392,7 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
         <NavItem href={buildPath("/settings/team")} icon={Users} label="Team" isActive={pathname.endsWith("/settings/team")} />
         <NavItem href={buildPath("/settings/agents")} icon={Bot} label="Agents" isActive={pathname.endsWith("/settings/agents")} />
         <NavItem href={buildPath("/settings/knowledge-graph")} icon={GitBranch} label="Knowledge Graph" isActive={pathname.endsWith("/settings/knowledge-graph")} />
+        <NavItem href={buildPath("/settings/email")} icon={Mail} label="Email" isActive={pathname.endsWith("/settings/email")} />
         <NavItem href={buildPath("/settings/analytics")} icon={BarChart2} label="Analytics" isActive={pathname.endsWith("/settings/analytics")} />
 
         {/* Admin */}
