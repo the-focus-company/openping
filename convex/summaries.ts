@@ -1,7 +1,7 @@
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 
 type EisenhowerQuadrant = "urgent-important" | "important" | "urgent" | "fyi";
 
@@ -246,6 +246,157 @@ export const generateChannelSummaries = internalAction({
             err,
           );
         }
+      }
+    }
+  },
+});
+
+// ─── Email summaries (8LI-130) ────────────────────────────────────────────────
+
+export const getRecentClassifiedEmails = internalQuery({
+  args: { since: v.number() },
+  handler: async (ctx, args) => {
+    const emails = await ctx.db
+      .query("emails")
+      .filter((q) =>
+        q.and(
+          q.neq(q.field("agentClassifiedAt"), undefined),
+          q.gte(q.field("agentClassifiedAt"), args.since),
+          q.eq(q.field("isArchived"), false),
+        ),
+      )
+      .take(200);
+
+    // Group by userId
+    const byUser = new Map<string, Array<Doc<"emails">>>();
+    for (const email of emails) {
+      const key = email.userId as string;
+      if (!byUser.has(key)) byUser.set(key, []);
+      byUser.get(key)!.push(email);
+    }
+
+    return Array.from(byUser.entries()).map(([userId, userEmails]) => ({
+      userId: userId as Id<"users">,
+      emails: userEmails.map((e) => ({
+        _id: e._id as string,
+        from: e.from,
+        subject: e.subject,
+        bodyPlain: e.bodyPlain.slice(0, 300),
+        eisenhowerQuadrant: e.eisenhowerQuadrant,
+        agentSummary: e.agentSummary,
+      })),
+    }));
+  },
+});
+
+export const writeEmailSummary = internalMutation({
+  args: {
+    userId: v.id("users"),
+    channelId: v.id("channels"),
+    eisenhowerQuadrant: v.union(
+      v.literal("urgent-important"),
+      v.literal("important"),
+      v.literal("urgent"),
+      v.literal("fyi"),
+    ),
+    bullets: v.array(
+      v.object({
+        text: v.string(),
+        priority: v.union(
+          v.literal("urgent-important"),
+          v.literal("important"),
+          v.literal("urgent"),
+          v.literal("fyi"),
+        ),
+        relatedMessageIds: v.array(v.id("messages")),
+      }),
+    ),
+    messageCount: v.number(),
+    periodStart: v.number(),
+    periodEnd: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("inboxSummaries", {
+      userId: args.userId,
+      channelId: args.channelId,
+      eisenhowerQuadrant: args.eisenhowerQuadrant,
+      bullets: args.bullets,
+      messageCount: args.messageCount,
+      periodStart: args.periodStart,
+      periodEnd: args.periodEnd,
+      isRead: false,
+      isArchived: false,
+      actionItems: [],
+    });
+  },
+});
+
+export const generateEmailSummaries = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const windowMs = 15 * 60 * 1000;
+    const periodStart = now - windowMs;
+
+    const userGroups = await ctx.runQuery(
+      internal.summaries.getRecentClassifiedEmails,
+      { since: periodStart },
+    );
+
+    for (const group of userGroups) {
+      if (group.emails.length < 1) continue;
+
+      // Aggregate email quadrants into a single inbox summary
+      const quadrantCounts: Record<string, number> = {};
+      const bullets: Array<{
+        text: string;
+        priority: EisenhowerQuadrant;
+        relatedMessageIds: Id<"messages">[];
+      }> = [];
+
+      for (const email of group.emails) {
+        const q = email.eisenhowerQuadrant ?? "fyi";
+        quadrantCounts[q] = (quadrantCounts[q] ?? 0) + 1;
+
+        bullets.push({
+          text: email.agentSummary ?? `${email.subject} from ${email.from}`,
+          priority: q as EisenhowerQuadrant,
+          relatedMessageIds: [],
+        });
+      }
+
+      // Sort bullets by quadrant priority
+      const sortedBullets = [...bullets].sort(
+        (a, b) =>
+          QUADRANT_ORDER.indexOf(a.priority) -
+          QUADRANT_ORDER.indexOf(b.priority),
+      );
+
+      // Overall quadrant = highest priority among emails
+      const topQuadrant = sortedBullets[0]?.priority ?? "fyi";
+
+      // Find user's default channel for the summary
+      const channelMembership = await ctx.runQuery(
+        internal.emailAgent.getUserDefaultChannel,
+        { userId: group.userId },
+      );
+      if (!channelMembership) continue;
+
+      try {
+        await ctx.runMutation(internal.summaries.writeEmailSummary, {
+          userId: group.userId,
+          channelId: channelMembership.channelId,
+          eisenhowerQuadrant: topQuadrant,
+          bullets: sortedBullets.slice(0, 5),
+          messageCount: group.emails.length,
+          periodStart,
+          periodEnd: now,
+        });
+      } catch (err) {
+        console.error(
+          `[summaries] Failed email summary for user ${group.userId}:`,
+          err,
+        );
       }
     }
   },
