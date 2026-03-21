@@ -30,7 +30,7 @@ export default defineSchema({
     name: v.string(),
     slug: v.string(),
     workosOrgId: v.optional(v.string()),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     integrations: v.optional(v.any()),
   })
     .index("by_slug", ["slug"])

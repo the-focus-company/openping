@@ -3,6 +3,54 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { requireAuth } from "./auth";
 
+async function provisionNewUser(
+  ctx: MutationCtx,
+  args: {
+    workosUserId: string;
+    email: string;
+    name: string;
+    avatarUrl?: string;
+  },
+) {
+  const slug = args.email.split("@")[0] + "-" + Date.now();
+
+  const workspaceId = await ctx.db.insert("workspaces", {
+    name: `${args.name}'s Workspace`,
+    slug,
+    integrations: {},
+  });
+
+  const userId = await ctx.db.insert("users", {
+    workosUserId: args.workosUserId,
+    email: args.email,
+    name: args.name,
+    avatarUrl: args.avatarUrl,
+    role: "admin",
+    workspaceId,
+    status: "active",
+    lastSeenAt: Date.now(),
+  });
+
+  await ctx.db.patch(workspaceId, { createdBy: userId });
+
+  // Create a default #general channel
+  const channelId = await ctx.db.insert("channels", {
+    name: "general",
+    description: "General discussion",
+    workspaceId,
+    createdBy: userId,
+    isDefault: true,
+    isArchived: false,
+  });
+
+  await ctx.db.insert("channelMembers", {
+    channelId,
+    userId,
+  });
+
+  return userId;
+}
+
 export const getMe = query({
   args: {},
   handler: async (ctx) => {
@@ -143,49 +191,6 @@ export const createOrUpdate = mutation({
       return existing._id;
     }
 
-    // For new users, find or create default workspace
-    let workspace = await ctx.db
-      .query("workspaces")
-      .withIndex("by_slug", (q) => q.eq("slug", "default"))
-      .unique();
-
-    if (!workspace) {
-      // Create a temporary user ID placeholder - we'll update after
-      const workspaceId = await ctx.db.insert("workspaces", {
-        name: "Default Workspace",
-        slug: "default",
-        createdBy: "" as any, // Will be updated
-        integrations: {},
-      });
-      workspace = await ctx.db.get(workspaceId);
-    }
-
-    const userId = await ctx.db.insert("users", {
-      workosUserId: args.workosUserId,
-      email: args.email,
-      name: args.name,
-      avatarUrl: args.avatarUrl,
-      role: "member",
-      workspaceId: workspace!._id,
-      status: "active",
-      lastSeenAt: Date.now(),
-    });
-
-    // Auto-join default channels
-    const defaultChannels = await ctx.db
-      .query("channels")
-      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspace!._id))
-      .collect();
-
-    for (const channel of defaultChannels) {
-      if (channel.isDefault) {
-        await ctx.db.insert("channelMembers", {
-          channelId: channel._id,
-          userId,
-        });
-      }
-    }
-
-    return userId;
+    return await provisionNewUser(ctx, args);
   },
 });

@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [currentUser]);
 
   const logout = () => {
-    window.location.href = "/login";
+    window.location.href = "/sign-out";
   };
 
   return (
