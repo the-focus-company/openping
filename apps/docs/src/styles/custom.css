@@ -1,0 +1,26 @@
+@font-face {
+  font-family: "Geist";
+  src: url("/Platform/fonts/GeistVF.woff") format("woff");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "GeistMono";
+  src: url("/Platform/fonts/GeistMonoVF.woff") format("woff");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --sl-color-accent: #5e6ad2;
+  --sl-color-accent-low: #2e3366;
+  --sl-color-accent-high: #b4b9f0;
+  --sl-color-bg: hsl(240 6% 7%);
+  --sl-color-bg-sidebar: hsl(240 5% 9%);
+  --sl-color-bg-nav: hsl(240 5% 9%);
+  --sl-font: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --sl-font-mono: "GeistMono", ui-monospace, monospace;
+}
