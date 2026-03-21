@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { UserPlus, MoreHorizontal, RefreshCw } from "lucide-react";
+import { UserPlus, MoreHorizontal, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
@@ -69,9 +69,28 @@ export default function TeamPage() {
   const [deprovisionTarget, setDeprovisionTarget] = useState<TeamMember | null>(null);
   const { toast } = useToast();
 
-  const filtered = tab === "all"
+  const [sortCol, setSortCol] = useState<"name" | "email" | "role" | "status">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const toggleSort = (col: "name" | "email" | "role" | "status") => {
+    if (sortCol === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortCol(col);
+      setSortDir("asc");
+    }
+  };
+
+  const filtered = (tab === "all"
     ? members
-    : members.filter((m) => m.status === tab || (tab === "invited" && m.status === "invited"));
+    : members.filter((m) => m.status === tab || (tab === "invited" && m.status === "invited"))
+  ).slice().sort((a, b) => {
+    const aVal = a[sortCol].toLowerCase();
+    const bVal = b[sortCol].toLowerCase();
+    if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+    return 0;
+  });
 
   const handleSync = () => {
     setSyncing(true);
@@ -168,11 +187,25 @@ export default function TeamPage() {
       {/* Table */}
       <div className="overflow-hidden rounded border border-subtle">
         <div className="grid grid-cols-[1fr_1fr_80px_80px_32px] gap-4 border-b border-subtle bg-surface-1 px-4 py-2">
-          {["Name", "Email", "Role", "Status", ""].map((h) => (
-            <span key={h} className="text-2xs font-medium uppercase tracking-widest text-white/25">
-              {h}
-            </span>
-          ))}
+          {([
+            { key: "name", label: "Name" },
+            { key: "email", label: "Email" },
+            { key: "role", label: "Role" },
+            { key: "status", label: "Status" },
+          ] as const).map(({ key, label }) => {
+            const SortIcon = sortCol === key ? (sortDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+            return (
+              <button
+                key={key}
+                onClick={() => toggleSort(key)}
+                className="flex items-center gap-1 text-2xs font-medium uppercase tracking-widest text-white/25 transition-colors hover:text-white/50 cursor-pointer"
+              >
+                {label}
+                <SortIcon className={cn("h-3 w-3", sortCol === key ? "text-white/40" : "text-white/15")} />
+              </button>
+            );
+          })}
+          <span />
         </div>
 
         {filtered.map((member) => {

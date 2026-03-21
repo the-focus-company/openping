@@ -67,3 +67,36 @@ export const send = mutation({
     return messageId;
   },
 });
+
+export const search = query({
+  args: {
+    query: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
+    if (!args.query.trim()) return [];
+
+    const results = await ctx.db
+      .query("messages")
+      .withSearchIndex("search_body", (q) => q.search("body", args.query))
+      .take(10);
+
+    const enriched = await Promise.all(
+      results.map(async (msg) => {
+        const author = await ctx.db.get(msg.authorId);
+        const channel = await ctx.db.get(msg.channelId);
+        return {
+          _id: msg._id,
+          body: msg.body,
+          channelId: msg.channelId,
+          channelName: channel?.name ?? "unknown",
+          authorName: author?.name ?? "Unknown",
+          timestamp: msg._creationTime,
+        };
+      }),
+    );
+
+    return enriched;
+  },
+});

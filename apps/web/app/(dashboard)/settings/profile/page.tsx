@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
@@ -9,7 +9,8 @@ import { Loader2 } from "lucide-react";
 
 export default function ProfilePage() {
   const { toast } = useToast();
-  const user = useQuery(api.users.getMe);
+  const { isAuthenticated } = useConvexAuth();
+  const user = useQuery(api.users.getMe, isAuthenticated ? {} : "skip");
   const updateProfile = useMutation(api.users.updateProfile);
 
   const [displayName, setDisplayName] = useState("");

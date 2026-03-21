@@ -190,4 +190,38 @@ export default defineSchema({
   })
     .index("by_session_id", ["workosSessionId"])
     .index("by_user", ["userId"]),
+
+  directConversations: defineTable({
+    workspaceId: v.id("workspaces"),
+    kind: v.union(
+      v.literal("1to1"),
+      v.literal("group"),
+      v.literal("agent_1to1"),
+      v.literal("agent_group"),
+    ),
+    name: v.optional(v.string()),
+    createdBy: v.id("users"),
+    isArchived: v.boolean(),
+  })
+    .index("by_workspace", ["workspaceId"]),
+
+  directConversationMembers: defineTable({
+    conversationId: v.id("directConversations"),
+    userId: v.id("users"),
+    isAgent: v.boolean(),
+    lastReadAt: v.optional(v.number()),
+  })
+    .index("by_conversation", ["conversationId"])
+    .index("by_user", ["userId"])
+    .index("by_conversation_user", ["conversationId", "userId"]),
+
+  directMessages: defineTable({
+    conversationId: v.id("directConversations"),
+    authorId: v.id("users"),
+    body: v.string(),
+    type: v.union(v.literal("user"), v.literal("bot"), v.literal("system")),
+    isEdited: v.boolean(),
+  })
+    .index("by_conversation", ["conversationId"])
+    .index("by_author", ["authorId"]),
 });

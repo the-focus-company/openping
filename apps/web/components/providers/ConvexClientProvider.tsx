@@ -18,11 +18,15 @@ function useConvexAuth() {
 
       try {
         const res = await fetch("/api/auth/token");
-        if (!res.ok) return null;
+        if (!res.ok) {
+          setToken(null);
+          return null;
+        }
         const data = await res.json();
         setToken(data.token);
         return data.token;
       } catch {
+        setToken(null);
         return null;
       } finally {
         setIsLoading(false);

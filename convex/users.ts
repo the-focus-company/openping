@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuth } from "./auth";
 
 export const getMe = query({
   args: {},
@@ -13,6 +14,26 @@ export const getMe = query({
         q.eq("workosUserId", identity.subject),
       )
       .unique();
+  },
+});
+
+export const listAll = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireAuth(ctx);
+    const users = await ctx.db
+      .query("users")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", user.workspaceId))
+      .take(200);
+    return users
+      .filter((u) => u.status === "active")
+      .map((u) => ({
+        _id: u._id,
+        name: u.name,
+        email: u.email,
+        avatarUrl: u.avatarUrl,
+        role: u.role,
+      }));
   },
 });
 

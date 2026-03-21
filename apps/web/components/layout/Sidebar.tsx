@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
   Inbox,
@@ -17,9 +17,11 @@ import {
   Settings,
   ChevronDown,
   User,
+  Building2,
   Keyboard,
   LogOut,
   Lock,
+  MessageSquare,
 } from "lucide-react";
 import { Kbd } from "@/components/ui/kbd";
 import { StatusDot } from "@/components/ui/status-dot";
@@ -102,9 +104,11 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const channels = useQuery(api.channels.list);
-  const inboxUnread = useQuery(api.inboxSummaries.unreadCount);
-  const user = useQuery(api.users.getMe);
+  const { isAuthenticated } = useConvexAuth();
+  const channels = useQuery(api.channels.list, isAuthenticated ? {} : "skip");
+  const inboxUnread = useQuery(api.inboxSummaries.unreadCount, isAuthenticated ? {} : "skip");
+  const dmConversations = useQuery(api.directConversations.list, isAuthenticated ? {} : "skip");
+  const user = useQuery(api.users.getMe, isAuthenticated ? {} : "skip");
   const createChannel = useMutation(api.channels.create);
 
   const [addChannelOpen, setAddChannelOpen] = useState(false);
@@ -158,7 +162,7 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
               </div>
             </div>
             <DropdownMenuSeparator className="bg-white/5" />
-            <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => router.push("/settings/team")}>
+            <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => router.push("/settings/workspace")}>
               <Settings className="mr-2 h-3 w-3" />
               Workspace settings
             </DropdownMenuItem>
@@ -194,7 +198,7 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
       <div className="h-px bg-white/[0.05] mx-2" />
 
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2 scrollbar-thin">
+      <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2 scrollbar-thin">
         {/* Primary nav */}
         <NavItem
           href="/inbox"
@@ -204,6 +208,64 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
           kbd="G I"
           isActive={pathname === "/inbox"}
         />
+
+        {/* Direct Messages */}
+        <SectionHeader
+          label="Direct Messages"
+          action={
+            <Link
+              href="/dms"
+              className="rounded p-0.5 text-white/25 transition-colors hover:bg-surface-3 hover:text-white/60"
+            >
+              <Plus className="h-3 w-3" />
+            </Link>
+          }
+        />
+
+        <NavItem
+          href="/dms"
+          icon={MessageSquare}
+          label="All Messages"
+          isActive={pathname === "/dms"}
+        />
+
+        {dmConversations &&
+          dmConversations.slice(0, 5).map((conv) => {
+            const otherMembers = conv.members.filter(
+              (m) => m.userId !== user?._id,
+            );
+            const displayName =
+              conv.name || otherMembers.map((m) => m.name).join(", ") || "DM";
+            const isAgent =
+              conv.kind === "agent_1to1" || conv.kind === "agent_group";
+            const isActive = pathname === `/dm/${conv._id}`;
+
+            return (
+              <Link
+                key={conv._id}
+                href={`/dm/${conv._id}`}
+                className={cn(
+                  "group relative flex h-7 items-center gap-2 rounded px-2 text-sm",
+                  "transition-colors duration-100",
+                  isActive
+                    ? "bg-ping-purple-muted text-foreground before:absolute before:left-0 before:top-1/2 before:h-4 before:-translate-y-1/2 before:w-0.5 before:rounded-r before:bg-ping-purple"
+                    : "text-muted-foreground hover:bg-surface-3 hover:text-foreground",
+                )}
+              >
+                {isAgent ? (
+                  <Bot className="h-3.5 w-3.5 shrink-0 text-ping-purple" />
+                ) : (
+                  <User className="h-3.5 w-3.5 shrink-0 text-white/30" />
+                )}
+                <span className="flex-1 truncate">{displayName}</span>
+                {conv.unreadCount > 0 && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-ping-purple px-1 text-2xs font-medium text-white tabular-nums">
+                    {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
 
         {/* Channels */}
         <SectionHeader
@@ -258,6 +320,7 @@ export function Sidebar({ onOpenSearch, onOpenShortcuts }: SidebarProps) {
         {/* Settings */}
         <SectionHeader label="Settings" />
 
+        <NavItem href="/settings/workspace" icon={Building2} label="Workspace" isActive={pathname === "/settings/workspace"} />
         <NavItem href="/settings/profile" icon={User} label="Profile" isActive={pathname === "/settings/profile"} />
         <NavItem href="/settings/team" icon={Users} label="Team" isActive={pathname === "/settings/team"} />
         <NavItem href="/settings/agents" icon={Bot} label="Agents" isActive={pathname === "/settings/agents"} />

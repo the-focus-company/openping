@@ -80,7 +80,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <TopBar
           onToggleSidebar={toggleSidebar}
           onOpenSearch={openSearch}
-          onOpenShortcuts={openShortcuts}
         />
         <main className="flex-1 overflow-auto scrollbar-thin">{children}</main>
       </div>

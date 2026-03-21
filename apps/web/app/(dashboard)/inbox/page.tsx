@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { InboxCard, type InboxItem, type Priority } from "@/components/inbox/InboxCard";
 import { useToast } from "@/components/ui/toast-provider";
@@ -26,7 +26,8 @@ export default function InboxPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const summaries = useQuery(api.inboxSummaries.list);
+  const { isAuthenticated } = useConvexAuth();
+  const summaries = useQuery(api.inboxSummaries.list, isAuthenticated ? {} : "skip");
   const markReadMutation = useMutation(api.inboxSummaries.markRead);
   const archiveMutation = useMutation(api.inboxSummaries.archive);
 

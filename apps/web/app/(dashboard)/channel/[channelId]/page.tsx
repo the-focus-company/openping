@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useEffect, useMemo } from "react";
-import { useQuery, usePaginatedQuery, useMutation } from "convex/react";
+import { useQuery, usePaginatedQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { MessageList, type Message } from "@/components/channel/MessageList";
@@ -25,21 +25,23 @@ export default function ChannelPage({ params }: Props) {
   const { channelId } = use(params);
   const typedChannelId = channelId as Id<"channels">;
 
-  const channel = useQuery(api.channels.get, { channelId: typedChannelId });
+  const { isAuthenticated } = useConvexAuth();
+  const channel = useQuery(api.channels.get, isAuthenticated ? { channelId: typedChannelId } : "skip");
   const { results, status, loadMore } = usePaginatedQuery(
     api.messages.list,
-    { channelId: typedChannelId },
+    isAuthenticated ? { channelId: typedChannelId } : "skip",
     { initialNumItems: 50 },
   );
   const sendMessage = useMutation(api.messages.send);
   const markRead = useMutation(api.channels.markRead);
-  const alerts = useQuery(api.proactiveAlerts.listPending);
+  const alerts = useQuery(api.proactiveAlerts.listPending, isAuthenticated ? {} : "skip");
   const dismissAlert = useMutation(api.proactiveAlerts.dismiss);
 
-  // Mark channel as read on mount
+  // Mark channel as read on mount (only when authenticated)
   useEffect(() => {
+    if (!isAuthenticated) return;
     markRead({ channelId: typedChannelId });
-  }, [markRead, typedChannelId]);
+  }, [isAuthenticated, markRead, typedChannelId]);
 
   // Reverse results (they come desc, we display asc)
   const messages: Message[] = useMemo(() => {
