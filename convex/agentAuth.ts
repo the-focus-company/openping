@@ -16,7 +16,9 @@ export const validateToken = internalQuery({
       .query("agentApiTokens")
       .withIndex("by_token_hash", (q) => q.eq("tokenHash", args.tokenHash))
       .unique();
+
     if (!token || token.status !== "active") return null;
+    if (token.expiresAt && token.expiresAt < Date.now()) return null;
 
     const agent = await ctx.db.get(token.agentId);
     if (!agent || agent.status !== "active") return null;
