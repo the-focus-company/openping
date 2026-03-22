@@ -196,6 +196,13 @@ export const listAll = query({
       wsMembers.map(async (m) => {
         const u = await ctx.db.get(m.userId);
         if (!u) return null;
+
+        // Check if this user is an agent's user record
+        const agentRecord = await ctx.db
+          .query("agents")
+          .withIndex("by_agent_user", (q) => q.eq("agentUserId", u._id))
+          .first();
+
         return {
           _id: u._id,
           name: u.name,
@@ -203,6 +210,9 @@ export const listAll = query({
           avatarUrl: u.avatarUrl,
           role: m.role,
           status: u.status,
+          isAgent: !!agentRecord,
+          agentId: agentRecord?._id,
+          agentColor: agentRecord?.color,
         };
       }),
     );

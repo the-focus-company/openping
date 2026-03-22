@@ -89,7 +89,7 @@ export const setTypingDM = mutation({
       .withIndex("by_conversation_user", (q) =>
         q.eq("conversationId", args.conversationId).eq("userId", user._id),
       )
-      .unique();
+      .first();
 
     if (existing) {
       await ctx.db.patch(existing._id, { expiresAt: Date.now() + TYPING_TTL });
@@ -114,7 +114,7 @@ export const clearTypingDM = mutation({
       .withIndex("by_conversation_user", (q) =>
         q.eq("conversationId", args.conversationId).eq("userId", user._id),
       )
-      .unique();
+      .first();
 
     if (existing) {
       await ctx.db.delete(existing._id);
@@ -307,6 +307,98 @@ export const getTypingUsersThreadDM = query({
     return users
       .filter((u) => u !== null)
       .map((u) => ({ _id: u._id, name: u.name, avatarUrl: u.avatarUrl }));
+  },
+});
+
+// ── Agent typing (internal, no auth required) ───────────────────────
+
+const AGENT_TYPING_TTL = 30000; // 30s — longer since agents take time
+
+export const setAgentTypingDM = internalMutation({
+  args: {
+    conversationId: v.id("directConversations"),
+    agentUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_conversation_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", args.agentUserId),
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { expiresAt: Date.now() + AGENT_TYPING_TTL });
+    } else {
+      await ctx.db.insert("typingIndicators", {
+        conversationId: args.conversationId,
+        userId: args.agentUserId,
+        expiresAt: Date.now() + AGENT_TYPING_TTL,
+      });
+    }
+  },
+});
+
+export const clearAgentTypingDM = internalMutation({
+  args: {
+    conversationId: v.id("directConversations"),
+    agentUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_conversation_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", args.agentUserId),
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
+  },
+});
+
+export const setAgentTypingChannel = internalMutation({
+  args: {
+    channelId: v.id("channels"),
+    agentUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_channel_user", (q) =>
+        q.eq("channelId", args.channelId).eq("userId", args.agentUserId),
+      )
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { expiresAt: Date.now() + AGENT_TYPING_TTL });
+    } else {
+      await ctx.db.insert("typingIndicators", {
+        channelId: args.channelId,
+        userId: args.agentUserId,
+        expiresAt: Date.now() + AGENT_TYPING_TTL,
+      });
+    }
+  },
+});
+
+export const clearAgentTypingChannel = internalMutation({
+  args: {
+    channelId: v.id("channels"),
+    agentUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_channel_user", (q) =>
+        q.eq("channelId", args.channelId).eq("userId", args.agentUserId),
+      )
+      .unique();
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
   },
 });
 

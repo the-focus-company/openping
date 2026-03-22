@@ -21,7 +21,7 @@ export const list = query({
           .eq("conversationId", args.conversationId)
           .eq("userId", user._id),
       )
-      .unique();
+      .first();
     if (!membership) throw new Error("Not a member");
 
     const results = await ctx.db
@@ -47,7 +47,7 @@ export const list = query({
               .eq("conversationId", args.conversationId)
               .eq("userId", message.authorId),
           )
-          .unique();
+          .first();
 
         // Resolve thread participant info for parent messages
         let threadParticipants: Array<{
@@ -171,7 +171,7 @@ export const send = mutation({
           .eq("conversationId", args.conversationId)
           .eq("userId", user._id),
       )
-      .unique();
+      .first();
     if (!membership) throw new Error("Not a member");
 
     const messageId = await ctx.db.insert("directMessages", {
@@ -189,6 +189,16 @@ export const send = mutation({
     await ctx.scheduler.runAfter(0, internal.ingest.processDirectMessage, {
       messageId,
     });
+
+    // Dispatch to agent members if this is an agent conversation
+    if (!membership.isAgent) {
+      await ctx.scheduler.runAfter(0, internal.agentRunner.dispatchDMResponse, {
+        conversationId: args.conversationId,
+        messageId,
+        body: args.body,
+        authorId: user._id,
+      });
+    }
 
     // Update sender's lastReadAt
     await ctx.db.patch(membership._id, { lastReadAt: Date.now() });

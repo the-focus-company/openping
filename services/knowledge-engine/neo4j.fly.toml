@@ -2,7 +2,7 @@ app = "ping-neo4j"
 primary_region = "waw"
 
 [build]
-  image = "neo4j:5.22.0-community"
+  image = "neo4j:5.26.0-community"
 
 [env]
   NEO4J_PLUGINS = '["apoc"]'

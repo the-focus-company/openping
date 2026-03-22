@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Plus } from "lucide-react";
-import { AgentCard, AgentConfigDialog } from "@/components/bot/AgentCard";
+import { AgentCard, AgentConfigDialog, type AgentSaveData } from "@/components/bot/AgentCard";
 import type { Agent } from "@/components/bot/AgentCard";
 import { AgentTokenDialog } from "@/components/bot/AgentTokenDialog";
 import { AgentApiInfo } from "@/components/bot/AgentApiInfo";
@@ -64,12 +64,7 @@ export default function AgentsPage() {
     }
   };
 
-  const handleSave = async (data: {
-    name: string;
-    description: string;
-    systemPrompt: string;
-    color: string;
-  }) => {
+  const handleSave = async (data: AgentSaveData) => {
     try {
       if (configMode === "create") {
         await createAgent({
@@ -78,6 +73,12 @@ export default function AgentsPage() {
           description: data.description,
           systemPrompt: data.systemPrompt,
           color: data.color,
+          model: data.model,
+          scope: data.scope ?? "workspace",
+          tools: data.tools,
+          restrictions: data.restrictions,
+          triggers: data.triggers,
+          jobs: data.jobs,
         });
         toast("Agent created", "success");
       } else if (selectedAgent) {
@@ -88,6 +89,12 @@ export default function AgentsPage() {
           description: data.description,
           systemPrompt: data.systemPrompt,
           color: data.color,
+          model: data.model,
+          scope: data.scope,
+          tools: data.tools,
+          restrictions: data.restrictions,
+          triggers: data.triggers,
+          jobs: data.jobs,
         });
         toast("Agent updated", "success");
       }
@@ -126,9 +133,7 @@ export default function AgentsPage() {
           <AgentCard
             key={agent._id}
             agent={agent}
-            onToggle={handleToggle}
             onConfigure={handleConfigure}
-            onGenerateToken={handleGenerateToken}
           />
         ))}
 

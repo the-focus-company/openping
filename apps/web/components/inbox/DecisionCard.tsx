@@ -10,13 +10,14 @@ import {
   RefreshCw,
   FileText,
   ExternalLink,
+  Maximize2,
 } from "lucide-react";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { DecisionActions } from "./DecisionActions";
 import type { DecisionType } from "./DecisionActions";
-import type { EisenhowerQuadrant } from "./InboxCard";
+import type { EisenhowerQuadrant, PriorityLevel } from "./InboxCard";
 
-export type { DecisionType, EisenhowerQuadrant };
+export type { DecisionType, EisenhowerQuadrant, PriorityLevel };
 
 export interface OrgTracePerson {
   name: string;
@@ -30,6 +31,7 @@ export interface DecisionItem {
   title: string;
   summary: string;
   eisenhowerQuadrant: EisenhowerQuadrant;
+  priority: PriorityLevel;
   status: string;
   channelName: string;
   sourceUrl?: string;
@@ -48,6 +50,12 @@ export interface DecisionItem {
     primary?: boolean;
     needsComment?: boolean;
   }>;
+  links?: Array<{
+    title: string;
+    url: string;
+    type: "doc" | "sheet" | "video" | "pr" | "other";
+  }>;
+  relatedDecisionIds?: string[];
 }
 
 const priorityConfig: Record<
@@ -157,9 +165,10 @@ interface DecisionCardProps {
   item: DecisionItem;
   onAction: (id: string, action: string, comment?: string) => void;
   onOpen: () => void;
+  onFocus?: () => void;
 }
 
-export function DecisionCard({ item, onAction, onOpen }: DecisionCardProps) {
+export function DecisionCard({ item, onAction, onOpen, onFocus }: DecisionCardProps) {
   const [hovered, setHovered] = useState(false);
   const config = priorityConfig[item.eisenhowerQuadrant];
   const typeInfo = typeConfig[item.type];
@@ -248,6 +257,18 @@ export function DecisionCard({ item, onAction, onOpen }: DecisionCardProps) {
                   <ExternalLink className="h-3 w-3" />
                 </a>
               )}
+              {onFocus && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onFocus(); }}
+                  title="Focus mode"
+                  className={cn(
+                    "rounded p-0.5 transition-colors hover:bg-surface-3 hover:text-foreground",
+                    hovered ? "text-foreground/25" : "text-transparent pointer-events-none",
+                  )}
+                >
+                  <Maximize2 className="h-3 w-3" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -261,14 +282,9 @@ export function DecisionCard({ item, onAction, onOpen }: DecisionCardProps) {
             {item.summary}
           </p>
 
-          {/* Quick actions — show on hover */}
+          {/* Quick actions — always visible */}
           <div
-            className={cn(
-              "mt-2 transition-all duration-150",
-              hovered
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-1 pointer-events-none"
-            )}
+            className="mt-2"
             onClick={(e) => e.stopPropagation()}
           >
             <DecisionActions

@@ -302,4 +302,176 @@ http.route({
   }),
 });
 
+// ---------------------------------------------------------------------------
+// Agent REST API
+// ---------------------------------------------------------------------------
+
+/** Extract and validate a Bearer token from the Authorization header. */
+async function authenticateAgent(
+  ctx: { runQuery: (ref: any, args: any) => Promise<any>; runMutation: (ref: any, args: any) => Promise<any> },
+  request: Request,
+) {
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const rawToken = authHeader.slice(7);
+  const encoded = new TextEncoder().encode(rawToken);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+  const tokenHash = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  const result = await ctx.runQuery(internal.agentApi.getAgentByTokenHash, {
+    tokenHash,
+  });
+  if (!result) return null;
+
+  // Touch token last-used timestamp
+  await ctx.runMutation(internal.agentApi.touchToken, {
+    tokenId: result.tokenId,
+  });
+
+  return result;
+}
+
+function jsonResponse(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+// GET /api/agent/v1/me — Agent identity
+http.route({
+  path: "/api/agent/v1/me",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateAgent(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    return jsonResponse({
+      agent: auth.agent,
+      user: auth.user,
+      workspaceId: auth.workspaceId,
+    });
+  }),
+});
+
+// GET /api/agent/v1/channels — List workspace channels
+http.route({
+  path: "/api/agent/v1/channels",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateAgent(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const channels = await ctx.runQuery(
+      internal.agentApi.listChannelsForWorkspace,
+      { workspaceId: auth.workspaceId },
+    );
+
+    return jsonResponse({ channels });
+  }),
+});
+
+// GET /api/agent/v1/channels/:channelId/messages — Read channel messages
+http.route({
+  path: "/api/agent/v1/messages/channel",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateAgent(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const body = await request.json();
+    const channelId = body.channelId;
+    const limit = body.limit ?? 50;
+
+    if (!channelId) return jsonResponse({ error: "channelId required" }, 400);
+
+    const messages = await ctx.runQuery(
+      internal.agentApi.readChannelMessages,
+      { channelId, workspaceId: auth.workspaceId, limit },
+    );
+
+    return jsonResponse({ messages });
+  }),
+});
+
+// POST /api/agent/v1/send/channel — Send message to channel
+http.route({
+  path: "/api/agent/v1/send/channel",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateAgent(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const body = await request.json();
+    const { channelId, message } = body;
+
+    if (!channelId || !message) {
+      return jsonResponse({ error: "channelId and message required" }, 400);
+    }
+
+    const result = await ctx.runMutation(
+      internal.agentApi.sendChannelMessage,
+      {
+        channelId,
+        workspaceId: auth.workspaceId,
+        authorId: auth.user._id,
+        body: message,
+      },
+    );
+
+    return jsonResponse(result);
+  }),
+});
+
+// POST /api/agent/v1/send/dm — Send DM
+http.route({
+  path: "/api/agent/v1/send/dm",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateAgent(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const body = await request.json();
+    const { conversationId, message } = body;
+
+    if (!conversationId || !message) {
+      return jsonResponse(
+        { error: "conversationId and message required" },
+        400,
+      );
+    }
+
+    const result = await ctx.runMutation(
+      internal.agentApi.sendDirectMessage,
+      {
+        conversationId,
+        userId: auth.user._id,
+        body: message,
+      },
+    );
+
+    return jsonResponse(result);
+  }),
+});
+
+// GET /api/agent/v1/conversations — List DM conversations
+http.route({
+  path: "/api/agent/v1/conversations",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateAgent(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const conversations = await ctx.runQuery(
+      internal.agentApi.listConversationsForUser,
+      { userId: auth.user._id },
+    );
+
+    return jsonResponse({ conversations });
+  }),
+});
+
 export default http;

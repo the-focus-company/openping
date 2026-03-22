@@ -260,6 +260,8 @@ export default defineSchema({
     name: v.optional(v.string()),
     createdBy: v.id("users"),
     isArchived: v.boolean(),
+    archivedAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
   })
     .index("by_workspace", ["workspaceId"]),
 
@@ -484,6 +486,22 @@ export default defineSchema({
         }),
       ),
     ),
+    links: v.optional(
+      v.array(
+        v.object({
+          title: v.string(),
+          url: v.string(),
+          type: v.union(
+            v.literal("doc"),
+            v.literal("sheet"),
+            v.literal("video"),
+            v.literal("pr"),
+            v.literal("other"),
+          ),
+        }),
+      ),
+    ),
+    relatedDecisionIds: v.optional(v.array(v.id("decisions"))),
     recommendedActions: v.optional(
       v.array(
         v.object({
@@ -586,6 +604,13 @@ export default defineSchema({
     description: v.optional(v.string()),
     systemPrompt: v.optional(v.string()),
     color: v.optional(v.string()),
+    model: v.optional(v.string()),
+    scope: v.union(v.literal("workspace"), v.literal("private")),
+    // Preconfigured capabilities
+    tools: v.optional(v.array(v.string())),
+    restrictions: v.optional(v.array(v.string())),
+    triggers: v.optional(v.array(v.string())),
+    jobs: v.optional(v.array(v.string())),
     status: v.union(
       v.literal("active"),
       v.literal("inactive"),
@@ -593,8 +618,11 @@ export default defineSchema({
     ),
     lastActiveAt: v.optional(v.number()),
     createdBy: v.id("users"),
+    // Links agent to its user record so it can participate in channels/DMs
+    agentUserId: v.optional(v.id("users")),
   })
-    .index("by_workspace", ["workspaceId"]),
+    .index("by_workspace", ["workspaceId"])
+    .index("by_agent_user", ["agentUserId"]),
 
   agentApiTokens: defineTable({
     agentId: v.id("agents"),
@@ -645,4 +673,18 @@ export default defineSchema({
     .index("by_workspace", ["workspaceId"])
     .index("by_workspace_type", ["workspaceId", "integrationType"])
     .index("by_channel_type_target", ["channelId", "integrationType", "externalTarget"]),
+
+  quickChats: defineTable({
+    workspaceId: v.id("workspaces"),
+    userId: v.id("users"),
+    query: v.string(),
+    response: v.optional(v.string()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("done"),
+      v.literal("error"),
+    ),
+    promotedToConversationId: v.optional(v.id("directConversations")),
+  })
+    .index("by_user", ["userId"]),
 });

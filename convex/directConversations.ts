@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth, requireUser } from "./auth";
+import { requireAuth, requireUser, requireDMmember } from "./auth";
 
 export const list = query({
   args: {},
@@ -16,7 +16,7 @@ export const list = query({
     const conversations = await Promise.all(
       memberships.map(async (membership) => {
         const conversation = await ctx.db.get(membership.conversationId);
-        if (!conversation || conversation.isArchived) return null;
+        if (!conversation || conversation.isArchived || conversation.deletedAt) return null;
 
         // Get all members of this conversation
         const members = await ctx.db
@@ -83,6 +83,74 @@ export const list = query({
   },
 });
 
+export const listArchived = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx);
+
+    const memberships = await ctx.db
+      .query("directConversationMembers")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .take(500);
+
+    const conversations = await Promise.all(
+      memberships.map(async (membership) => {
+        const conversation = await ctx.db.get(membership.conversationId);
+        if (!conversation || !conversation.isArchived || conversation.deletedAt) return null;
+
+        const members = await ctx.db
+          .query("directConversationMembers")
+          .withIndex("by_conversation", (q) =>
+            q.eq("conversationId", conversation._id),
+          )
+          .take(50);
+
+        const memberDetails = await Promise.all(
+          members.map(async (m) => {
+            const memberUser = await ctx.db.get(m.userId);
+            return {
+              userId: m.userId,
+              name: memberUser?.name ?? "Unknown",
+              avatarUrl: memberUser?.avatarUrl,
+              isAgent: m.isAgent,
+            };
+          }),
+        );
+
+        const lastMessage = await ctx.db
+          .query("directMessages")
+          .withIndex("by_conversation", (q) =>
+            q.eq("conversationId", conversation._id),
+          )
+          .order("desc")
+          .first();
+
+        let lastMessagePreview = null;
+        if (lastMessage) {
+          const author = await ctx.db.get(lastMessage.authorId);
+          lastMessagePreview = {
+            body: lastMessage.body,
+            authorName: author?.name ?? "Unknown",
+            timestamp: lastMessage._creationTime,
+          };
+        }
+
+        return {
+          ...conversation,
+          members: memberDetails,
+          unreadCount: 0,
+          lastMessage: lastMessagePreview,
+          myLastReadAt: membership.lastReadAt,
+        };
+      }),
+    );
+
+    return conversations
+      .filter((c): c is NonNullable<typeof c> => c !== null)
+      .sort((a, b) => (b.archivedAt ?? 0) - (a.archivedAt ?? 0));
+  },
+});
+
 export const get = query({
   args: { conversationId: v.id("directConversations") },
   handler: async (ctx, args) => {
@@ -99,7 +167,7 @@ export const get = query({
           .eq("conversationId", args.conversationId)
           .eq("userId", user._id),
       )
-      .unique();
+      .first();
     if (!membership) throw new Error("Not a member");
 
     const members = await ctx.db
@@ -159,7 +227,7 @@ export const create = mutation({
                 .eq("conversationId", m.conversationId)
                 .eq("userId", otherUserId),
             )
-            .unique();
+            .first();
           if (otherMembership) return m.conversationId;
         }
       }
@@ -216,10 +284,45 @@ export const markRead = mutation({
           .eq("conversationId", args.conversationId)
           .eq("userId", user._id),
       )
-      .unique();
+      .first();
 
     if (membership) {
       await ctx.db.patch(membership._id, { lastReadAt: Date.now() });
     }
+  },
+});
+
+export const archive = mutation({
+  args: { conversationId: v.id("directConversations") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    await requireDMmember(ctx, args.conversationId, user._id);
+    await ctx.db.patch(args.conversationId, {
+      isArchived: true,
+      archivedAt: Date.now(),
+    });
+  },
+});
+
+export const unarchive = mutation({
+  args: { conversationId: v.id("directConversations") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    await requireDMmember(ctx, args.conversationId, user._id);
+    await ctx.db.patch(args.conversationId, {
+      isArchived: false,
+      archivedAt: undefined,
+    });
+  },
+});
+
+export const remove = mutation({
+  args: { conversationId: v.id("directConversations") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    await requireDMmember(ctx, args.conversationId, user._id);
+    await ctx.db.patch(args.conversationId, {
+      deletedAt: Date.now(),
+    });
   },
 });

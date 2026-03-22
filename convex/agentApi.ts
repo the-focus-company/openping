@@ -187,7 +187,7 @@ export const readConversationMessages = internalQuery({
       .withIndex("by_conversation_user", (q) =>
         q.eq("conversationId", conversationId).eq("userId", userId),
       )
-      .unique();
+      .first();
 
     if (!membership) {
       throw new Error("Not a member of this conversation");
@@ -235,7 +235,7 @@ export const sendDirectMessage = internalMutation({
       .withIndex("by_conversation_user", (q) =>
         q.eq("conversationId", conversationId).eq("userId", userId),
       )
-      .unique();
+      .first();
 
     if (!membership) {
       throw new Error("Not a member of this conversation");

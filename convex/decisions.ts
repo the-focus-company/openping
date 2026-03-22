@@ -125,6 +125,26 @@ export const getContext = query({
         orgTrace: d.orgTrace ?? [],
       }));
 
+    const relatedDecisions = (
+      await Promise.all(
+        (decision.relatedDecisionIds ?? []).map(async (id) => {
+          const d = await ctx.db.get(id);
+          if (!d) return null;
+          return {
+            id: d._id,
+            title: d.title,
+            type: d.type,
+            eisenhowerQuadrant: d.eisenhowerQuadrant,
+            summary: d.summary,
+            outcome: d.outcome,
+            orgTrace: d.orgTrace ?? [],
+            createdAt: d.createdAt,
+            status: d.status,
+          };
+        }),
+      )
+    ).filter((d): d is NonNullable<typeof d> => d !== null);
+
     return {
       decision,
       sourceAlert,
@@ -133,6 +153,8 @@ export const getContext = query({
       sourceIntegrationObject,
       relatedMessages,
       relatedPastDecisions,
+      relatedDecisions,
+      links: decision.links ?? [],
     };
   },
 });

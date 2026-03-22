@@ -25,6 +25,14 @@ export const send = mutation({
       messageId,
     });
 
+    // Dispatch to agents (@mention or channel-trigger)
+    await ctx.scheduler.runAfter(0, internal.agentRunner.dispatchChannelMention, {
+      channelId: args.channelId,
+      messageId,
+      body: args.body,
+      authorId: user._id,
+    });
+
     // Update sender's lastReadAt and reset their unreadCount,
     // then increment unreadCount for all other channel members.
     const allMembers = await ctx.db

@@ -1,87 +1,114 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
-import { AgentCard, AgentConfigDialog, type Agent } from "@/components/bot/AgentCard";
+import { Plus, Loader2 } from "lucide-react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import { AgentCard, AgentConfigDialog, type Agent, type AgentSaveData } from "@/components/bot/AgentCard";
+import { AgentTokenDialog } from "@/components/bot/AgentTokenDialog";
 import { useToast } from "@/components/ui/toast-provider";
-import { Id } from "@convex/_generated/dataModel";
-
-const MOCK_AGENTS: Agent[] = [
-  {
-    _id: "1" as Id<"agents">,
-    _creationTime: Date.now(),
-    name: "KnowledgeBot",
-    description: "Answers questions about your team's codebase, past decisions, and historical context. Queries GitHub, Linear, and chat history with citations.",
-    status: "active",
-    color: "#5E6AD2",
-    createdBy: "" as Id<"users">,
-  },
-  {
-    _id: "2" as Id<"agents">,
-    _creationTime: Date.now(),
-    name: "SupportRouterBot",
-    description: "Automatically triages incoming support messages, routes to the right team member, and drafts initial responses based on past resolution patterns.",
-    status: "active",
-    color: "#22C55E",
-    createdBy: "" as Id<"users">,
-  },
-  {
-    _id: "3" as Id<"agents">,
-    _creationTime: Date.now(),
-    name: "SprintCoach",
-    description: "Monitors sprint health, flags blocked tickets, pings assignees on overdue items, and generates weekly summaries for planning meetings.",
-    status: "inactive",
-    color: "#F59E0B",
-    createdBy: "" as Id<"users">,
-  },
-];
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState(MOCK_AGENTS);
+  const { workspaceId } = useWorkspace();
+  const agents = useQuery(api.agents.list, { workspaceId });
+  const createAgent = useMutation(api.agents.create);
+  const updateAgent = useMutation(api.agents.update);
+  const removeAgent = useMutation(api.agents.remove);
+  const generateTokenMutation = useMutation(api.agents.generateToken);
+
   const [configuring, setConfiguring] = useState<Agent | null>(null);
   const [creating, setCreating] = useState(false);
+  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleToggle = (id: Id<"agents">, status: "active" | "inactive") => {
-    setAgents((prev) =>
-      prev.map((a) => (a._id === id ? { ...a, status } : a))
-    );
-    toast(status === "active" ? "Agent enabled" : "Agent disabled", "success");
-  };
-
-  const handleSave = (data: { name: string; description: string; systemPrompt: string; color: string }) => {
-    if (configuring) {
-      setAgents((prev) =>
-        prev.map((a) =>
-          a._id === configuring._id ? { ...a, ...data } : a
-        )
-      );
-      toast("Agent updated", "success");
-    } else {
-      const newAgent: Agent = {
-        _id: crypto.randomUUID() as Id<"agents">,
-        _creationTime: Date.now(),
-        name: data.name,
-        description: data.description,
-        systemPrompt: data.systemPrompt,
-        color: data.color,
-        status: "active",
-        createdBy: "" as Id<"users">,
-      };
-      setAgents((prev) => [...prev, newAgent]);
-      toast("Agent created", "success");
+  const handleToggle = async (id: Id<"agents">, status: "active" | "inactive") => {
+    try {
+      await updateAgent({ agentId: id, workspaceId, status });
+      toast(status === "active" ? "Agent enabled" : "Agent disabled", "success");
+    } catch {
+      toast("Failed to update agent", "error");
     }
   };
 
+  const handleSave = async (data: AgentSaveData) => {
+    try {
+      if (configuring) {
+        await updateAgent({
+          agentId: configuring._id,
+          workspaceId,
+          name: data.name,
+          description: data.description,
+          systemPrompt: data.systemPrompt,
+          color: data.color,
+          model: data.model,
+          scope: data.scope,
+          tools: data.tools,
+          restrictions: data.restrictions,
+          triggers: data.triggers,
+          jobs: data.jobs,
+        });
+        toast("Agent updated", "success");
+      } else {
+        await createAgent({
+          workspaceId,
+          name: data.name,
+          description: data.description || undefined,
+          systemPrompt: data.systemPrompt,
+          color: data.color,
+          model: data.model,
+          scope: data.scope ?? "workspace",
+          tools: data.tools,
+          restrictions: data.restrictions,
+          triggers: data.triggers,
+          jobs: data.jobs,
+        });
+        toast("Agent created", "success");
+      }
+    } catch {
+      toast("Failed to save agent", "error");
+    }
+  };
+
+  const handleGenerateToken = async (id: Id<"agents">) => {
+    try {
+      const token = await generateTokenMutation({ agentId: id, workspaceId });
+      setGeneratedToken(token);
+    } catch {
+      toast("Failed to generate token", "error");
+    }
+  };
+
+  const handleDelete = async (id: Id<"agents">) => {
+    try {
+      await removeAgent({ agentId: id, workspaceId });
+      setConfiguring(null);
+      toast("Agent deleted", "success");
+    } catch {
+      toast("Failed to delete agent", "error");
+    }
+  };
+
+  if (agents === undefined) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-foreground/20" />
+      </div>
+    );
+  }
+
+  const visibleAgents = agents.filter((a) => a.status !== "revoked");
+  const activeCount = agents.filter((a) => a.status === "active").length;
+
   return (
-    <div className="mx-auto max-w-4xl animate-fade-in px-6 py-6">
+    <div className="mx-auto max-w-5xl animate-fade-in px-6 py-6">
       {/* Header */}
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-md font-semibold text-foreground">Agents</h1>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {agents.filter((a) => a.status === "active").length} active ·{" "}
-            {agents.length} total agents in this workspace
+            {activeCount} active · {visibleAgents.length} total agent{visibleAgents.length !== 1 ? "s" : ""} in this workspace
           </p>
         </div>
         <button
@@ -94,13 +121,14 @@ export default function AgentsPage() {
       </div>
 
       {/* Grid */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {agents.map((agent) => (
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {visibleAgents.map((agent) => (
           <AgentCard
             key={agent._id}
             agent={agent}
-            onToggle={handleToggle}
-            onConfigure={(id) => setConfiguring(agents.find((a) => a._id === id) ?? null)}
+            onConfigure={(id) =>
+              setConfiguring(agents.find((a) => a._id === id) ?? null)
+            }
           />
         ))}
 
@@ -126,6 +154,9 @@ export default function AgentsPage() {
         open={!!configuring}
         onClose={() => setConfiguring(null)}
         onSave={handleSave}
+        onToggle={handleToggle}
+        onGenerateToken={handleGenerateToken}
+        onDelete={handleDelete}
       />
 
       {/* Create dialog */}
@@ -135,6 +166,13 @@ export default function AgentsPage() {
         open={creating}
         onClose={() => setCreating(false)}
         onSave={handleSave}
+      />
+
+      {/* Token dialog */}
+      <AgentTokenDialog
+        token={generatedToken}
+        open={!!generatedToken}
+        onClose={() => setGeneratedToken(null)}
       />
     </div>
   );

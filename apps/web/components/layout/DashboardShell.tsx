@@ -17,6 +17,7 @@ import { PanelLeftOpen } from "lucide-react";
 import { SIDEBAR_WIDTH_DEFAULT, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX, TOPBAR_HEIGHT, THREAD_PANEL_WIDTH } from "@/lib/constants";
 import { usePresenceHeartbeat } from "@/hooks/usePresenceHeartbeat";
 import { ThreadPanelProvider, useThreadPanel } from "@/hooks/useThreadPanel";
+import { SidebarContext } from "@/hooks/useSidebar";
 import { ThreadPanel } from "@/components/channel/ThreadPanel";
 
 function isEditableTarget(e: KeyboardEvent): boolean {
@@ -280,6 +281,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [toggleSidebar, clearChord, router, workspacePrefix, pathname, navItems, channels, markChannelRead, markDMRead, toast]);
 
   return (
+    <SidebarContext.Provider value={{ sidebarOpen, setSidebarOpen }}>
     <ThreadPanelProvider>
       <TopBarProvider>
         <div className="flex h-screen flex-col overflow-hidden bg-background">
@@ -370,6 +372,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
       </TopBarProvider>
     </ThreadPanelProvider>
+    </SidebarContext.Provider>
   );
 }
 

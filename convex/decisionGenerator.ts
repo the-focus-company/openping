@@ -86,6 +86,22 @@ export const insertDecision = internalMutation({
         }),
       ),
     ),
+    links: v.optional(
+      v.array(
+        v.object({
+          title: v.string(),
+          url: v.string(),
+          type: v.union(
+            v.literal("doc"),
+            v.literal("sheet"),
+            v.literal("video"),
+            v.literal("pr"),
+            v.literal("other"),
+          ),
+        }),
+      ),
+    ),
+    relatedDecisionIds: v.optional(v.array(v.id("decisions"))),
     recommendedActions: v.optional(
       v.array(
         v.object({

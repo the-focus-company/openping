@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn, formatRelativeTime, avatarGradient } from "@/lib/utils";
 
 export type EisenhowerQuadrant = "urgent-important" | "important" | "urgent" | "fyi";
+export type PriorityLevel = "urgent" | "high" | "medium" | "low";
 
 export interface InboxAction {
   label: string;
@@ -16,7 +17,8 @@ export interface InboxAction {
 
 export interface InboxItem {
   id: string;
-  priority: EisenhowerQuadrant;
+  quadrant: EisenhowerQuadrant;
+  priority: PriorityLevel;
   channel: string;
   author: string;
   authorInitials: string;
@@ -31,10 +33,10 @@ export const priorityConfig: Record<
   EisenhowerQuadrant,
   { borderColor: string; borderWidth: string; bg: string; label: string; textColor: string; dimmed: boolean; bold: boolean; pulse: boolean }
 > = {
-  "urgent-important": { borderColor: "bg-priority-urgent",    borderWidth: "w-[3px]", bg: "bg-priority-urgent/8",    label: "URGENT",            textColor: "text-priority-urgent",    dimmed: false, bold: true,  pulse: true  },
-  "important":        { borderColor: "bg-priority-important", borderWidth: "w-0.5",   bg: "bg-priority-important/8", label: "IMPORTANT",         textColor: "text-priority-important", dimmed: false, bold: false, pulse: false },
-  "urgent":           { borderColor: "bg-blue-500",           borderWidth: "w-0.5",   bg: "bg-blue-500/8",           label: "URGENT",            textColor: "text-blue-400",           dimmed: false, bold: false, pulse: false },
-  "fyi":              { borderColor: "bg-foreground/20",           borderWidth: "w-0.5",   bg: "bg-foreground/5",              label: "FYI",               textColor: "text-foreground/30",           dimmed: true,  bold: false, pulse: false },
+  "urgent-important": { borderColor: "bg-priority-urgent",    borderWidth: "w-[3px]", bg: "bg-priority-urgent/8",    label: "URGENT",     textColor: "text-priority-urgent",    dimmed: false, bold: true,  pulse: true  },
+  "important":        { borderColor: "bg-priority-important", borderWidth: "w-0.5",   bg: "bg-priority-important/8", label: "IMPORTANT",  textColor: "text-priority-important", dimmed: false, bold: false, pulse: false },
+  "urgent":           { borderColor: "bg-blue-500",           borderWidth: "w-0.5",   bg: "bg-blue-500/8",           label: "URGENT",     textColor: "text-blue-400",           dimmed: false, bold: false, pulse: false },
+  "fyi":              { borderColor: "bg-foreground/20",      borderWidth: "w-0.5",   bg: "bg-foreground/5",         label: "FYI",        textColor: "text-foreground/30",      dimmed: true,  bold: false, pulse: false },
 };
 
 // Sort order for Eisenhower quadrants
@@ -49,7 +51,7 @@ interface InboxCardProps {
 export function InboxCard({ item, onMarkRead, onArchive }: InboxCardProps) {
   const [hovered, setHovered] = useState(false);
   const router = useRouter();
-  const config = priorityConfig[item.priority];
+  const config = priorityConfig[item.quadrant] ?? priorityConfig["fyi"];
 
   return (
     <div

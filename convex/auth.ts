@@ -11,7 +11,7 @@ export async function requireDMmember(
     .withIndex("by_conversation_user", (q) =>
       q.eq("conversationId", conversationId).eq("userId", userId),
     )
-    .unique();
+    .first();
   if (!membership) throw new Error("Not a member of this conversation");
   return membership;
 }

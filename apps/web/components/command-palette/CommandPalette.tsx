@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -24,6 +24,9 @@ import {
   Clock,
   LayoutDashboard,
   ArrowRight,
+  Send,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -155,9 +158,26 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
   // Loading state: queries have been sent but haven't returned yet
   const isSearching = hasSearch && (peopleResults === undefined || messageResults === undefined || dmResults === undefined);
 
-  // Reset search when closed
+  // Quick chat state
+  const [quickChatId, setQuickChatId] = useState<Id<"quickChats"> | null>(null);
+  const quickChat = useQuery(api.quickChat.get, quickChatId ? { quickChatId } : "skip");
+  const sendQuickChat = useMutation(api.quickChat.send);
+  const isQuickChatMode = search.startsWith("@");
+
+  const handleQuickChatSubmit = useCallback(async () => {
+    if (!workspaceId || !search.trim()) return;
+    const query = search.replace(/^@\s*/, "").trim();
+    if (!query) return;
+    const id = await sendQuickChat({ workspaceId, query });
+    setQuickChatId(id);
+  }, [workspaceId, search, sendQuickChat]);
+
+  // Reset state when closed
   useEffect(() => {
-    if (!open) setSearch("");
+    if (!open) {
+      setSearch("");
+      setQuickChatId(null);
+    }
   }, [open]);
 
   const navigate = (href: string) => {
@@ -227,14 +247,55 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
 
   return (
     <>
-    <CommandDialog open={open} onOpenChange={onOpenChange}>
+    <CommandDialog open={open} onOpenChange={onOpenChange} shouldFilter={isQuickChatMode ? false : undefined}>
       <CommandInput
-        placeholder="Search people, messages, and more..."
+        placeholder={isQuickChatMode ? "Ask anything..." : "Search people, messages, and more... (@ to chat)"}
         value={search}
-        onValueChange={setSearch}
+        onValueChange={(v) => { setSearch(v); if (!v.startsWith("@")) setQuickChatId(null); }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && isQuickChatMode && !quickChatId) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleQuickChatSubmit();
+          }
+        }}
       />
       {/* Fixed-height list — prevents dialog from jumping when content changes */}
       <div className="h-[400px]">
+      {isQuickChatMode ? (
+        // ── Quick chat mode ──
+        <div className="flex h-full flex-col p-4">
+          {!quickChatId ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+              <Bot className="h-8 w-8 text-ping-purple/40" />
+              <p className="text-sm text-muted-foreground">
+                Press <kbd className="rounded border border-subtle bg-surface-2 px-1.5 py-0.5 text-2xs font-medium">Enter</kbd> to send your message
+              </p>
+            </div>
+          ) : quickChat?.status === "pending" ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-ping-purple" />
+              <p className="text-xs text-muted-foreground">Thinking...</p>
+            </div>
+          ) : quickChat?.status === "error" ? (
+            <div className="flex flex-1 flex-col gap-3">
+              <div className="flex items-start gap-2 rounded-lg bg-red-500/10 p-3">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-400 mt-0.5" />
+                <p className="text-sm text-red-400">{quickChat.response}</p>
+              </div>
+            </div>
+          ) : quickChat?.status === "done" ? (
+            <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
+              <div className="flex items-start gap-2">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ping-purple mt-0.5">
+                  <Bot className="h-3 w-3 text-white" />
+                </div>
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{quickChat.response}</p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : (
       <CommandList className="h-full max-h-full">
         {showSearchResults ? (
           // ── Search results mode ──
@@ -416,6 +477,7 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
           </>
         )}
       </CommandList>
+      )}
       </div>
     </CommandDialog>
 

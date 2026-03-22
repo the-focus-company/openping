@@ -203,6 +203,14 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
               <User className="mr-2 h-3 w-3" />
               Profile
             </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => router.push(buildPath("/settings/team"))}>
+              <Users className="mr-2 h-3 w-3" />
+              Team
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => router.push(buildPath("/settings/workspace"))}>
+              <Settings className="mr-2 h-3 w-3" />
+              Settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-foreground/5" />
 
             {/* Workspaces */}
@@ -274,22 +282,45 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
                     u._id !== user?._id &&
                     u.name.toLowerCase().includes(dmUserSearch.toLowerCase()),
                 )
+                .sort((a, b) => {
+                  if (a.isAgent && !b.isAgent) return -1;
+                  if (!a.isAgent && b.isAgent) return 1;
+                  return a.name.localeCompare(b.name);
+                })
                 .map((u) => (
                   <button
                     key={u._id}
                     onClick={async () => {
                       if (!workspaceId) return;
-                      const id = await createConversation({ workspaceId, kind: "1to1", memberIds: [u._id] });
+                      const id = await createConversation({
+                        workspaceId,
+                        kind: u.isAgent ? "agent_1to1" : "1to1",
+                        memberIds: u.isAgent ? [] : [u._id],
+                        agentMemberIds: u.isAgent ? [u._id] : undefined,
+                      });
                       setNewDmOpen(false);
                       router.push(buildPath(`/dm/${id}`));
                     }}
                     className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-surface-3"
                   >
-                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-3 text-2xs font-medium">
-                      {u.name[0]?.toUpperCase()}
-                    </div>
+                    {u.isAgent ? (
+                      <div
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                        style={{ backgroundColor: `${u.agentColor ?? "#5E6AD2"}20` }}
+                      >
+                        <Bot className="h-3 w-3" style={{ color: u.agentColor ?? "#5E6AD2" }} />
+                      </div>
+                    ) : (
+                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-3 text-2xs font-medium">
+                        {u.name[0]?.toUpperCase()}
+                      </div>
+                    )}
                     <span className="flex-1 truncate">{u.name}</span>
-                    <span className="text-2xs text-muted-foreground">{u.email}</span>
+                    {u.isAgent ? (
+                      <span className="text-2xs text-ping-purple/60">Agent</span>
+                    ) : (
+                      <span className="text-2xs text-muted-foreground">{u.email}</span>
+                    )}
                   </button>
                 ))}
             </div>
