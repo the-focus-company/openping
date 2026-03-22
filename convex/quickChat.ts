@@ -118,6 +118,26 @@ export const generateResponse = internalAction({
         } catch {
           // Knowledge graph unavailable, continue without it
         }
+
+        // Fetch integration objects for context
+        try {
+          const integrations = await ctx.runQuery(
+            internal.quickChat.getWorkspaceIntegrations,
+            { workspaceId: chat.workspaceId, query: chat.query, limit: 20 },
+          );
+          if (integrations.length > 0) {
+            factsContext +=
+              "\n\nWorkspace integrations (Linear tickets & GitHub PRs):\n" +
+              integrations
+                .map(
+                  (io: { type: string; externalId: string; title: string; status: string; author: string }) =>
+                    `- [${io.type === "linear_ticket" ? "Linear" : "GitHub"}] ${io.externalId}: ${io.title} (${io.status}) by ${io.author}`,
+                )
+                .join("\n");
+          }
+        } catch {
+          // Integrations unavailable
+        }
       }
 
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -174,5 +194,58 @@ export const getAgent = internalQuery({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.agentId);
+  },
+});
+
+export const getWorkspaceIntegrations = internalQuery({
+  args: {
+    workspaceId: v.id("workspaces"),
+    query: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const allObjects = await ctx.db
+      .query("integrationObjects")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .order("desc")
+      .take(200);
+
+    if (allObjects.length === 0) return [];
+
+    const queryLower = args.query.toLowerCase();
+    const idPatterns = args.query.match(/[A-Z]+-\d+|#\d+/gi) ?? [];
+    const keywords = queryLower
+      .replace(/[^a-z0-9\s-]/g, "")
+      .split(/\s+/)
+      .filter((w) => w.length >= 3);
+
+    const scored = allObjects.map((o) => {
+      let score = 0;
+      const extLower = o.externalId.toLowerCase();
+      const titleLower = o.title.toLowerCase();
+      for (const id of idPatterns) {
+        if (extLower === id.toLowerCase()) score += 100;
+        if (extLower.includes(id.toLowerCase())) score += 50;
+      }
+      for (const kw of keywords) {
+        if (titleLower.includes(kw)) score += 10;
+      }
+      return { obj: o, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    const relevant = scored.filter((s) => s.score > 0).slice(0, args.limit);
+    const remaining = args.limit - relevant.length;
+    const recent = remaining > 0
+      ? scored.filter((s) => s.score === 0).slice(0, remaining)
+      : [];
+
+    return [...relevant, ...recent].map((s) => ({
+      type: s.obj.type,
+      externalId: s.obj.externalId,
+      title: s.obj.title,
+      status: s.obj.status,
+      author: s.obj.author,
+    }));
   },
 });

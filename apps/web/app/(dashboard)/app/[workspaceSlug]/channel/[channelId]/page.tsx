@@ -100,7 +100,7 @@ export default function ChannelPage({ params }: Props) {
         label: c.sourceTitle ?? c.text,
         url: c.sourceUrl,
       })),
-      botName: msg.type === "bot" ? "KnowledgeBot" : undefined,
+      botName: msg.type === "bot" ? "mrPING" : undefined,
       threadReplyCount: msg.threadReplyCount,
       threadLastReplyAt: msg.threadLastReplyAt,
       threadParticipants: msg.threadParticipants,

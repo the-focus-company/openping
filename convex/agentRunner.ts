@@ -78,6 +78,87 @@ export const updateLastActive = internalMutation({
   },
 });
 
+export const getWorkspaceIntegrations = internalQuery({
+  args: {
+    workspaceId: v.id("workspaces"),
+    query: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const allObjects = await ctx.db
+      .query("integrationObjects")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .order("desc")
+      .take(200);
+
+    if (allObjects.length === 0) return [];
+
+    // Extract identifiers and keywords from the query
+    const queryLower = args.query.toLowerCase();
+    // Match ticket IDs like "8LI-270", "PROJ-123", PR "#847"
+    const idPatterns = args.query.match(/[A-Z]+-\d+|#\d+/gi) ?? [];
+    // Extract meaningful words (3+ chars, skip stop words)
+    const stopWords = new Set(["the", "what", "are", "how", "can", "has", "was", "for", "and", "that", "this", "with", "from", "about", "other", "same", "project", "tickets", "ticket"]);
+    const keywords = args.query
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .split(/\s+/)
+      .filter((w) => w.length >= 3 && !stopWords.has(w));
+
+    // Score each integration object by relevance
+    const scored = allObjects.map((o) => {
+      let score = 0;
+      const extLower = o.externalId.toLowerCase();
+      const titleLower = o.title.toLowerCase();
+      const meta = o.metadata as Record<string, unknown> | null;
+      const projectName = (typeof meta?.projectName === "string" ? meta.projectName : "").toLowerCase();
+
+      // Direct ID match (highest signal)
+      for (const id of idPatterns) {
+        if (extLower === id.toLowerCase()) score += 100;
+        if (extLower.includes(id.toLowerCase())) score += 50;
+      }
+
+      // Same project as a matched ticket
+      if (projectName && idPatterns.length > 0) {
+        const matchedProject = allObjects.find((other) =>
+          idPatterns.some((id) => other.externalId.toLowerCase().includes(id.toLowerCase())),
+        );
+        const matchedMeta = matchedProject?.metadata as Record<string, unknown> | null;
+        const matchedProjectName = typeof matchedMeta?.projectName === "string" ? matchedMeta.projectName.toLowerCase() : "";
+        if (matchedProjectName && projectName === matchedProjectName) score += 30;
+      }
+
+      // Keyword matches in title
+      for (const kw of keywords) {
+        if (titleLower.includes(kw)) score += 10;
+      }
+
+      // Keyword in query matching externalId prefix (e.g., user says "8LI" tickets)
+      if (queryLower.includes(extLower.split("-")[0])) score += 5;
+
+      return { obj: o, score };
+    });
+
+    // Return scored items (relevant first), then pad with recent if needed
+    scored.sort((a, b) => b.score - a.score);
+    const relevant = scored.filter((s) => s.score > 0).slice(0, args.limit);
+    const remaining = args.limit - relevant.length;
+    const recent = remaining > 0
+      ? scored.filter((s) => s.score === 0).slice(0, remaining)
+      : [];
+
+    return [...relevant, ...recent].map((s) => ({
+      type: s.obj.type,
+      externalId: s.obj.externalId,
+      title: s.obj.title,
+      status: s.obj.status,
+      author: s.obj.author,
+      url: s.obj.url,
+    }));
+  },
+});
+
 // ── Channel response ────────────────────────────────────────────────
 
 export const respondInChannel = internalAction({
@@ -147,6 +228,28 @@ export const respondInChannel = internalAction({
         // Knowledge graph unavailable, continue without it
       }
 
+      // Fetch integration objects (Linear tickets, GitHub PRs) for context
+      let integrationsContext = "";
+      try {
+        const integrations = await ctx.runQuery(
+          internal.agentRunner.getWorkspaceIntegrations,
+          { workspaceId: agent.workspaceId, query: args.query, limit: 20 },
+        );
+        console.log(`[agentRunner] integrations found: ${integrations.length}`);
+        if (integrations.length > 0) {
+          integrationsContext =
+            "\n\nWorkspace integrations (Linear tickets & GitHub PRs):\n" +
+            integrations
+              .map(
+                (io) =>
+                  `- [${io.type === "linear_ticket" ? "Linear" : "GitHub"}] ${io.externalId}: ${io.title} (${io.status}) by ${io.author}`,
+              )
+              .join("\n");
+        }
+      } catch (err) {
+        console.error("[agentRunner] integration fetch failed:", err);
+      }
+
       const systemPrompt =
         agent.systemPrompt ??
         `You are ${agent.name}, an AI agent in the PING workspace. Be helpful, concise, and cite sources when available.`;
@@ -154,7 +257,7 @@ export const respondInChannel = internalAction({
       const messages = [
         {
           role: "system" as const,
-          content: systemPrompt + factsContext,
+          content: systemPrompt + factsContext + integrationsContext,
         },
         ...recentMessages,
         { role: "user" as const, content: args.query },
@@ -291,6 +394,28 @@ export const respondInDM = internalAction({
         // Knowledge graph unavailable
       }
 
+      // Fetch integration objects for context
+      let integrationsContext = "";
+      try {
+        const integrations = await ctx.runQuery(
+          internal.agentRunner.getWorkspaceIntegrations,
+          { workspaceId: agent.workspaceId, query: args.query, limit: 20 },
+        );
+        console.log(`[agentRunner] DM integrations found: ${integrations.length}`);
+        if (integrations.length > 0) {
+          integrationsContext =
+            "\n\nWorkspace integrations (Linear tickets & GitHub PRs):\n" +
+            integrations
+              .map(
+                (io) =>
+                  `- [${io.type === "linear_ticket" ? "Linear" : "GitHub"}] ${io.externalId}: ${io.title} (${io.status}) by ${io.author}`,
+              )
+              .join("\n");
+        }
+      } catch (err) {
+        console.error("[agentRunner] DM integration fetch failed:", err);
+      }
+
       const systemPrompt =
         agent.systemPrompt ??
         `You are ${agent.name}, an AI agent in the PING workspace. Be helpful, concise, and cite sources when available.`;
@@ -298,7 +423,7 @@ export const respondInDM = internalAction({
       const messages = [
         {
           role: "system" as const,
-          content: systemPrompt + factsContext,
+          content: systemPrompt + factsContext + integrationsContext,
         },
         ...recentMessages,
         { role: "user" as const, content: args.query },

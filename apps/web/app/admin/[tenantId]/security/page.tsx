@@ -23,12 +23,12 @@ interface AuditEntry {
 }
 
 const MOCK_AUDIT: AuditEntry[] = [
-  { id: "1", timestamp: "2026-03-20 14:32:11", agent: "KnowledgeBot",  action: "READ",   resource: "#private-salary",    status: "denied" },
-  { id: "2", timestamp: "2026-03-20 14:32:09", agent: "KnowledgeBot",  action: "READ",   resource: "#private-salary",    status: "denied" },
-  { id: "3", timestamp: "2026-03-20 14:32:05", agent: "KnowledgeBot",  action: "READ",   resource: "#private-salary",    status: "flagged" },
+  { id: "1", timestamp: "2026-03-20 14:32:11", agent: "mrPING",  action: "READ",   resource: "#private-salary",    status: "denied" },
+  { id: "2", timestamp: "2026-03-20 14:32:09", agent: "mrPING",  action: "READ",   resource: "#private-salary",    status: "denied" },
+  { id: "3", timestamp: "2026-03-20 14:32:05", agent: "mrPING",  action: "READ",   resource: "#private-salary",    status: "flagged" },
   { id: "4", timestamp: "2026-03-20 14:31:22", agent: "SupportRouter", action: "READ",   resource: "#engineering",       status: "allowed" },
-  { id: "5", timestamp: "2026-03-20 14:30:55", agent: "KnowledgeBot",  action: "SEARCH", resource: "vector-store:main",  status: "allowed" },
-  { id: "6", timestamp: "2026-03-20 14:29:12", agent: "KnowledgeBot",  action: "READ",   resource: "#product",           status: "allowed" },
+  { id: "5", timestamp: "2026-03-20 14:30:55", agent: "mrPING",  action: "SEARCH", resource: "vector-store:main",  status: "allowed" },
+  { id: "6", timestamp: "2026-03-20 14:29:12", agent: "mrPING",  action: "READ",   resource: "#product",           status: "allowed" },
   { id: "7", timestamp: "2026-03-20 14:28:43", agent: "SupportRouter", action: "WRITE",  resource: "#general",           status: "allowed" },
   { id: "8", timestamp: "2026-03-20 14:28:01", agent: "SprintCoach",   action: "READ",   resource: "linear:all-tickets", status: "denied" },
 ];
@@ -107,7 +107,7 @@ export default function SecurityPage({ params }: Props) {
           <div className="flex-1">
             <p className="text-xs font-semibold text-foreground">Anomaly Detected</p>
             <p className="mt-0.5 text-2xs text-muted-foreground">
-              KnowledgeBot attempted to access <code className="font-mono text-foreground/70">#private-salary</code> 3 times in 2 minutes — access denied by scope policy. Possible prompt injection attempt.
+              mrPING attempted to access <code className="font-mono text-foreground/70">#private-salary</code> 3 times in 2 minutes — access denied by scope policy. Possible prompt injection attempt.
             </p>
           </div>
           <span className="shrink-0 rounded border border-status-danger/30 bg-status-danger/10 px-1.5 py-0.5 text-2xs font-medium text-status-danger">

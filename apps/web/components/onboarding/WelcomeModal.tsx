@@ -34,8 +34,8 @@ const STEPS: Step[] = [
   },
   {
     icon: Bot,
-    title: "Meet KnowledgeBot",
-    description: "Ask @KnowledgeBot anything about your codebase, past conversations, or team decisions. It searches your workspace history to give you answers with citations.",
+    title: "Meet mrPING",
+    description: "Ask @mrPING anything about your codebase, past conversations, or team decisions. It searches your workspace history to give you answers with citations.",
     action: "Start Using PING",
   },
 ];

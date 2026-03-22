@@ -371,7 +371,7 @@ export function AgentConfigDialog({ agent, mode, open, onClose, onSave, onToggle
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. KnowledgeBot"
+                placeholder="e.g. SalesBot"
                 className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-ring focus:outline-none"
                 autoFocus
                 readOnly={isManaged}

@@ -12,6 +12,7 @@ import {
 
 interface IntegrationStackProps {
   messages: Message[];
+  onToggle?: () => void;
 }
 
 function getIdentifier(msg: Message): string | undefined {
@@ -111,15 +112,16 @@ function ExpandedRow({ msg, prev }: { msg: Message; prev?: Message }) {
   );
 }
 
-export function IntegrationStack({ messages }: IntegrationStackProps) {
+export function IntegrationStack({ messages, onToggle }: IntegrationStackProps) {
   const [expanded, setExpanded] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    onToggle?.();
     if (expanded && listRef.current) {
       listRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-  }, [expanded]);
+  }, [expanded, onToggle]);
 
   if (messages.length === 0) return null;
 
@@ -140,20 +142,26 @@ export function IntegrationStack({ messages }: IntegrationStackProps) {
         )}
       </button>
 
-      {expanded && (
-        <div
-          ref={listRef}
-          className="mt-1 rounded border border-subtle bg-surface-1 divide-y divide-subtle"
-        >
-          {messages.map((msg, i) => (
-            <ExpandedRow
-              key={msg.id}
-              msg={msg}
-              prev={i > 0 ? messages[i - 1] : undefined}
-            />
-          ))}
+      <div
+        className="grid transition-[grid-template-rows] duration-150 ease-out"
+        style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
+        onTransitionEnd={() => onToggle?.()}
+      >
+        <div className="overflow-hidden">
+          <div
+            ref={listRef}
+            className="mt-1 rounded border border-subtle bg-surface-1 divide-y divide-subtle"
+          >
+            {messages.map((msg, i) => (
+              <ExpandedRow
+                key={msg.id}
+                msg={msg}
+                prev={i > 0 ? messages[i - 1] : undefined}
+              />
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

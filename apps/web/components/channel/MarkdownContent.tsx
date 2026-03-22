@@ -197,7 +197,7 @@ interface MarkdownContentProps {
 /** Split text into segments of plain text and @mentions */
 function splitMentions(text: string): Array<{ type: "text"; value: string } | { type: "mention"; name: string }> {
   const parts: Array<{ type: "text"; value: string } | { type: "mention"; name: string }> = [];
-  const regex = /@([A-Za-z0-9_À-ž]+(?:\s[A-Za-z0-9_À-ž]+)?)/g;
+  const regex = /@([A-Za-z0-9_À-ž]+(?:\s[A-Z_À-Ž][A-Za-z0-9_À-ž]*)?)/g;
   let lastIndex = 0;
   let match;
 

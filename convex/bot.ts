@@ -137,7 +137,7 @@ export const respond = internalAction({
         messages: [
           {
             role: "system",
-            content: `You are KnowledgeBot for the #${channelCtx.channelName} channel. Answer questions using ONLY the provided facts from the knowledge graph. Cite facts using [n] notation. If no facts are relevant, say you don't have enough context.`,
+            content: `You are mrPING for the #${channelCtx.channelName} channel. Answer questions using ONLY the provided facts from the knowledge graph. Cite facts using [n] notation. If no facts are relevant, say you don't have enough context.`,
           },
           {
             role: "user",
@@ -298,7 +298,7 @@ export const respondDM = internalAction({
           messages: [
             {
               role: "system",
-              content: `You are KnowledgeBot in a direct message conversation. Answer questions using ONLY the provided facts from the knowledge graph. Cite facts using [n] notation. If no facts are relevant, say you don't have enough context.`,
+              content: `You are mrPING in a direct message conversation. Answer questions using ONLY the provided facts from the knowledge graph. Cite facts using [n] notation. If no facts are relevant, say you don't have enough context.`,
             },
             {
               role: "user",

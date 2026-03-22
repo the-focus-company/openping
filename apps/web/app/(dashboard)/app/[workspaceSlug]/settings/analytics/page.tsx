@@ -15,7 +15,7 @@ const KPI_DATA: Record<Period, { queries: number; queryDelta: number; hoursSaved
 };
 
 const AGENT_LEADERBOARD = [
-  { name: "KnowledgeBot",   queries: 847, pct: 100, color: "#5E6AD2" },
+  { name: "mrPING",          queries: 847, pct: 100, color: "#5E6AD2" },
   { name: "SupportRouter",  queries: 312, pct: 37,  color: "#22C55E" },
   { name: "SprintCoach",    queries: 88,  pct: 10,  color: "#F59E0B" },
 ];

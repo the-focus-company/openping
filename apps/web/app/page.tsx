@@ -51,7 +51,7 @@ const features = [
   },
   {
     icon: BotMessageSquare,
-    title: "KnowledgeBot",
+    title: "mrPING",
     description:
       "An AI assistant grounded in your team's actual conversations and docs. Ask anything — it searches your workspace knowledge graph.",
     accent: "from-ping-purple/20 to-indigo-500/10",

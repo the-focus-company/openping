@@ -180,7 +180,7 @@ export function MessageItem({ message, showAvatar, showThreadLabel = true, onOpe
                 !isBot && onClickAuthor && "hover:underline cursor-pointer",
               )}
             >
-              {isBot ? message.botName || "KnowledgeBot" : message.author}
+              {isBot ? message.botName || "mrPING" : message.author}
             </button>
             {isBot && (
               <span className="rounded border border-ping-purple/30 bg-ping-purple/10 px-1 py-px text-2xs text-ping-purple">
@@ -502,11 +502,20 @@ export function MessageList({
     count: messages.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) => {
-      // Messages with avatars are taller due to the author header and top margin
-      return showAvatarFlags[index] ? 64 : 32;
+      const msg = messages[index];
+      const hasAvatar = showAvatarFlags[index];
+      const baseHeight = hasAvatar ? 64 : 32;
+      // Estimate extra height for longer messages (~20px per 80 chars)
+      const contentLines = Math.ceil((msg?.content?.length ?? 0) / 80);
+      const extraHeight = contentLines > 1 ? (contentLines - 1) * 20 : 0;
+      return baseHeight + extraHeight;
     },
     overscan: 20,
   });
+
+  const handleStackToggle = useCallback(() => {
+    virtualizer.measure();
+  }, [virtualizer]);
 
   const isAtBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -690,7 +699,10 @@ export function MessageList({
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
                   >
-                    <IntegrationStack messages={stackInfo.stackMessages} />
+                    <IntegrationStack
+                      messages={stackInfo.stackMessages}
+                      onToggle={handleStackToggle}
+                    />
                   </div>
                 );
               }
@@ -754,7 +766,7 @@ export function MessageList({
         <div className="shrink-0 min-w-0 border-t border-subtle p-3">
           <RichTextComposer
             ref={composerRef}
-            placeholder={isDM ? `Message ${channelName}...` : `Message #${channelName}... or @KnowledgeBot`}
+            placeholder={isDM ? `Message ${channelName}...` : `Message #${channelName}... or @mrPING`}
             onSend={handleSend}
             onTyping={onTyping}
             showActions
