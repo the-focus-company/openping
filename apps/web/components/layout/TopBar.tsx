@@ -66,7 +66,7 @@ export function TopBar({
           <Menu className="h-4 w-4" />
         </button>
         <Link href={inboxHref} className="flex items-center gap-1.5 transition-opacity hover:opacity-80">
-          <Image src="/ping-logo.png" alt="PING" width={20} height={20} className="dark:invert" />
+          <Image src="/ping-logo.png" alt="PING" width={20} height={20} className="dark:invert" unoptimized />
           <span className="text-sm font-bold text-foreground">PING</span>
           {workspaceName && (
             <>
