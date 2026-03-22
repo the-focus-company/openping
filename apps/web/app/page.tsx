@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useQuery } from "convex/react";
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -229,7 +228,8 @@ function LandingPage() {
       <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-surface-0/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="group flex items-center gap-2.5">
-            <Image src="/ping-logo-white.png" alt="PING" width={24} height={24} className="group-hover:scale-105 transition-transform" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/ping-logo-white.png" alt="PING" width={24} height={24} className="group-hover:scale-105 transition-transform" />
             <span className="text-sm font-semibold tracking-tight text-white">PING</span>
           </Link>
           <div className="flex items-center gap-1">

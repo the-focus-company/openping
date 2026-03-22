@@ -21,36 +21,47 @@
   --sl-font-mono: "Geist Mono", ui-monospace, monospace;
   --sl-content-width: 55rem;
 
-  /* PING custom */
+  /* PING design tokens — aligned with web app */
   --ping-accent: #5e6ad2;
+  --ping-accent-hover: #4f5bc4;
   --ping-accent-light: #818cf8;
+  --ping-surface-0: #ffffff;
+  --ping-surface-1: #fafafc;
+  --ping-surface-2: #f5f5f8;
+  --ping-surface-3: #ededf2;
   --ping-surface: #ffffff;
   --ping-surface-raised: #f8f9fc;
   --ping-border: #e5e7eb;
+  --ping-border-subtle: rgba(0, 0, 0, 0.06);
   --ping-text: #111827;
   --ping-text-muted: #6b7280;
   --ping-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   --ping-card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* ── Dark mode ── */
+/* ── Dark mode — matches web app surface scale ── */
 :root[data-theme="dark"] {
   --sl-color-accent-low: #1e1f3b;
   --sl-color-accent: #818cf8;
   --sl-color-accent-high: #c7caff;
-  --sl-color-bg: #0f1117;
-  --sl-color-bg-sidebar: #0f1117;
-  --sl-color-bg-nav: rgba(15, 17, 23, 0.85);
-  --sl-color-hairline: rgba(255, 255, 255, 0.08);
-  --sl-color-gray-6: rgba(255, 255, 255, 0.08);
+  --sl-color-bg: #0f0f12;
+  --sl-color-bg-sidebar: #0f0f12;
+  --sl-color-bg-nav: rgba(15, 15, 18, 0.8);
+  --sl-color-hairline: rgba(255, 255, 255, 0.06);
+  --sl-color-gray-6: rgba(255, 255, 255, 0.06);
 
-  --ping-surface: #0f1117;
-  --ping-surface-raised: #171923;
-  --ping-border: rgba(255, 255, 255, 0.08);
+  --ping-surface-0: #0f0f12;
+  --ping-surface-1: #161619;
+  --ping-surface-2: #1c1c20;
+  --ping-surface-3: #26262b;
+  --ping-surface: #0f0f12;
+  --ping-surface-raised: #161619;
+  --ping-border: rgba(255, 255, 255, 0.06);
+  --ping-border-subtle: rgba(255, 255, 255, 0.06);
   --ping-text: #f3f4f6;
-  --ping-text-muted: rgba(255, 255, 255, 0.55);
-  --ping-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  --ping-card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --ping-text-muted: rgba(255, 255, 255, 0.52);
+  --ping-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --ping-card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 /* ── Global overrides ── */
@@ -154,4 +165,105 @@ header .header > .right-group {
 /* Horizontal rule */
 .sl-markdown-content hr {
   border-color: var(--ping-border);
+}
+
+/* ── Section label pattern (matches landing page) ── */
+.ping-section-label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ping-accent);
+}
+
+/* ── Grid background pattern (matches landing page) ── */
+.ping-grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, var(--ping-border) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.35;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 20%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 20%, transparent 100%);
+}
+
+/* ── Gradient glow (matches landing page hero) ── */
+.ping-glow {
+  position: absolute;
+  width: 600px;
+  height: 400px;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.ping-glow--accent {
+  background: var(--ping-accent);
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ── Pulse dot (matches landing page badge) ── */
+.ping-pulse-dot {
+  display: inline-flex;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: ping-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ping-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Card hover glow effect (matches landing page GlowCard) ── */
+.ping-card-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.ping-card-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--glow-x, 50%) var(--glow-y, 50%), rgba(94, 106, 210, 0.06), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.ping-card-glow:hover::before {
+  opacity: 1;
+}
+
+/* ── Aside / callout polish ── */
+.starlight-aside {
+  border-radius: 0.625rem;
+  border-color: var(--ping-border);
+}
+
+:root[data-theme="dark"] .starlight-aside {
+  background: var(--ping-surface-1);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Table polish ── */
+.sl-markdown-content table {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+:root[data-theme="dark"] .sl-markdown-content th {
+  background: var(--ping-surface-1);
+}
+
+:root[data-theme="dark"] .sl-markdown-content td {
+  border-color: rgba(255, 255, 255, 0.06);
 }
