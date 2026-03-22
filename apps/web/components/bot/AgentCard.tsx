@@ -361,7 +361,7 @@ export function AgentConfigDialog({ agent, mode, open, onClose, onSave, onToggle
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. KnowledgeBot"
-                className="w-full rounded border border-subtle bg-surface-3 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-ring focus:outline-none"
+                className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-ring focus:outline-none"
                 autoFocus
               />
             </div>
@@ -373,7 +373,7 @@ export function AgentConfigDialog({ agent, mode, open, onClose, onSave, onToggle
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Brief description of what this agent does"
-                className="w-full rounded border border-subtle bg-surface-3 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-ring focus:outline-none"
+                className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-ring focus:outline-none"
               />
             </div>
             <div>

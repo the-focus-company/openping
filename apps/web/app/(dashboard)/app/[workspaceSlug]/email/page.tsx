@@ -107,7 +107,7 @@ export default function EmailListPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search emails..."
-            className="w-full rounded border border-subtle bg-surface-2 py-1.5 pl-8 pr-3 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+            className="w-full rounded border border-subtle bg-background py-1.5 pl-8 pr-3 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
           />
         </div>
       </div>

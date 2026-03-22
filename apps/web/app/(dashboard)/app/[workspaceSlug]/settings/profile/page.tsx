@@ -94,7 +94,7 @@ export default function ProfilePage() {
     .toUpperCase();
 
   return (
-    <div className="mx-auto max-w-lg animate-fade-in px-6 py-6">
+    <div className="mx-auto max-w-lg animate-fade-in px-6 py-6 h-full overflow-y-auto">
       <div className="mb-6">
         <h1 className="text-md font-semibold text-foreground">Profile</h1>
         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -134,7 +134,7 @@ export default function ProfilePage() {
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+            className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
           />
         </Field>
 
@@ -153,7 +153,7 @@ export default function ProfilePage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Senior Engineer"
-            className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+            className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
           />
         </Field>
 
@@ -163,7 +163,7 @@ export default function ProfilePage() {
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
             placeholder="e.g. Engineering"
-            className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+            className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
           />
         </Field>
 
@@ -176,7 +176,7 @@ export default function ProfilePage() {
             onChange={(e) => setBio(e.target.value)}
             placeholder="A short description about yourself"
             rows={3}
-            className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none resize-none"
+            className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none resize-none"
           />
         </Field>
 
@@ -187,7 +187,7 @@ export default function ProfilePage() {
             onChange={(e) => setWorkContext(e.target.value)}
             placeholder="Current projects, responsibilities..."
             rows={2}
-            className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none resize-none"
+            className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none resize-none"
           />
         </Field>
 
@@ -197,7 +197,7 @@ export default function ProfilePage() {
             value={expertiseText}
             onChange={(e) => setExpertiseText(e.target.value)}
             placeholder="e.g. React, TypeScript, Distributed Systems"
-            className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+            className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
           />
         </Field>
 
@@ -211,7 +211,7 @@ export default function ProfilePage() {
               onChange={(e) => setStatusEmoji(e.target.value)}
               placeholder="🎯"
               maxLength={4}
-              className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground text-center placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+              className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground text-center placeholder:text-foreground/45 focus:border-ring focus:outline-none"
             />
           </Field>
           <Field label="Status message" className="flex-1">
@@ -219,7 +219,7 @@ export default function ProfilePage() {
               value={statusMessage}
               onChange={(e) => setStatusMessage(e.target.value)}
               placeholder="e.g. In a meeting until 3pm"
-              className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+              className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
             />
           </Field>
         </div>
@@ -232,7 +232,7 @@ export default function ProfilePage() {
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
             placeholder="e.g. America/New_York, CET"
-            className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+            className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
           />
         </Field>
 
@@ -242,7 +242,7 @@ export default function ProfilePage() {
             value={preferredHours}
             onChange={(e) => setPreferredHours(e.target.value)}
             placeholder="e.g. 9am–5pm"
-            className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+            className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
           />
         </Field>
 
@@ -252,7 +252,7 @@ export default function ProfilePage() {
             value={responseTimeGoal}
             onChange={(e) => setResponseTimeGoal(e.target.value)}
             placeholder="e.g. 30 minutes, 1 hour"
-            className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+            className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
           />
         </Field>
 

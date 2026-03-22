@@ -235,7 +235,7 @@ function WorkspacePageContent() {
                       value={githubOrg}
                       onChange={(e) => setGithubOrg(e.target.value)}
                       placeholder="my-org"
-                      className="w-full rounded border border-subtle bg-surface-1 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+                      className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
                     />
                   </div>
                   <div>
@@ -261,7 +261,7 @@ function WorkspacePageContent() {
                       onChange={(e) => setGithubSecret(e.target.value)}
                       placeholder="whsec_... (optional)"
                       type="password"
-                      className="w-full rounded border border-subtle bg-surface-1 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/25 focus:border-foreground/20 focus:outline-none"
+                      className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/25 focus:border-ring focus:outline-none"
                     />
                   </div>
                   <Button
@@ -308,7 +308,7 @@ function WorkspacePageContent() {
                       value={linearOrg}
                       onChange={(e) => setLinearOrg(e.target.value)}
                       placeholder="my-team (optional)"
-                      className="w-full rounded border border-subtle bg-surface-1 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+                      className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
                     />
                   </div>
                   <div>
@@ -335,7 +335,7 @@ function WorkspacePageContent() {
                       onChange={(e) => setLinearSecret(e.target.value)}
                       placeholder="lin_wh_... (optional)"
                       type="password"
-                      className="w-full rounded border border-subtle bg-surface-1 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/25 focus:border-foreground/20 focus:outline-none"
+                      className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/25 focus:border-ring focus:outline-none"
                     />
                   </div>
                   <Button
@@ -500,7 +500,7 @@ function RoutingSection({
         <select
           value={selectedChannel}
           onChange={(e) => onSelectChannel(e.target.value)}
-          className="flex-1 rounded border border-subtle bg-surface-1 px-2 py-1.5 text-2xs text-foreground focus:border-ring focus:outline-none"
+          className="flex-1 rounded border border-subtle bg-background px-2 py-1.5 text-2xs text-foreground focus:border-ring focus:outline-none"
         >
           <option value="">Select a channel…</option>
           {channels.map((c) => (

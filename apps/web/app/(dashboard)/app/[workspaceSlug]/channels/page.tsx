@@ -239,7 +239,7 @@ export default function ChannelsPage() {
                 onChange={(e) => setNewChannelName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreateChannel()}
                 placeholder="e.g. announcements"
-                className="w-full rounded border border-subtle bg-surface-3 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
+                className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
                 autoFocus
               />
             </div>

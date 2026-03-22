@@ -350,7 +350,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
               onChange={(e) => setDmUserSearch(e.target.value)}
               placeholder="Search people..."
               autoFocus
-              className="w-full rounded border border-subtle bg-surface-3 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-ring focus:outline-none"
+              className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-ring focus:outline-none"
             />
             <div className="max-h-52 space-y-0.5 overflow-y-auto scrollbar-thin">
               {(allUsers ?? [])
@@ -421,7 +421,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
                 onChange={(e) => setNewChannelName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreateChannel()}
                 placeholder="e.g. announcements"
-                className="w-full rounded border border-subtle bg-surface-3 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-ring focus:outline-none"
+                className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-ring focus:outline-none"
                 autoFocus
               />
             </div>
