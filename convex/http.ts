@@ -480,4 +480,13 @@ http.route({
   }),
 });
 
+// Health check
+http.route({
+  path: "/health",
+  method: "GET",
+  handler: httpAction(async () => {
+    return jsonResponse({ status: "ok", timestamp: new Date().toISOString() });
+  }),
+});
+
 export default http;

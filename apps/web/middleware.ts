@@ -10,6 +10,7 @@ export default authkitMiddleware({
       "/sign-in",
       "/sign-out",
       "/api/webhooks(.*)",
+      "/api/health",
       "/invite/(.*)",
     ],
   },
