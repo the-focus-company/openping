@@ -92,7 +92,6 @@
   :focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
-    border-radius: 2px;
   }
 
   /* Suppress focus ring for mouse/touch interactions */

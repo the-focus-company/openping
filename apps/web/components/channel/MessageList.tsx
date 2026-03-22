@@ -15,6 +15,36 @@ import { IntegrationMessageCard } from "@/components/integrations/IntegrationMes
 import { IntegrationStack } from "@/components/integrations/IntegrationStack";
 import { cn, avatarGradient, formatRelativeTime } from "@/lib/utils";
 
+type VirtualRow =
+  | { kind: "date"; label: string; messageIndex: number }
+  | { kind: "message"; messageIndex: number };
+
+function formatDateDivider(date: Date): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  if (msgDay.getTime() === today.getTime()) return "Today";
+  if (msgDay.getTime() === yesterday.getTime()) return "Yesterday";
+
+  const opts: Intl.DateTimeFormatOptions = { weekday: "long", month: "long", day: "numeric" };
+  if (msgDay.getFullYear() !== now.getFullYear()) opts.year = "numeric";
+  return date.toLocaleDateString("en-US", opts);
+}
+
+function DateDivider({ label }: { label: string }) {
+  return (
+    <div className="relative flex items-center px-4 py-3">
+      <div className="flex-1 border-t border-subtle" />
+      <span className="mx-3 shrink-0 rounded-full border border-subtle bg-surface-2 px-3 py-0.5 text-2xs font-medium text-muted-foreground">
+        {label}
+      </span>
+      <div className="flex-1 border-t border-subtle" />
+    </div>
+  );
+}
+
 export interface Message {
   id: string;
   type: "user" | "bot";
@@ -444,62 +474,69 @@ export function MessageList({
   const [newMessageId, setNewMessageId] = useState<string | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
-  // Pre-compute which messages should show avatars so the virtualizer can use it
-  const showAvatarFlags = useMemo(() => {
-    return messages.map((msg, i) => {
-      const prev = messages[i - 1];
-      return (
-        !prev ||
-        prev.author !== msg.author ||
-        msg.timestamp.getTime() - prev.timestamp.getTime() > 5 * 60 * 1000
-      );
-    });
-  }, [messages]);
+  // Build a flat list of virtual rows: date dividers interleaved with messages.
+  // Also pre-compute per-message flags (avatar, thread label, integration stacks).
+  const { rows, showAvatarFlags, showThreadLabelFlags, integrationStackInfo } = useMemo(() => {
+    const rowList: VirtualRow[] = [];
+    const avatarFlags: boolean[] = [];
+    const threadFlags: boolean[] = [];
 
-  // Only show "Replied to thread" on the first message of consecutive thread replies to the same thread
-  const showThreadLabelFlags = useMemo(() => {
-    return messages.map((msg, i) => {
-      if (!msg.threadId || !msg.alsoSentToChannel) return false;
-      const prev = messages[i - 1];
-      if (!prev) return true;
-      return prev.threadId !== msg.threadId || !prev.alsoSentToChannel;
-    });
-  }, [messages]);
-
-  // Group consecutive integration messages into stacks (3+ in a row)
-  const integrationStackInfo = useMemo(() => {
-    const info: Array<{ isPartOfStack: boolean; isStackLeader: boolean; stackMessages: Message[] | null }> = messages.map(() => ({
-      isPartOfStack: false,
-      isStackLeader: false,
-      stackMessages: null,
-    }));
-
-    let i = 0;
-    while (i < messages.length) {
-      if (messages[i].messageType === "integration") {
-        // Find the run of consecutive integration messages
-        let j = i;
-        while (j < messages.length && messages[j].messageType === "integration") {
-          j++;
-        }
-        const runLength = j - i;
-        if (runLength >= 3) {
-          const stackMessages = messages.slice(i, j);
-          info[i] = { isPartOfStack: true, isStackLeader: true, stackMessages };
-          for (let k = i + 1; k < j; k++) {
-            info[k] = { isPartOfStack: true, isStackLeader: false, stackMessages: null };
+    // --- integration stack detection ---
+    const stackInfo: Array<{ isPartOfStack: boolean; isStackLeader: boolean; stackMessages: Message[] | null }> =
+      messages.map(() => ({ isPartOfStack: false, isStackLeader: false, stackMessages: null }));
+    {
+      let si = 0;
+      while (si < messages.length) {
+        if (messages[si].messageType === "integration") {
+          let sj = si;
+          while (sj < messages.length && messages[sj].messageType === "integration") sj++;
+          if (sj - si >= 3) {
+            const stack = messages.slice(si, sj);
+            stackInfo[si] = { isPartOfStack: true, isStackLeader: true, stackMessages: stack };
+            for (let k = si + 1; k < sj; k++) {
+              stackInfo[k] = { isPartOfStack: true, isStackLeader: false, stackMessages: null };
+            }
           }
+          si = sj;
+        } else {
+          si++;
         }
-        i = j;
-      } else {
-        i++;
       }
     }
-    return info;
+
+    // --- build rows with date dividers ---
+    let lastDateKey = "";
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      const dateKey = `${msg.timestamp.getFullYear()}-${msg.timestamp.getMonth()}-${msg.timestamp.getDate()}`;
+
+      if (dateKey !== lastDateKey) {
+        rowList.push({ kind: "date", label: formatDateDivider(msg.timestamp), messageIndex: i });
+        lastDateKey = dateKey;
+      }
+
+      // Avatar: show for first message of the day, different author, or >5 min gap
+      const prev = messages[i - 1];
+      const isFirstInDay = !prev || `${prev.timestamp.getFullYear()}-${prev.timestamp.getMonth()}-${prev.timestamp.getDate()}` !== dateKey;
+      avatarFlags[i] = isFirstInDay || prev!.author !== msg.author || msg.timestamp.getTime() - prev!.timestamp.getTime() > 5 * 60 * 1000;
+
+      // Thread label: first of consecutive thread replies to same thread
+      if (!msg.threadId || !msg.alsoSentToChannel) {
+        threadFlags[i] = false;
+      } else if (!prev) {
+        threadFlags[i] = true;
+      } else {
+        threadFlags[i] = prev.threadId !== msg.threadId || !prev.alsoSentToChannel;
+      }
+
+      rowList.push({ kind: "message", messageIndex: i });
+    }
+
+    return { rows: rowList, showAvatarFlags: avatarFlags, showThreadLabelFlags: threadFlags, integrationStackInfo: stackInfo };
   }, [messages]);
 
   const virtualizer = useVirtualizer({
-    count: messages.length,
+    count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) => {
       const msg = messages[index];
@@ -525,13 +562,13 @@ export function MessageList({
 
   const scrollToBottom = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
-      if (messages.length === 0) return;
-      virtualizer.scrollToIndex(messages.length - 1, {
+      if (rows.length === 0) return;
+      virtualizer.scrollToIndex(rows.length - 1, {
         align: "end",
         behavior,
       });
     },
-    [virtualizer, messages.length]
+    [virtualizer, rows.length]
   );
 
   // Auto-scroll when new messages arrive (only if already at bottom)
@@ -561,7 +598,9 @@ export function MessageList({
       hasInitiallyScrolledRef.current = true;
       if (highlightMessageId) {
         // Scroll to highlighted message instead of bottom
-        const idx = messages.findIndex((m) => m.id === highlightMessageId);
+        const idx = rows.findIndex(
+          (r) => r.kind === "message" && messages[r.messageIndex].id === highlightMessageId
+        );
         if (idx >= 0) {
           setHighlightedId(highlightMessageId);
           requestAnimationFrame(() => {
@@ -576,7 +615,7 @@ export function MessageList({
         scrollToBottom("instant");
       });
     }
-  }, [isLoading, messages.length, scrollToBottom, highlightMessageId, messages, virtualizer]);
+  }, [isLoading, messages.length, scrollToBottom, highlightMessageId, messages, virtualizer, rows]);
 
   // Re-scroll when the scroll container resizes (e.g. Tiptap composer mounts
   // asynchronously and shrinks the message area)
@@ -608,7 +647,7 @@ export function MessageList({
     setTimeout(() => scrollToBottom("smooth"), 50);
   }, [onSend, scrollToBottom]);
 
-  const virtualItems = virtualizer.getVirtualItems();
+  const vRows = virtualizer.getVirtualItems();
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -652,11 +691,32 @@ export function MessageList({
               position: "relative",
             }}
           >
-            {virtualItems.map((virtualRow) => {
-              const msg = messages[virtualRow.index];
-              const stackInfo = integrationStackInfo[virtualRow.index];
-              const showAvatar = showAvatarFlags[virtualRow.index];
-              const showThreadLabel = showThreadLabelFlags[virtualRow.index];
+            {vRows.map((virtualRow) => {
+              const row = rows[virtualRow.index];
+
+              if (row.kind === "date") {
+                return (
+                  <div
+                    key={`date-${row.label}-${row.messageIndex}`}
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <DateDivider label={row.label} />
+                  </div>
+                );
+              }
+
+              const msg = messages[row.messageIndex];
+              const stackInfo = integrationStackInfo[row.messageIndex];
+              const showAvatar = showAvatarFlags[row.messageIndex];
+              const showThreadLabel = showThreadLabelFlags[row.messageIndex];
 
               const msgWithReactions = reactionsByMessage?.[msg.id]
                 ? { ...msg, reactions: reactionsByMessage[msg.id] }
@@ -772,9 +832,6 @@ export function MessageList({
             showActions
             isDM={isDM}
           />
-          <p className="mt-1 h-4 text-2xs leading-4 text-foreground/40">
-            Enter to send · Shift+Enter for new line{!isDM && " · @mention to summon agents"}
-          </p>
         </div>
       )}
     </div>

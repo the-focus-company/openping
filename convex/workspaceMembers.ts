@@ -33,7 +33,18 @@ export const listMyWorkspaces = query({
       }),
     );
 
-    return workspaces.filter((w): w is NonNullable<typeof w> => w !== null);
+    const filtered = workspaces.filter((w): w is NonNullable<typeof w> => w !== null);
+
+    // Deduplicate: if a user has multiple memberships for the same workspace,
+    // prefer the one with the highest role (admin > member)
+    const byWorkspace = new Map<string, (typeof filtered)[number]>();
+    for (const w of filtered) {
+      const existing = byWorkspace.get(w.workspaceId);
+      if (!existing || (w.role === "admin" && existing.role !== "admin")) {
+        byWorkspace.set(w.workspaceId, w);
+      }
+    }
+    return Array.from(byWorkspace.values());
   },
 });
 
@@ -243,5 +254,50 @@ export const listByWorkspace = internalQuery({
     );
 
     return members.filter((m): m is NonNullable<typeof m> => m !== null);
+  },
+});
+
+/**
+ * Promote the workspace creator (or sole admin-less workspace) to admin.
+ * Also cleans up duplicate memberships for the same user+workspace.
+ */
+export const promoteToAdmin = mutation({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+
+    // Find all memberships for this user+workspace (may have duplicates)
+    const memberships = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_user_workspace", (q) =>
+        q.eq("userId", user._id).eq("workspaceId", args.workspaceId),
+      )
+      .take(10);
+
+    if (memberships.length === 0) throw new Error("Not a member of this workspace");
+
+    // Allow if user is the workspace creator OR if there are no other admins
+    const workspace = await ctx.db.get(args.workspaceId);
+    const isCreator = workspace?.createdBy === user._id;
+
+    if (!isCreator) {
+      const allMembers = await ctx.db
+        .query("workspaceMembers")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+        .take(1000);
+      const hasAdmin = allMembers.some(
+        (m) => m.role === "admin" && m.userId !== user._id,
+      );
+      if (hasAdmin) throw new Error("Workspace already has an admin");
+    }
+
+    // Keep the first membership, promote it, delete duplicates
+    const [keep, ...duplicates] = memberships;
+    await ctx.db.patch(keep._id, { role: "admin" });
+    for (const dup of duplicates) {
+      await ctx.db.delete(dup._id);
+    }
+
+    return { promoted: true, duplicatesRemoved: duplicates.length };
   },
 });
