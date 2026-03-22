@@ -38,7 +38,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={copy}
-      className="shrink-0 rounded p-1 text-foreground/30 hover:text-foreground/60 transition-colors"
+      className="shrink-0 rounded p-1 text-foreground/50 hover:text-foreground/80 transition-colors"
       title="Copy"
     >
       {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -47,17 +47,22 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function WorkspacePage() {
-  const { toast } = useToast();
-  const ws = useWorkspace();
-  const { workspaceId } = ws;
+  const { role } = useWorkspace();
 
-  if (ws.role !== "admin") {
+  if (role !== "admin") {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
         You don&apos;t have permission to view workspace settings.
       </div>
     );
   }
+
+  return <WorkspacePageContent />;
+}
+
+function WorkspacePageContent() {
+  const { toast } = useToast();
+  const { workspaceId } = useWorkspace();
   const workspace = useQuery(api.workspaces.get, { workspaceId });
   const updateWorkspace = useMutation(api.workspaces.update);
   const connectIntegration = useMutation(api.workspaces.connectIntegration);
@@ -153,7 +158,7 @@ export default function WorkspacePage() {
   if (workspace === undefined) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-foreground/20" />
+        <Loader2 className="h-5 w-5 animate-spin text-foreground/40" />
       </div>
     );
   }
@@ -185,7 +190,7 @@ export default function WorkspacePage() {
           <input
             value={workspaceName}
             onChange={(e) => setWorkspaceName(e.target.value)}
-            className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/25 focus:border-foreground/20 focus:outline-none"
+            className="w-full rounded border border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
           />
         </div>
 
@@ -199,7 +204,7 @@ export default function WorkspacePage() {
             disabled
             className="w-full rounded border border-subtle bg-surface-1 px-2.5 py-1.5 text-xs text-muted-foreground"
           />
-          <p className="mt-1 text-2xs text-foreground/20">Read-only identifier</p>
+          <p className="mt-1 text-2xs text-foreground/40">Read-only identifier</p>
         </div>
 
         {/* Integrations */}
@@ -230,7 +235,7 @@ export default function WorkspacePage() {
                       value={githubOrg}
                       onChange={(e) => setGithubOrg(e.target.value)}
                       placeholder="my-org"
-                      className="w-full rounded border border-subtle bg-surface-1 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/25 focus:border-foreground/20 focus:outline-none"
+                      className="w-full rounded border border-subtle bg-surface-1 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
                     />
                   </div>
                   <div>
@@ -303,7 +308,7 @@ export default function WorkspacePage() {
                       value={linearOrg}
                       onChange={(e) => setLinearOrg(e.target.value)}
                       placeholder="my-team (optional)"
-                      className="w-full rounded border border-subtle bg-surface-1 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/25 focus:border-foreground/20 focus:outline-none"
+                      className="w-full rounded border border-subtle bg-surface-1 px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/45 focus:border-ring focus:outline-none"
                     />
                   </div>
                   <div>
@@ -412,9 +417,9 @@ function IntegrationPanel({
           </div>
         </div>
         {expanded ? (
-          <ChevronDown className="h-3.5 w-3.5 text-foreground/30" />
+          <ChevronDown className="h-3.5 w-3.5 text-foreground/50" />
         ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-foreground/30" />
+          <ChevronRight className="h-3.5 w-3.5 text-foreground/50" />
         )}
       </button>
 
@@ -482,7 +487,7 @@ function RoutingSection({
               </span>
               <button
                 onClick={() => onRemoveRouting(rule._id)}
-                className="text-foreground/20 hover:text-destructive"
+                className="text-foreground/40 hover:text-destructive"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -495,7 +500,7 @@ function RoutingSection({
         <select
           value={selectedChannel}
           onChange={(e) => onSelectChannel(e.target.value)}
-          className="flex-1 rounded border border-subtle bg-surface-1 px-2 py-1.5 text-2xs text-foreground focus:border-foreground/20 focus:outline-none"
+          className="flex-1 rounded border border-subtle bg-surface-1 px-2 py-1.5 text-2xs text-foreground focus:border-ring focus:outline-none"
         >
           <option value="">Select a channel…</option>
           {channels.map((c) => (

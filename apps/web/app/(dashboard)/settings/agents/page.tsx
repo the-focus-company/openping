@@ -13,16 +13,21 @@ import { useToast } from "@/components/ui/toast-provider";
 import { useWorkspace } from "@/hooks/useWorkspace";
 
 export default function AgentsPage() {
-  const ws = useWorkspace();
-  const { workspaceId } = ws;
+  const { role } = useWorkspace();
 
-  if (ws.role !== "admin") {
+  if (role !== "admin") {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
         You don&apos;t have permission to manage agents.
       </div>
     );
   }
+
+  return <AgentsPageContent />;
+}
+
+function AgentsPageContent() {
+  const { workspaceId } = useWorkspace();
   const agents = useQuery(api.agents.list, { workspaceId });
   const createAgent = useMutation(api.agents.create);
   const updateAgent = useMutation(api.agents.update);

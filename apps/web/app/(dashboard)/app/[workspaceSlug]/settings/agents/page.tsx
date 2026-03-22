@@ -11,16 +11,21 @@ import { useToast } from "@/components/ui/toast-provider";
 import { useWorkspace } from "@/hooks/useWorkspace";
 
 export default function AgentsPage() {
-  const ws = useWorkspace();
-  const { workspaceId } = ws;
+  const { role } = useWorkspace();
 
-  if (ws.role !== "admin") {
+  if (role !== "admin") {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
         You don&apos;t have permission to manage agents.
       </div>
     );
   }
+
+  return <AgentsPageContent />;
+}
+
+function AgentsPageContent() {
+  const { workspaceId } = useWorkspace();
   const agents = useQuery(api.agents.list, { workspaceId });
   const createAgent = useMutation(api.agents.create);
   const updateAgent = useMutation(api.agents.update);
@@ -102,7 +107,7 @@ export default function AgentsPage() {
   if (agents === undefined) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-foreground/20" />
+        <Loader2 className="h-5 w-5 animate-spin text-foreground/40" />
       </div>
     );
   }
@@ -147,11 +152,11 @@ export default function AgentsPage() {
           className="flex flex-col items-center justify-center gap-2 rounded border border-dashed border-foreground/10 bg-transparent py-10 text-center transition-colors hover:border-foreground/20 hover:bg-surface-2"
         >
           <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-dashed border-foreground/15">
-            <Plus className="h-4 w-4 text-foreground/30" />
+            <Plus className="h-4 w-4 text-foreground/50" />
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Create agent</p>
-            <p className="text-2xs text-foreground/25">Custom AI for your workflow</p>
+            <p className="text-2xs text-foreground/45">Custom AI for your workflow</p>
           </div>
         </button>
       </div>
