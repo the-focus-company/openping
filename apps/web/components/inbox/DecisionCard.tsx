@@ -10,7 +10,6 @@ import {
   RefreshCw,
   FileText,
   Mail,
-  ExternalLink,
   Maximize2,
   Archive,
 } from "lucide-react";

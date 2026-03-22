@@ -10,7 +10,7 @@ import {
   RefreshCw,
   FileText,
 } from "lucide-react";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/utils";
 
 interface RelatedDecision {
   id: string;

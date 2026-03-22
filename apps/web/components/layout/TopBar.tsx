@@ -6,7 +6,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { Menu } from "lucide-react";
 import { TOPBAR_HEIGHT } from "@/lib/constants";
-import { Breadcrumbs } from "./Breadcrumbs";
 import { SearchField } from "./SearchField";
 
 /** Still used by DashboardShell for document.title */
@@ -34,8 +33,6 @@ interface TopBarProps {
   onOpenSearch: () => void;
   trailing?: ReactNode;
   workspaceName?: string;
-  channelName?: string | null;
-  conversationName?: string | null;
 }
 
 export function TopBar({
@@ -43,8 +40,6 @@ export function TopBar({
   onOpenSearch,
   trailing,
   workspaceName,
-  channelName,
-  conversationName,
 }: TopBarProps) {
   const pathname = usePathname();
   const workspacePrefix = pathname.match(/^\/app\/[^/]+/)?.[0] ?? "";

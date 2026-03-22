@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import {
   Inbox,
   Mail,
@@ -18,7 +19,6 @@ import {
   Keyboard,
   LogOut,
   Lock,
-  MessageSquare,
   ArrowLeft,
   PanelLeftClose,
   Check,
@@ -148,7 +148,6 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
   const toggleStar = useMutation(api.channels.toggleStar);
 
   const [addChannelOpen, setAddChannelOpen] = useState(false);
-  const [browseChannelsOpen, setBrowseChannelsOpen] = useState(false);
   const [newChannelName, setNewChannelName] = useState("");
   const [newChannelPrivate, setNewChannelPrivate] = useState(false);
   const [newDmOpen, setNewDmOpen] = useState(false);
@@ -246,7 +245,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
             onlineUserIds={onlineUserIds}
             onNewDm={() => router.push(buildPath("/dms?new=1"))}
             onNewChannel={() => router.push(buildPath("/channels?new=1"))}
-            onToggleStar={(channelId) => toggleStar({ channelId: channelId as any })}
+            onToggleStar={(channelId) => toggleStar({ channelId: channelId as Id<"channels"> })}
           />
         )}
       </nav>
@@ -702,7 +701,7 @@ interface SettingsNavProps {
   user: any;
 }
 
-function SettingsNav({ pathname, buildPath, user }: SettingsNavProps) {
+function SettingsNav({ pathname, buildPath }: SettingsNavProps) {
   const router = useRouter();
   const wsCtx = useContext(WorkspaceContext);
   const isAdmin = wsCtx?.role === "admin";

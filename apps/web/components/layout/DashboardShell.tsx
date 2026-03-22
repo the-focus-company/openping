@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Sidebar } from "./Sidebar";
-import { TopBar, titleFromPath } from "./TopBar";
+import { TopBar } from "./TopBar";
 import { TopBarProvider } from "./TopBarContext";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
@@ -51,7 +51,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const channels = useQuery(api.channels.list, isAuthenticated && workspaceId ? { workspaceId } : "skip");
   const dmConversations = useQuery(api.directConversations.list, isAuthenticated ? {} : "skip");
   const inboxUnread = useQuery(api.inboxItems.unreadCount, isAuthenticated ? {} : "skip");
-  const currentUser = useQuery(api.users.getMe, isAuthenticated ? {} : "skip");
   const markChannelRead = useMutation(api.channels.markRead);
   const markDMRead = useMutation(api.directConversations.markRead);
   const { toast } = useToast();
@@ -77,54 +76,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [workspacePrefix, channels, dmConversations, inboxUnread]);
 
   const isSettingsRoute = pathname.includes("/settings/");
-
-  // Resolve channel/DM names from already-loaded data to avoid flashing raw IDs
-  const resolvedTitle = useMemo(() => {
-    const p = pathname.replace(/^\/app\/[^/]+/, "");
-
-    const channelMatch = p.match(/^\/channel\/(.+)$/);
-    if (channelMatch && channels) {
-      const ch = channels.find((c) => c._id === channelMatch[1]);
-      if (ch) return `# ${ch.name}`;
-      return null;
-    }
-
-    const dmMatch = p.match(/^\/dm\/(.+)$/);
-    if (dmMatch && dmConversations && currentUser) {
-      const conv = dmConversations.find((c) => c._id === dmMatch[1]);
-      if (conv) {
-        const otherMembers = conv.members.filter((m) => m.userId !== currentUser._id);
-        return conv.name || otherMembers.map((m) => m.name).join(", ") || "Direct Message";
-      }
-      return "Direct Message";
-    }
-
-    return titleFromPath(pathname);
-  }, [pathname, channels, dmConversations, currentUser]);
-
-  // Extract channel/DM names for breadcrumbs
-  const channelName = useMemo(() => {
-    const p = pathname.replace(/^\/app\/[^/]+/, "");
-    const channelMatch = p.match(/^\/channel\/(.+)$/);
-    if (channelMatch && channels) {
-      const ch = channels.find((c) => c._id === channelMatch[1]);
-      return ch?.name ?? null;
-    }
-    return null;
-  }, [pathname, channels]);
-
-  const conversationName = useMemo(() => {
-    const p = pathname.replace(/^\/app\/[^/]+/, "");
-    const dmMatch = p.match(/^\/dm\/(.+)$/);
-    if (dmMatch && dmConversations && currentUser) {
-      const conv = dmConversations.find((c) => c._id === dmMatch[1]);
-      if (conv) {
-        const otherMembers = conv.members.filter((m) => m.userId !== currentUser._id);
-        return conv.name || otherMembers.map((m) => m.name).join(", ") || "Direct Message";
-      }
-    }
-    return null;
-  }, [pathname, dmConversations, currentUser]);
 
   useEffect(() => {
     const channelUnread = channels?.reduce((sum, ch) => sum + (ch.unreadCount ?? 0), 0) ?? 0;
@@ -300,8 +251,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             onOpenSearch={openSearch}
             trailing={<ThemeToggle />}
             workspaceName={workspace?.name}
-            channelName={channelName}
-            conversationName={conversationName}
           />
 
           {/* Below topbar: sidebar + content */}

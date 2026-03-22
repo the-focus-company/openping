@@ -9,7 +9,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import {
   X, GitPullRequest, Ticket, HelpCircle, AlertTriangle, Search,
   RefreshCw, FileText, ExternalLink, Loader2, CircleDot, MessageSquare,
-  Link2, History, Bot, UserCheck, UserPlus, ChevronRight, Maximize2,
+  Link2, History, UserCheck, UserPlus, ChevronRight, Maximize2,
   Minimize2, PenLine,
 } from "lucide-react";
 import { cn, formatRelativeTime } from "@/lib/utils";

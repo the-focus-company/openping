@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { GitPullRequest, ChevronDown, ChevronRight, History } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 import { LinearIcon } from "@/components/icons/LinearIcon";
 
 export interface IntegrationObjectData {

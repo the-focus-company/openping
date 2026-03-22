@@ -13,7 +13,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { avatarGradient } from "@/lib/utils";
 import {
-  Briefcase,
   Building2,
   Clock,
   Globe,

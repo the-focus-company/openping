@@ -180,14 +180,12 @@ function linkTypeLabel(type: string) {
 function PersonPill({
   name,
   role,
-  userId,
   dim = false,
   dashed = false,
   onClick,
 }: {
   name: string;
   role: string;
-  userId?: string;
   dim?: boolean;
   dashed?: boolean;
   onClick?: () => void;
@@ -626,7 +624,6 @@ export function DecisionModal({ item, onAction, onClose, focusMode = false, onTo
                       key={i}
                       name={p.name}
                       role={p.role}
-                      userId={(p as { userId?: string }).userId}
                       onClick={
                         (p as { userId?: string }).userId
                           ? () => setProfileUserId((p as { userId?: string }).userId!)
@@ -650,7 +647,6 @@ export function DecisionModal({ item, onAction, onClose, focusMode = false, onTo
                       key={i}
                       name={p.name}
                       role={p.role}
-                      userId={(p as { userId?: string }).userId}
                       dashed
                       onClick={
                         (p as { userId?: string }).userId
