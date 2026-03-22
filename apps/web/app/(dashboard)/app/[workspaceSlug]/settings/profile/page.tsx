@@ -94,7 +94,7 @@ export default function ProfilePage() {
     .toUpperCase();
 
   return (
-    <div className="mx-auto max-w-lg animate-fade-in px-6 py-6 h-full overflow-y-auto">
+    <div className="mx-auto max-w-lg animate-fade-in px-6 py-6">
       <div className="mb-6">
         <h1 className="text-md font-semibold text-foreground">Profile</h1>
         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -351,8 +351,8 @@ function ToggleRow({
         }`}
       >
         <span
-          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-            checked ? "translate-x-4" : "translate-x-0.5"
+          className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+            checked ? "translate-x-4" : "translate-x-0"
           }`}
         />
       </button>

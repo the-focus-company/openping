@@ -237,11 +237,11 @@
   cursor: pointer;
 }
 
-/* Message fade-in animation */
+/* New message subtle highlight */
 @keyframes message-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  0%   { background-color: hsl(var(--primary) / 0.08); }
+  100% { background-color: transparent; }
 }
 .animate-message-in {
-  animation: message-in 0.2s ease-out;
+  animation: message-in 0.6s ease-out;
 }

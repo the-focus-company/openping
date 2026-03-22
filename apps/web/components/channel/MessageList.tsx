@@ -472,7 +472,7 @@ export function MessageList({
       const lastMsg = messages[messages.length - 1];
       if (lastMsg) {
         setNewMessageId(lastMsg.id);
-        setTimeout(() => setNewMessageId(null), 400);
+        setTimeout(() => setNewMessageId(null), 600);
       }
       if (isAtBottom()) {
         scrollToBottom("smooth");

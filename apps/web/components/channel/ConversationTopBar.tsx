@@ -66,7 +66,7 @@ export function ConversationTopBar({
   const overflow = members.length - 4;
 
   return (
-    <div className="flex items-center gap-3 border-b border-subtle bg-surface-1 px-4 py-2 shrink-0">
+    <div className="flex h-10 items-center gap-3 border-b border-subtle bg-surface-1 px-4 shrink-0">
       {/* Stacked avatars — always shown */}
       <div className="relative flex items-center">
         {visible.map((m, i) => (

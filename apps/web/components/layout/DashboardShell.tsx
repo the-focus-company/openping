@@ -357,7 +357,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
             {/* Main content + Thread panel */}
             <div className="flex min-w-0 flex-1 overflow-hidden">
-              <main id="main-content" className="min-w-0 flex-1 overflow-hidden">{children}</main>
+              <main id="main-content" className="min-w-0 flex-1 overflow-y-auto">{children}</main>
               <ThreadPanelSlot />
             </div>
           </div>
