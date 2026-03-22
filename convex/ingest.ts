@@ -223,7 +223,7 @@ export const processDirectMessage = internalAction({
       }
     }
 
-    const groupId = `dm:${message.conversationId}`;
+    const groupId = `dm-${message.conversationId}`;
 
     const response = await fetch(`${graphitiUrl}/messages`, {
       method: "POST",
@@ -356,7 +356,7 @@ export const processIntegrationObject = internalAction({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        group_id: `integrations:${obj.workspaceId}`,
+        group_id: `integrations-${obj.workspaceId}`,
         messages: [
           {
             content,
@@ -466,7 +466,7 @@ export const processDecision = internalAction({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        group_id: `decisions:${decision.workspaceId}`,
+        group_id: `decisions-${decision.workspaceId}`,
         messages: [
           {
             content,

@@ -198,7 +198,7 @@ export const semanticSearch = action({
 
     // We need the user ID to scope the search. Look up via the subject.
     // Actions cannot read the DB directly, so we use the Graphiti group_id pattern.
-    const groupId = `email:${identity.subject}`;
+    const groupId = `email-${identity.subject}`;
 
     const searchResponse = await fetch(`${graphitiUrl}/search`, {
       method: "POST",

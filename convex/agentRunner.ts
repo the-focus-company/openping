@@ -253,7 +253,7 @@ export const respondInDM = internalAction({
 
       // Search knowledge graph with expanded scope for agent DMs
       const graphitiUrl = process.env.GRAPHITI_API_URL ?? "http://localhost:8000";
-      const groupIds: string[] = [`dm:${args.conversationId}`];
+      const groupIds: string[] = [`dm-${args.conversationId}`];
 
       // Expand search to user's channels
       const channelIds: string[] = await ctx.runQuery(

@@ -54,7 +54,7 @@ export const ingestEmailToGraphiti = internalAction({
       .filter(Boolean)
       .join("\n");
 
-    const groupId = `email:${email.userId}`;
+    const groupId = `email-${email.userId}`;
 
     try {
       const response = await fetch(`${graphitiUrl}/episodes`, {

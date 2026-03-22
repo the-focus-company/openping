@@ -238,7 +238,7 @@ export const respondDM = internalAction({
     if (!botUser) return;
 
     // Build group_ids — DM-scoped by default
-    const groupIds: string[] = [`dm:${args.conversationId}`];
+    const groupIds: string[] = [`dm-${args.conversationId}`];
 
     // For agent conversations, expand search to user's channel memberships
     if (convCtx.kind === "agent_1to1" || convCtx.kind === "agent_group") {

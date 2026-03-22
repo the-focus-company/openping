@@ -189,7 +189,7 @@ export const backfillDirectMessages = internalAction({
         }
       }
 
-      const groupId = `dm:${msg.conversationId}`;
+      const groupId = `dm-${msg.conversationId}`;
 
       const response = await fetch(`${graphitiUrl}/messages`, {
         method: "POST",
