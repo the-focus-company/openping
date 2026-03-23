@@ -312,27 +312,32 @@ http.route({
 // Agent REST API
 // ---------------------------------------------------------------------------
 
-/** Extract and validate a Bearer token from the Authorization header. */
-async function authenticateAgent(
-  ctx: { runQuery: (ref: any, args: any) => Promise<any>; runMutation: (ref: any, args: any) => Promise<any> },
-  request: Request,
-) {
+/** Extract a Bearer token from the request and return the raw token + its SHA-256 hash. */
+async function extractBearerToken(request: Request) {
   const authHeader = request.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
-
   const rawToken = authHeader.slice(7);
   const encoded = new TextEncoder().encode(rawToken);
   const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
   const tokenHash = Array.from(new Uint8Array(hashBuffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+  return { rawToken, tokenHash };
+}
+
+/** Extract and validate a Bearer token from the Authorization header. */
+async function authenticateAgent(
+  ctx: { runQuery: (ref: any, args: any) => Promise<any>; runMutation: (ref: any, args: any) => Promise<any> },
+  request: Request,
+) {
+  const bearer = await extractBearerToken(request);
+  if (!bearer) return null;
 
   const result = await ctx.runQuery(internal.agentApi.getAgentByTokenHash, {
-    tokenHash,
+    tokenHash: bearer.tokenHash,
   });
   if (!result) return null;
 
-  // Touch token last-used timestamp
   await ctx.runMutation(internal.agentApi.touchToken, {
     tokenId: result.tokenId,
   });
@@ -345,6 +350,26 @@ function jsonResponse(data: unknown, status = 200) {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+/** Authenticate either a user (ping_u_ prefix) or agent bearer token. */
+async function authenticateApiCaller(
+  ctx: { runQuery: (ref: any, args: any) => Promise<any>; runMutation: (ref: any, args: any) => Promise<any> },
+  request: Request,
+) {
+  const bearer = await extractBearerToken(request);
+  if (!bearer) return null;
+
+  if (bearer.rawToken.startsWith("ping_u_")) {
+    const result = await ctx.runQuery(internal.apiAuth.getUserByTokenHash, { tokenHash: bearer.tokenHash });
+    if (!result) return null;
+    await ctx.runMutation(internal.apiAuth.touchUserToken, { tokenId: result.tokenId });
+    return { kind: "user" as const, ...result };
+  }
+  const result = await ctx.runQuery(internal.agentApi.getAgentByTokenHash, { tokenHash: bearer.tokenHash });
+  if (!result) return null;
+  await ctx.runMutation(internal.agentApi.touchToken, { tokenId: result.tokenId });
+  return { kind: "agent" as const, ...result };
 }
 
 // GET /api/agent/v1/me — Agent identity
@@ -477,6 +502,32 @@ http.route({
     );
 
     return jsonResponse({ conversations });
+  }),
+});
+
+// POST /api/v1/reactions/toggle — Add/remove emoji reaction
+http.route({
+  path: "/api/v1/reactions/toggle",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const body = await request.json();
+    const { messageId, emoji } = body;
+
+    if (!messageId || !emoji) {
+      return jsonResponse({ error: "messageId and emoji are required" }, 400);
+    }
+
+    const result = await ctx.runMutation(internal.publicApi.toggleReaction, {
+      messageId,
+      userId: auth.user._id,
+      workspaceId: auth.workspaceId,
+      emoji,
+    });
+
+    return jsonResponse(result);
   }),
 });
 

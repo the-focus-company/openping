@@ -526,6 +526,21 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_status", ["userId", "status"]),
 
+  userApiTokens: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    tokenHash: v.string(),
+    tokenPrefix: v.string(),
+    label: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    expiresAt: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_user", ["userId"])
+    .index("by_user_workspace", ["userId", "workspaceId"]),
+
   // Agent platform tables
   agents: defineTable({
     workspaceId: v.id("workspaces"),
