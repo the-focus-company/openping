@@ -608,6 +608,21 @@ export default defineSchema({
     .index("by_workspace_type", ["workspaceId", "integrationType"])
     .index("by_channel_type_target", ["channelId", "integrationType", "externalTarget"]),
 
+  userApiTokens: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    tokenHash: v.string(),
+    tokenPrefix: v.string(),
+    label: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    expiresAt: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_user", ["userId"])
+    .index("by_user_workspace", ["userId", "workspaceId"]),
+
   quickChats: defineTable({
     workspaceId: v.id("workspaces"),
     userId: v.id("users"),

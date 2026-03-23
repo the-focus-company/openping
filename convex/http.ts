@@ -312,27 +312,56 @@ http.route({
 // Agent REST API
 // ---------------------------------------------------------------------------
 
-/** Extract and validate a Bearer token from the Authorization header. */
-async function authenticateAgent(
-  ctx: { runQuery: (ref: any, args: any) => Promise<any>; runMutation: (ref: any, args: any) => Promise<any> },
-  request: Request,
-) {
+/** Extract the raw Bearer token from the Authorization header. */
+function extractBearerToken(request: Request): string | null {
   const authHeader = request.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
+  return authHeader.slice(7);
+}
 
-  const rawToken = authHeader.slice(7);
+async function hashToken(rawToken: string): Promise<string> {
   const encoded = new TextEncoder().encode(rawToken);
   const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
-  const tokenHash = Array.from(new Uint8Array(hashBuffer))
+  return Array.from(new Uint8Array(hashBuffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+type HttpCtx = { runQuery: (ref: any, args: any) => Promise<any>; runMutation: (ref: any, args: any) => Promise<any> };
+
+/**
+ * Authenticate a public API caller — supports both user tokens (ping_u_ prefix)
+ * and agent tokens (fallback).
+ */
+async function authenticateApiCaller(ctx: HttpCtx, request: Request) {
+  const rawToken = extractBearerToken(request);
+  if (!rawToken) return null;
+  const tokenHash = await hashToken(rawToken);
+
+  if (rawToken.startsWith("ping_u_")) {
+    const result = await ctx.runQuery(internal.apiAuth.getUserByTokenHash, { tokenHash });
+    if (!result) return null;
+    await ctx.runMutation(internal.apiAuth.touchUserToken, { tokenId: result.tokenId });
+    return { kind: "user" as const, ...result };
+  }
+
+  const result = await ctx.runQuery(internal.agentApi.getAgentByTokenHash, { tokenHash });
+  if (!result) return null;
+  await ctx.runMutation(internal.agentApi.touchToken, { tokenId: result.tokenId });
+  return { kind: "agent" as const, ...result };
+}
+
+/** Authenticate an agent-only Bearer token. */
+async function authenticateAgent(ctx: HttpCtx, request: Request) {
+  const rawToken = extractBearerToken(request);
+  if (!rawToken) return null;
+  const tokenHash = await hashToken(rawToken);
 
   const result = await ctx.runQuery(internal.agentApi.getAgentByTokenHash, {
     tokenHash,
   });
   if (!result) return null;
 
-  // Touch token last-used timestamp
   await ctx.runMutation(internal.agentApi.touchToken, {
     tokenId: result.tokenId,
   });
@@ -477,6 +506,68 @@ http.route({
     );
 
     return jsonResponse({ conversations });
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// Public Channel API (v1)
+// ---------------------------------------------------------------------------
+
+// GET /api/v1/channels — List workspace channels
+http.route({
+  path: "/api/v1/channels",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const channels = await ctx.runQuery(internal.publicApi.listChannels, {
+      workspaceId: auth.workspaceId,
+    });
+    return jsonResponse({ channels });
+  }),
+});
+
+// POST /api/v1/channels — Create channel
+http.route({
+  path: "/api/v1/channels",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const body = await request.json();
+    const { name, description, isPrivate } = body;
+    if (!name) return jsonResponse({ error: "name is required" }, 400);
+
+    const result = await ctx.runMutation(internal.publicApi.createChannel, {
+      workspaceId: auth.workspaceId,
+      userId: auth.user._id,
+      name,
+      description,
+      isPrivate,
+    });
+    return jsonResponse(result, 201);
+  }),
+});
+
+// POST /api/v1/channels/members — List channel members
+http.route({
+  path: "/api/v1/channels/members",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const body = await request.json();
+    const { channelId } = body;
+    if (!channelId) return jsonResponse({ error: "channelId is required" }, 400);
+
+    const members = await ctx.runQuery(internal.publicApi.listChannelMembers, {
+      channelId,
+      workspaceId: auth.workspaceId,
+    });
+    return jsonResponse({ members });
   }),
 });
 
