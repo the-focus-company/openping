@@ -71,7 +71,7 @@ const DECISIONS = [
 const MANAGED_AGENT_STYLE: Record<string, { icon: typeof Sparkles; color: string }> = {
   "mr-ping": { icon: Sparkles, color: "text-violet-400" },
 };
-const DEFAULT_AGENT_STYLE = { icon: Bot, color: "text-white/50" };
+const DEFAULT_AGENT_STYLE = { icon: Bot, color: "text-white/70" };
 
 type AgentPickerItem = {
   id: string;
@@ -103,7 +103,7 @@ function SkeletonRow() {
 function SkeletonGroup({ heading, rows = 3 }: { heading: string; rows?: number }) {
   return (
     <div className="overflow-hidden p-1">
-      <div className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-white/30">
+      <div className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-white/50">
         {heading}
       </div>
       {Array.from({ length: rows }).map((_, i) => (
@@ -366,7 +366,7 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
         {isAgentPickerMode ? (
           // ── Agent picker ──
           <div className="p-1.5">
-            <div className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-white/30">
+            <div className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-white/50">
               Agents
             </div>
             {filteredAgents.map((agent) => (
@@ -380,14 +380,14 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
                   <agent.icon className="h-3.5 w-3.5" />
                 </div>
                 <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-[13px] font-medium text-white/80 group-hover:text-white">{agent.name}</span>
-                  <span className="text-[11px] text-white/30">{agent.description}</span>
+                  <span className="text-[13px] font-medium text-white/90 group-hover:text-white">{agent.name}</span>
+                  <span className="text-[11px] text-white/50">{agent.description}</span>
                 </div>
-                <ChevronRight className="h-3 w-3 text-white/15 group-hover:text-white/30 transition-colors" />
+                <ChevronRight className="h-3 w-3 text-white/30 group-hover:text-white/50 transition-colors" />
               </button>
             ))}
             {filteredAgents.length === 0 && (
-              <div className="px-3 py-6 text-center text-[13px] text-white/30">
+              <div className="px-3 py-6 text-center text-[13px] text-white/50">
                 No matching agents
               </div>
             )}
@@ -400,15 +400,15 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
                 <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.05] ${selectedAgent?.color}`}>
                   {selectedAgent && <selectedAgent.icon className="h-5 w-5" />}
                 </div>
-                <p className="text-[13px] text-white/40">
+                <p className="text-[13px] text-white/60">
                   Type your message and press{" "}
-                  <kbd className="rounded border border-white/10 bg-white/[0.05] px-1.5 py-0.5 text-[11px] font-medium text-white/50">↵</kbd>
+                  <kbd className="rounded border border-white/10 bg-white/[0.05] px-1.5 py-0.5 text-[11px] font-medium text-white/70">↵</kbd>
                 </p>
               </div>
             ) : quickChat?.status === "pending" ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
-                <p className="text-[12px] text-white/30">Thinking...</p>
+                <p className="text-[12px] text-white/50">Thinking...</p>
               </div>
             ) : quickChat?.status === "error" ? (
               <div className="flex flex-col gap-2">
@@ -439,7 +439,7 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
                   </div>
                 ) : !hasAnyResults ? (
                   <CommandEmpty>
-                    <span className="text-white/30">No results for &ldquo;{debouncedSearch}&rdquo;</span>
+                    <span className="text-white/50">No results for &ldquo;{debouncedSearch}&rdquo;</span>
                   </CommandEmpty>
                 ) : (
                   <>
@@ -465,12 +465,12 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
                                 />
                               ) : (
                                 <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/[0.07]">
-                                  <User className="h-3 w-3 text-white/40" />
+                                  <User className="h-3 w-3 text-white/60" />
                                 </div>
                               )}
                               <div className="flex flex-col min-w-0 flex-1">
-                                <span className="truncate text-[13px]">{person.name}</span>
-                                <span className="truncate text-[11px] text-white/30">
+                                <span className="truncate text-[13px] text-white/90">{person.name}</span>
+                                <span className="truncate text-[11px] text-white/50">
                                   {person.email}
                                 </span>
                               </div>
@@ -506,16 +506,16 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
                             value={`msg-${msg._id}-${msg.body.slice(0, 30)}`}
                             onSelect={() => navigate(`${msg.href}?msg=${msg._id}`)}
                           >
-                            <MessageSquare className="h-3.5 w-3.5 text-white/20 shrink-0" />
+                            <MessageSquare className="h-3.5 w-3.5 text-white/40 shrink-0" />
                             <div className="flex flex-col min-w-0 flex-1">
-                              <span className="truncate text-[13px]">
+                              <span className="truncate text-[13px] text-white/90">
                                 {truncate(msg.body)}
                               </span>
-                              <span className="truncate text-[11px] text-white/30">
+                              <span className="truncate text-[11px] text-white/50">
                                 {msg.authorName} in {msg.context} · {timeAgo(msg._creationTime)}
                               </span>
                             </div>
-                            <ArrowRight className="h-3 w-3 text-white/10 shrink-0" />
+                            <ArrowRight className="h-3 w-3 text-white/20 shrink-0" />
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -526,15 +526,15 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
             ) : (
               <>
                 <CommandEmpty>
-                  <span className="text-white/30">No results found.</span>
+                  <span className="text-white/50">No results found.</span>
                 </CommandEmpty>
 
                 <CommandGroup heading="Pages">
                   {PAGES.map(({ label, href, icon: Icon, shortcut }) => (
                     <CommandItem key={href} onSelect={() => navigate(href)}>
-                      <Icon className="h-3.5 w-3.5 text-white/25" />
-                      <span>{label}</span>
-                      {shortcut && <CommandShortcut className="text-[11px] text-white/20">{shortcut}</CommandShortcut>}
+                      <Icon className="h-3.5 w-3.5 text-white/40" />
+                      <span className="text-white/90">{label}</span>
+                      {shortcut && <CommandShortcut className="text-[12px] text-white/40">{shortcut}</CommandShortcut>}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -546,8 +546,8 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
                         key={channel._id}
                         onSelect={() => navigate(`/channel/${channel._id}`)}
                       >
-                        <Hash className="h-3.5 w-3.5 text-white/25" />
-                        <span>{channel.name}</span>
+                        <Hash className="h-3.5 w-3.5 text-white/40" />
+                        <span className="text-white/90">{channel.name}</span>
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -574,9 +574,9 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
                           {isAgent ? (
                             <Bot className="h-3.5 w-3.5 text-violet-400" />
                           ) : (
-                            <MessageSquare className="h-3.5 w-3.5 text-white/25" />
+                            <MessageSquare className="h-3.5 w-3.5 text-white/40" />
                           )}
-                          <span>{displayName}</span>
+                          <span className="text-white/90">{displayName}</span>
                           {isAgent && (
                             <span className="ml-1 rounded-md border border-violet-500/20 bg-violet-500/10 px-1.5 py-px text-[10px] font-medium text-violet-400">
                               Agent
@@ -591,9 +591,9 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
                 <CommandGroup heading="Decisions">
                   {DECISIONS.map(({ label, href, icon: Icon, shortcut }) => (
                     <CommandItem key={label} onSelect={() => navigate(href)}>
-                      <Icon className="h-3.5 w-3.5 text-white/25" />
-                      <span>{label}</span>
-                      {shortcut && <CommandShortcut className="text-[11px] text-white/20">{shortcut}</CommandShortcut>}
+                      <Icon className="h-3.5 w-3.5 text-white/40" />
+                      <span className="text-white/90">{label}</span>
+                      {shortcut && <CommandShortcut className="text-[12px] text-white/40">{shortcut}</CommandShortcut>}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -605,9 +605,9 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
                       onOpenChange(false);
                     }}
                   >
-                    <PanelLeftClose className="h-3.5 w-3.5 text-white/25" />
-                    <span>Toggle sidebar</span>
-                    <CommandShortcut className="text-[11px] text-white/20">⌘B</CommandShortcut>
+                    <PanelLeftClose className="h-3.5 w-3.5 text-white/40" />
+                    <span className="text-white/90">Toggle sidebar</span>
+                    <CommandShortcut className="text-[12px] text-white/40">⌘B</CommandShortcut>
                   </CommandItem>
                 </CommandGroup>
               </>
@@ -619,21 +619,21 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
       {/* Footer bar — Raycast-style hints */}
       <div className="flex items-center justify-between border-t border-white/[0.06] px-3 py-1.5">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1 text-[11px] text-white/20">
-            <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[10px]">↑↓</kbd>
+          <span className="flex items-center gap-1 text-[12px] text-white/40">
+            <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[11px]">↑↓</kbd>
             Navigate
           </span>
-          <span className="flex items-center gap-1 text-[11px] text-white/20">
-            <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[10px]">↵</kbd>
+          <span className="flex items-center gap-1 text-[12px] text-white/40">
+            <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[11px]">↵</kbd>
             Select
           </span>
-          <span className="flex items-center gap-1 text-[11px] text-white/20">
-            <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[10px]">esc</kbd>
+          <span className="flex items-center gap-1 text-[12px] text-white/40">
+            <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[11px]">esc</kbd>
             Close
           </span>
         </div>
-        <span className="flex items-center gap-1 text-[11px] text-white/20">
-          <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[10px]">@</kbd>
+        <span className="flex items-center gap-1 text-[12px] text-white/40">
+          <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[11px]">@</kbd>
           Talk to mrPING
         </span>
       </div>
