@@ -619,20 +619,20 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
       {/* Footer bar — Raycast-style hints */}
       <div className="flex items-center justify-between border-t border-white/[0.06] px-3 py-1.5">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1 text-[12px] text-white/40">
+          <span className="flex items-center gap-1 text-[12px] text-white/50">
             <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[11px]">↑↓</kbd>
             Navigate
           </span>
-          <span className="flex items-center gap-1 text-[12px] text-white/40">
+          <span className="flex items-center gap-1 text-[12px] text-white/50">
             <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[11px]">↵</kbd>
             Select
           </span>
-          <span className="flex items-center gap-1 text-[12px] text-white/40">
+          <span className="flex items-center gap-1 text-[12px] text-white/50">
             <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[11px]">esc</kbd>
             Close
           </span>
         </div>
-        <span className="flex items-center gap-1 text-[12px] text-white/40">
+        <span className="flex items-center gap-1 text-[12px] text-white/50">
           <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[11px]">@</kbd>
           Talk to mrPING
         </span>
