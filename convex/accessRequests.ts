@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
 import { requireAuth } from "./auth";
+import { cleanupEmptyPersonalWorkspaces } from "./invitations";
 
 export const submit = mutation({
   args: {
@@ -17,6 +17,7 @@ export const submit = mutation({
       .unique();
     if (!workspace) throw new Error("Workspace not found");
 
+    // Duplicate check
     const existing = await ctx.db
       .query("accessRequests")
       .withIndex("by_email_workspace", (q) =>
@@ -24,27 +25,14 @@ export const submit = mutation({
       )
       .first();
     if (existing && existing.status === "pending") {
-      throw new Error("You already have a pending access request");
+      throw new Error("A request is already pending for this email");
     }
 
-    let userId: Id<"users"> | undefined;
-    const identity = await ctx.auth.getUserIdentity();
-    if (identity) {
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_workos_id", (q) => q.eq("workosUserId", identity.subject))
-        .unique();
-      if (user) {
-        userId = user._id;
-      }
-    }
-
-    await ctx.db.insert("accessRequests", {
+    return await ctx.db.insert("accessRequests", {
       workspaceId: workspace._id,
       email: args.email,
       name: args.name,
       message: args.message,
-      userId,
       status: "pending",
       createdAt: Date.now(),
     });
@@ -52,16 +40,22 @@ export const submit = mutation({
 });
 
 export const list = query({
-  args: { workspaceId: v.id("workspaces") },
+  args: {
+    workspaceId: v.id("workspaces"),
+  },
   handler: async (ctx, args) => {
     const user = await requireAuth(ctx, args.workspaceId);
     if (user.role !== "admin") {
       throw new Error("Only admins can view access requests");
     }
-    return await ctx.db
+
+    const requests = await ctx.db
       .query("accessRequests")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .order("desc")
       .collect();
+
+    return requests;
   },
 });
 
@@ -74,56 +68,49 @@ export const review = mutation({
     const request = await ctx.db.get(args.requestId);
     if (!request) throw new Error("Access request not found");
 
-    const admin = await requireAuth(ctx, request.workspaceId);
-    if (admin.role !== "admin") {
+    const user = await requireAuth(ctx, request.workspaceId);
+    if (user.role !== "admin") {
       throw new Error("Only admins can review access requests");
     }
 
     if (request.status !== "pending") {
-      throw new Error("This request has already been reviewed");
+      throw new Error("Request has already been reviewed");
     }
 
     if (args.decision === "approved") {
       if (request.userId) {
-        // Add user as member directly
-        const existingMembership = await ctx.db
-          .query("workspaceMembers")
-          .withIndex("by_user_workspace", (q) =>
-            q.eq("userId", request.userId!).eq("workspaceId", request.workspaceId),
+        // User exists — add as member
+        await ctx.db.insert("workspaceMembers", {
+          userId: request.userId,
+          workspaceId: request.workspaceId,
+          role: "member",
+          joinedAt: Date.now(),
+        });
+
+        // Auto-join #general
+        const generalChannel = await ctx.db
+          .query("channels")
+          .withIndex("by_workspace_name", (q) =>
+            q.eq("workspaceId", request.workspaceId).eq("name", "general"),
           )
           .unique();
 
-        if (!existingMembership) {
-          await ctx.db.insert("workspaceMembers", {
+        if (generalChannel) {
+          await ctx.db.insert("channelMembers", {
+            channelId: generalChannel._id,
             userId: request.userId,
-            workspaceId: request.workspaceId,
-            role: "member",
-            joinedAt: Date.now(),
           });
-
-          // Auto-join #general
-          const generalChannel = await ctx.db
-            .query("channels")
-            .withIndex("by_workspace_name", (q) =>
-              q.eq("workspaceId", request.workspaceId).eq("name", "general"),
-            )
-            .unique();
-
-          if (generalChannel) {
-            await ctx.db.insert("channelMembers", {
-              channelId: generalChannel._id,
-              userId: request.userId,
-            });
-          }
         }
+
+        await cleanupEmptyPersonalWorkspaces(ctx, request.userId, request.workspaceId);
       } else {
-        // Create an invitation for the email
+        // No user — create a 90-day invitation
         const token = crypto.randomUUID();
         const ninetyDays = 90 * 24 * 60 * 60 * 1000;
         await ctx.db.insert("invitations", {
           workspaceId: request.workspaceId,
           email: request.email,
-          invitedBy: admin._id,
+          invitedBy: user._id,
           role: "member",
           status: "pending",
           token,
@@ -134,25 +121,29 @@ export const review = mutation({
 
     await ctx.db.patch(args.requestId, {
       status: args.decision,
-      reviewedBy: admin._id,
+      reviewedBy: user._id,
       reviewedAt: Date.now(),
     });
   },
 });
 
 export const countPending = query({
-  args: { workspaceId: v.id("workspaces") },
+  args: {
+    workspaceId: v.id("workspaces"),
+  },
   handler: async (ctx, args) => {
     const user = await requireAuth(ctx, args.workspaceId);
     if (user.role !== "admin") {
-      throw new Error("Only admins can view access request counts");
+      return 0;
     }
-    const requests = await ctx.db
+
+    const pending = await ctx.db
       .query("accessRequests")
       .withIndex("by_workspace_status", (q) =>
         q.eq("workspaceId", args.workspaceId).eq("status", "pending"),
       )
       .collect();
-    return requests.length;
+
+    return pending.length;
   },
 });

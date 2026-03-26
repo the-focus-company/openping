@@ -4,9 +4,9 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
-import { UserPlus, MoreHorizontal, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Copy, Check } from "lucide-react";
+import { UserPlus, MoreHorizontal, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Copy, Check, Link } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { avatarGradient } from "@/lib/utils";
+import { avatarGradient, cn, formatRelativeTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
 import {
@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast-provider";
-import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { UserProfileDialog } from "@/components/user/UserProfileDialog";
 
@@ -81,11 +80,17 @@ export default function TeamPage() {
 }
 
 function TeamPageContent() {
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, workspaceSlug } = useWorkspace();
   const rawUsers = useQuery(api.users.listAll, { workspaceId });
+  const workspace = useQuery(api.workspaces.get, { workspaceId });
   const updateRoleMutation = useMutation(api.users.updateRole);
   const deactivateMutation = useMutation(api.users.deactivate);
   const inviteByEmailMutation = useMutation(api.workspaceMembers.inviteByEmail);
+  const togglePublicInviteMutation = useMutation(api.workspaces.togglePublicInvite);
+  const pendingRequestCount = useQuery(api.accessRequests.countPending, { workspaceId });
+  const accessRequests = useQuery(api.accessRequests.list, { workspaceId });
+  const reviewRequestMutation = useMutation(api.accessRequests.review);
+  const [copiedPublicLink, setCopiedPublicLink] = useState(false);
 
   const [tab, setTab] = useState("all");
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
@@ -231,6 +236,78 @@ function TeamPageContent() {
         </p>
       </div>
 
+      {/* Public Invite Link */}
+      {workspace && (
+        <div className="mb-4 rounded border border-subtle bg-surface-1 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Link className="h-3.5 w-3.5 text-muted-foreground" />
+              <div>
+                <p className="text-xs font-medium text-foreground">Public Invite Link</p>
+                <p className="text-2xs text-muted-foreground">
+                  Allow anyone with the link to join this workspace
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  await togglePublicInviteMutation({
+                    workspaceId,
+                    enabled: !workspace.publicInviteEnabled,
+                  });
+                  toast(
+                    workspace.publicInviteEnabled
+                      ? "Public invite link disabled"
+                      : "Public invite link enabled",
+                    "success",
+                  );
+                } catch (err) {
+                  toast(err instanceof Error ? err.message : "Failed to toggle public invite", "error");
+                }
+              }}
+              className={cn(
+                "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                workspace.publicInviteEnabled ? "bg-ping-purple" : "bg-foreground/20",
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+                  workspace.publicInviteEnabled ? "translate-x-4" : "translate-x-0",
+                )}
+              />
+            </button>
+          </div>
+          {workspace.publicInviteEnabled && (
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                value={typeof window !== "undefined" ? `${window.location.origin}/join/${workspaceSlug}` : `/join/${workspaceSlug}`}
+                readOnly
+                className="flex-1 rounded border border-subtle bg-surface-3 px-2.5 py-1.5 font-mono text-xs text-foreground"
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                onClick={() => {
+                  const url = `${window.location.origin}/join/${workspaceSlug}`;
+                  navigator.clipboard.writeText(url);
+                  setCopiedPublicLink(true);
+                  setTimeout(() => setCopiedPublicLink(false), 2000);
+                }}
+              >
+                {copiedPublicLink ? (
+                  <Check className="h-3.5 w-3.5 text-status-online" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab} className="mb-4">
         <TabsList className="h-7 bg-surface-2 p-0.5">
@@ -238,9 +315,95 @@ function TeamPageContent() {
           <TabsTrigger value="active" className="h-6 px-2.5 text-xs">Active</TabsTrigger>
           <TabsTrigger value="invited" className="h-6 px-2.5 text-xs">Pending</TabsTrigger>
           <TabsTrigger value="deprovisioned" className="h-6 px-2.5 text-xs">Deprovisioned</TabsTrigger>
+          <TabsTrigger value="requests" className="h-6 px-2.5 text-xs">
+            <span className="flex items-center gap-1.5">
+              Requests
+              {(pendingRequestCount ?? 0) > 0 && (
+                <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-ping-purple px-1 text-2xs font-medium text-white">
+                  {pendingRequestCount}
+                </span>
+              )}
+            </span>
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 
+      {/* Requests Tab Content */}
+      {tab === "requests" ? (
+        <div className="overflow-hidden rounded border border-subtle">
+          {(!accessRequests || accessRequests.length === 0) ? (
+            <div className="px-4 py-8 text-center text-xs text-muted-foreground">
+              No pending requests
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-[1fr_1fr_1.5fr_100px_120px] gap-4 border-b border-subtle bg-surface-1 px-4 py-2">
+                <span className="text-2xs font-medium uppercase tracking-widest text-foreground/45">Email</span>
+                <span className="text-2xs font-medium uppercase tracking-widest text-foreground/45">Name</span>
+                <span className="text-2xs font-medium uppercase tracking-widest text-foreground/45">Message</span>
+                <span className="text-2xs font-medium uppercase tracking-widest text-foreground/45">Submitted</span>
+                <span className="text-2xs font-medium uppercase tracking-widest text-foreground/45">Actions</span>
+              </div>
+              {accessRequests.map((req) => (
+                <div
+                  key={req._id}
+                  className="grid grid-cols-[1fr_1fr_1.5fr_100px_120px] items-center gap-4 border-b border-subtle px-4 py-2.5 last:border-0 hover:bg-surface-2"
+                >
+                  <span className="truncate text-xs text-foreground">{req.email}</span>
+                  <span className="truncate text-xs text-muted-foreground">{req.name ?? "—"}</span>
+                  <span className="truncate text-xs text-muted-foreground">{req.message ?? "—"}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {formatRelativeTime(req.createdAt)}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {req.status === "pending" ? (
+                      <>
+                        <Button
+                          size="sm"
+                          className="h-6 px-2 text-2xs bg-status-online/15 text-status-online hover:bg-status-online/25"
+                          onClick={async () => {
+                            try {
+                              await reviewRequestMutation({ requestId: req._id, decision: "approved" });
+                              toast("Request approved", "success");
+                            } catch (err) {
+                              toast(err instanceof Error ? err.message : "Failed to approve", "error");
+                            }
+                          }}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 px-2 text-2xs text-destructive hover:text-destructive"
+                          onClick={async () => {
+                            try {
+                              await reviewRequestMutation({ requestId: req._id, decision: "rejected" });
+                              toast("Request rejected", "success");
+                            } catch (err) {
+                              toast(err instanceof Error ? err.message : "Failed to reject", "error");
+                            }
+                          }}
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    ) : (
+                      <span className={cn(
+                        "text-2xs font-medium capitalize",
+                        req.status === "approved" ? "text-status-online" : "text-destructive",
+                      )}>
+                        {req.status}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      ) : (
+      <>
       {/* Table */}
       <div className="overflow-hidden rounded border border-subtle">
         <div className="grid grid-cols-[1fr_1fr_80px_80px_32px] gap-4 border-b border-subtle bg-surface-1 px-4 py-2">
@@ -347,6 +510,8 @@ function TeamPageContent() {
       <p className="mt-3 text-2xs text-foreground/40">
         {members.length} total members · Real-time sync via Convex
       </p>
+      </>
+      )}
 
       {/* Change Role Dialog */}
       <Dialog open={roleDialogOpen} onOpenChange={(open) => { setRoleDialogOpen(open); if (!open) setRoleTarget(null); }}>
