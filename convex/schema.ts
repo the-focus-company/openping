@@ -371,21 +371,6 @@ export default defineSchema({
     .index("by_thread_dm", ["threadDmMessageId"])
     .index("by_thread_dm_user", ["threadDmMessageId", "userId"]),
 
-  accessRequests: defineTable({
-    workspaceId: v.id("workspaces"),
-    email: v.string(),
-    name: v.optional(v.string()),
-    message: v.optional(v.string()),
-    userId: v.optional(v.id("users")),
-    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
-    reviewedBy: v.optional(v.id("users")),
-    reviewedAt: v.optional(v.number()),
-    createdAt: v.number(),
-  })
-    .index("by_workspace", ["workspaceId"])
-    .index("by_workspace_status", ["workspaceId", "status"])
-    .index("by_email_workspace", ["email", "workspaceId"]),
-
   invitations: defineTable({
     workspaceId: v.id("workspaces"),
     email: v.string(),
