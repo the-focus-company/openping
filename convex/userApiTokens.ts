@@ -34,7 +34,7 @@ export const list = query({
     workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx);
+    const user = await requireAuth(ctx, args.workspaceId);
 
     const tokens = await ctx.db
       .query("userApiTokens")
