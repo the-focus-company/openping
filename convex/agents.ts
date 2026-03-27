@@ -185,9 +185,37 @@ export const remove = mutation({
       await ctx.db.patch(token._id, { status: "revoked" as const });
     }
 
-    // Deactivate the agent's user record
+    // Delete agent channel scopes
+    const channelScopes = await ctx.db
+      .query("agentChannelScopes")
+      .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
+      .take(500);
+    for (const scope of channelScopes) {
+      await ctx.db.delete(scope._id);
+    }
+
+    // Delete agent audit logs
+    const auditLogs = await ctx.db
+      .query("agentAuditLogs")
+      .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
+      .take(500);
+    for (const log of auditLogs) {
+      await ctx.db.delete(log._id);
+    }
+
+    // Deactivate the agent's user record and clean up workspace membership
     if (agent.agentUserId) {
       await ctx.db.patch(agent.agentUserId, { status: "deactivated" });
+
+      const membership = await ctx.db
+        .query("workspaceMembers")
+        .withIndex("by_user_workspace", (q) =>
+          q.eq("userId", agent.agentUserId!).eq("workspaceId", args.workspaceId),
+        )
+        .unique();
+      if (membership) {
+        await ctx.db.delete(membership._id);
+      }
     }
 
     await ctx.db.patch(args.agentId, { status: "revoked" });
