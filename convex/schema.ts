@@ -638,4 +638,26 @@ export default defineSchema({
     promotedToConversationId: v.optional(v.id("directConversations")),
   })
     .index("by_user", ["userId"]),
+
+  userApiTokens: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    tokenHash: v.string(),
+    tokenPrefix: v.string(),
+    label: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    expiresAt: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_user", ["userId"])
+    .index("by_user_workspace", ["userId", "workspaceId"]),
+
+  rateLimitCounters: defineTable({
+    key: v.string(),
+    windowStart: v.number(),
+    count: v.number(),
+  })
+    .index("by_key", ["key"]),
 });
