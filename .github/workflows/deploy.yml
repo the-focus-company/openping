@@ -25,15 +25,6 @@ jobs:
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
-  deploy-vercel:
-    name: Deploy Vercel
-    needs: deploy-convex
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger Vercel Deployment
-        run: |
-          curl -s -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
-
   deploy-knowledge:
     name: Deploy Knowledge Engine
     runs-on: ubuntu-latest

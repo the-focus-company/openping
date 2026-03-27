@@ -5,7 +5,7 @@
   "installCommand": "pnpm install",
   "git": {
     "deploymentEnabled": {
-      "main": false
+      "main": true
     }
   }
 }
