@@ -1,72 +1,88 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CategoryBadge } from "./CategoryBadge";
 
-function formatRelativeTime(ts: number): string {
+type Action = { label: string; actionKey: string; primary?: boolean };
+
+type Item = {
+  _id: string;
+  type: string;
+  category: "do" | "decide" | "delegate" | "skip";
+  title: string;
+  summary: string;
+  status: "pending" | "snoozed";
+  channelName?: string | null;
+  recommendedActions?: Action[] | null;
+  createdAt: number;
+  _creationTime: number;
+};
+
+function relativeTime(ts: number): string {
   const diff = Date.now() - ts;
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "now";
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
-  return new Date(ts).toLocaleDateString();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
 }
 
-interface DecisionCardProps {
-  item: any;
+export function DecisionCard({
+  item,
+  onAct,
+  onArchive,
+}: {
+  item: Item;
   onAct: (itemId: string, actionKey: string) => void;
   onArchive: (itemId: string) => void;
-}
-
-export function DecisionCard({ item, onAct, onArchive }: DecisionCardProps) {
+}) {
   const actions = item.recommendedActions ?? [];
 
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
-        <CategoryBadge category={item.category ?? "skip"} />
-        {item.channelName && (
+        <CategoryBadge category={item.category} />
+        {item.channelName ? (
           <Text style={styles.channel}>#{item.channelName}</Text>
-        )}
-        <Text style={styles.time}>
-          {formatRelativeTime(item.createdAt ?? item._creationTime)}
-        </Text>
+        ) : null}
+        <Text style={styles.time}>{relativeTime(item.createdAt)}</Text>
       </View>
 
-      <Text style={styles.title} numberOfLines={2}>
-        {item.title}
-      </Text>
+      <Text style={styles.title}>{item.title}</Text>
       <Text style={styles.summary} numberOfLines={3}>
         {item.summary}
       </Text>
 
       {actions.length > 0 && (
-        <View style={styles.actions}>
-          {actions.map((action: any) => (
+        <View style={styles.actionsRow}>
+          {actions.map((action) => (
             <Pressable
               key={action.actionKey}
               style={[
                 styles.actionBtn,
-                action.primary && styles.actionBtnPrimary,
+                action.primary ? styles.primaryBtn : styles.secondaryBtn,
               ]}
               onPress={() => onAct(item._id, action.actionKey)}
             >
               <Text
-                style={[
-                  styles.actionText,
-                  action.primary && styles.actionTextPrimary,
-                ]}
+                style={
+                  action.primary ? styles.primaryText : styles.secondaryText
+                }
               >
                 {action.label}
               </Text>
             </Pressable>
           ))}
-          <Pressable onPress={() => onArchive(item._id)}>
-            <Text style={styles.archiveText}>Archive</Text>
-          </Pressable>
         </View>
       )}
+
+      <Pressable
+        style={styles.archiveBtn}
+        onPress={() => onArchive(item._id)}
+        hitSlop={8}
+      >
+        <Text style={styles.archiveText}>Archive</Text>
+      </Pressable>
     </View>
   );
 }
@@ -76,35 +92,65 @@ const styles = StyleSheet.create({
     backgroundColor: "#111",
     borderRadius: 12,
     padding: 16,
-    marginHorizontal: 16,
     marginBottom: 8,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#333",
   },
   topRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  channel: { color: "#888", fontSize: 12, flex: 1 },
-  time: { color: "#666", fontSize: 12 },
-  title: { color: "#fff", fontSize: 17, fontWeight: "bold", marginTop: 8 },
-  summary: { color: "#ccc", fontSize: 14, marginTop: 4, lineHeight: 20 },
-  actions: {
+  channel: {
+    color: "#888",
+    fontSize: 13,
+    flex: 1,
+  },
+  time: {
+    color: "#888",
+    fontSize: 12,
+  },
+  title: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 17,
+    marginTop: 8,
+  },
+  summary: {
+    color: "#ccc",
+    fontSize: 14,
+    marginTop: 4,
+  },
+  actionsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
     marginTop: 12,
-    alignItems: "center",
   },
   actionBtn: {
-    backgroundColor: "#222",
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
   },
-  actionBtnPrimary: { backgroundColor: "#0a7ea4" },
-  actionText: { color: "#ccc", fontSize: 14, fontWeight: "500" },
-  actionTextPrimary: { color: "#fff" },
-  archiveText: { color: "#888", fontSize: 13, marginLeft: 4 },
+  primaryBtn: {
+    backgroundColor: "#0a7ea4",
+  },
+  secondaryBtn: {
+    backgroundColor: "#222",
+  },
+  primaryText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  secondaryText: {
+    color: "#ccc",
+    fontSize: 14,
+  },
+  archiveBtn: {
+    alignSelf: "flex-end",
+    marginTop: 8,
+  },
+  archiveText: {
+    color: "#888",
+    fontSize: 12,
+  },
 });
