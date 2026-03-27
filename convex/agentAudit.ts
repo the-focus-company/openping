@@ -9,7 +9,7 @@ export const log = internalMutation({
     action: v.string(),
     resourceType: v.optional(v.string()),
     resourceId: v.optional(v.string()),
-    metadata: v.optional(v.any()),
+    metadata: v.optional(v.record(v.string(), v.any())),
     tokenPrefix: v.string(),
     durationMs: v.optional(v.number()),
   },

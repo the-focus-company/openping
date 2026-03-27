@@ -97,23 +97,28 @@ http.route({
       | { linearWebhookSecret?: string }
       | undefined;
     const secret = integrations?.linearWebhookSecret ?? process.env.LINEAR_WEBHOOK_SECRET;
-    if (secret) {
-      const signatureHeader = request.headers.get("linear-signature");
-      if (!signatureHeader) {
-        return new Response(
-          JSON.stringify({ error: "Missing linear-signature header" }),
-          { status: 401, headers: { "Content-Type": "application/json" } },
-        );
-      }
+    if (!secret) {
+      return new Response(
+        JSON.stringify({ error: "Webhook secret not configured" }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
 
-      const expected = await hmacSha256Hex(secret, rawBody);
+    const signatureHeader = request.headers.get("linear-signature");
+    if (!signatureHeader) {
+      return new Response(
+        JSON.stringify({ error: "Missing linear-signature header" }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      );
+    }
 
-      if (signatureHeader !== expected) {
-        return new Response(
-          JSON.stringify({ error: "Invalid signature" }),
-          { status: 401, headers: { "Content-Type": "application/json" } },
-        );
-      }
+    const expected = await hmacSha256Hex(secret, rawBody);
+
+    if (signatureHeader !== expected) {
+      return new Response(
+        JSON.stringify({ error: "Invalid signature" }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      );
     }
 
     const action = body.action as string | undefined;
@@ -254,21 +259,26 @@ http.route({
       | { githubWebhookSecret?: string }
       | undefined;
     const secret = integrations?.githubWebhookSecret ?? process.env.GITHUB_WEBHOOK_SECRET;
-    if (secret) {
-      const sigHeader = request.headers.get("x-hub-signature-256");
-      if (!sigHeader) {
-        return new Response(JSON.stringify({ error: "Missing x-hub-signature-256" }), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      const expected = "sha256=" + await hmacSha256Hex(secret, rawBody);
-      if (sigHeader !== expected) {
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+    if (!secret) {
+      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const sigHeader = request.headers.get("x-hub-signature-256");
+    if (!sigHeader) {
+      return new Response(JSON.stringify({ error: "Missing x-hub-signature-256" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const expected = "sha256=" + await hmacSha256Hex(secret, rawBody);
+    if (sigHeader !== expected) {
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     const isMerged = !!(pr.merged as boolean);
@@ -293,10 +303,10 @@ http.route({
       url: (pr.html_url as string) ?? "",
       author: (prUser?.login as string) ?? "unknown",
       metadata: {
-        number: pr.number,
+        number: pr.number as number | undefined,
         repo: repoFullName,
         description: pr.body ? String(pr.body).slice(0, 200) : "",
-        draft: pr.draft,
+        draft: pr.draft as boolean | undefined,
         merged: isMerged,
       },
     });

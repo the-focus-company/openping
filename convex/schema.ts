@@ -1,6 +1,27 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+/** Typed metadata for integration objects (GitHub PRs and Linear tickets). */
+export const integrationMetadataValidator = v.union(
+  v.object({
+    number: v.optional(v.number()),
+    repo: v.optional(v.string()),
+    description: v.optional(v.string()),
+    draft: v.optional(v.boolean()),
+    merged: v.optional(v.boolean()),
+  }),
+  v.object({
+    linearId: v.optional(v.string()),
+    identifier: v.optional(v.string()),
+    priority: v.optional(v.string()),
+    labels: v.optional(v.array(v.string())),
+    assigneeEmail: v.optional(v.string()),
+    teamKey: v.optional(v.string()),
+    createdAt: v.optional(v.string()),
+    updatedAt: v.optional(v.string()),
+  }),
+);
+
 export default defineSchema({
   users: defineTable({
     workosUserId: v.string(),
@@ -58,8 +79,32 @@ export default defineSchema({
     slug: v.string(),
     workosOrgId: v.optional(v.string()),
     createdBy: v.optional(v.id("users")),
-    integrations: v.optional(v.any()),
-    integrationConfig: v.optional(v.any()),
+    integrations: v.optional(
+      v.object({
+        githubOrgLogin: v.optional(v.string()),
+        githubWebhookSecret: v.optional(v.string()),
+        linearOrgId: v.optional(v.string()),
+        linearWebhookSecret: v.optional(v.string()),
+      }),
+    ),
+    integrationConfig: v.optional(
+      v.object({
+        github: v.optional(
+          v.object({
+            connected: v.boolean(),
+            accountName: v.optional(v.string()),
+            connectedAt: v.optional(v.number()),
+          }),
+        ),
+        linear: v.optional(
+          v.object({
+            connected: v.boolean(),
+            orgName: v.optional(v.string()),
+            connectedAt: v.optional(v.number()),
+          }),
+        ),
+      }),
+    ),
     industry: v.optional(v.string()),
     companySize: v.optional(v.string()),
     companyDescription: v.optional(v.string()),
@@ -161,7 +206,7 @@ export default defineSchema({
     status: v.string(),
     url: v.string(),
     author: v.string(),
-    metadata: v.any(),
+    metadata: integrationMetadataValidator,
     lastSyncedAt: v.number(),
     graphitiEpisodeId: v.optional(v.string()),
   })
@@ -617,7 +662,7 @@ export default defineSchema({
     action: v.string(),
     resourceType: v.optional(v.string()),
     resourceId: v.optional(v.string()),
-    metadata: v.optional(v.any()),
+    metadata: v.optional(v.record(v.string(), v.any())),
     tokenPrefix: v.string(),
     durationMs: v.optional(v.number()),
     timestamp: v.number(),
