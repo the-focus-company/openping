@@ -4,7 +4,7 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "NODE_OPTIONS=--no-experimental-strip-types expo start",
+    "dev": "PATH=/opt/homebrew/opt/node@18/bin:$PATH expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "build": "echo \"Use EAS Build for production builds\"",
