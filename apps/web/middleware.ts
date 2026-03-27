@@ -5,7 +5,10 @@ export default authkitMiddleware({
     enabled: true,
     unauthenticatedPaths: [
       "/",
+      "/manifesto",
       "/pricing",
+      "/privacy",
+      "/terms",
       "/callback",
       "/sign-in",
       "/sign-out",

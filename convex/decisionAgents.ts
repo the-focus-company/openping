@@ -295,8 +295,8 @@ async function handleCoordinate(
 ): Promise<string> {
   const results: string[] = [];
 
-  // 0. Get the mrPING bot user — needed for both ticket and conversation
-  const botUser = await ctx.runQuery(internal.bot.getBotUser, {
+  // 0. Get mrPING agent user — needed for both ticket and conversation
+  const botUser = await ctx.runQuery(internal.decisionAgents.getMrPingUser, {
     workspaceId: decision.workspaceId,
   });
 
@@ -520,6 +520,19 @@ export const addDecisionLink = internalMutation({
     await ctx.db.patch(args.decisionId, {
       links: [...existingLinks, { title: args.title, url: args.url, type: args.type }],
     });
+  },
+});
+
+export const getMrPingUser = internalQuery({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const agent = await ctx.db
+      .query("agents")
+      .withIndex("by_managed_slug", (q) => q.eq("managedSlug", "mr-ping"))
+      .filter((q) => q.eq(q.field("workspaceId"), args.workspaceId))
+      .first();
+    if (!agent?.agentUserId) return null;
+    return await ctx.db.get(agent.agentUserId);
   },
 });
 

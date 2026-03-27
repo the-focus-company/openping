@@ -2,18 +2,23 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 
 export default defineConfig({
-  site: "https://pingcompany.github.io",
-  base: "/platform/",
+  site: "https://the-focus-company.github.io",
+  base: "/openping/",
   integrations: [
     starlight({
       title: "PING Docs",
-      logo: { src: "./src/assets/ping-logo.svg", replacesTitle: true },
+      favicon: "/favicon.ico",
+      logo: {
+        light: "./src/assets/ping-logo-light.png",
+        dark: "./src/assets/ping-logo-dark.png",
+        replacesTitle: true,
+      },
       customCss: ["./src/styles/custom.css"],
       social: [
         {
           label: "GitHub",
           icon: "github",
-          href: "https://github.com/PingCompany/Platform",
+          href: "https://github.com/the-focus-company/openping",
         },
       ],
       sidebar: [

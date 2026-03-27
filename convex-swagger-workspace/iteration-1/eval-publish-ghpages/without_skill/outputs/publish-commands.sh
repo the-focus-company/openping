@@ -10,7 +10,7 @@
 #   4. Enable GitHub Pages on the gh-pages branch (if not already enabled).
 #
 # Prerequisites:
-#   - git, gh CLI authenticated, and push access to PingCompany/Platform
+#   - git, gh CLI authenticated, and push access to the-focus-company/openping
 #   - Run from the repo root
 # ──────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
@@ -94,13 +94,13 @@ git checkout "${CURRENT_BRANCH}"
 
 gh api \
   --method POST \
-  "repos/PingCompany/Platform/pages" \
+  "repos/the-focus-company/openping/pages" \
   -f "source[branch]=gh-pages" \
   -f "source[path]=/" \
   2>/dev/null || \
 gh api \
   --method PUT \
-  "repos/PingCompany/Platform/pages" \
+  "repos/the-focus-company/openping/pages" \
   -f "source[branch]=gh-pages" \
   -f "source[path]=/" \
   2>/dev/null || \
@@ -108,7 +108,7 @@ echo "GitHub Pages may already be configured. Verify at:"
 
 echo ""
 echo "Done! Swagger docs will be available at:"
-echo "  https://pingcompany.github.io/Platform/"
+echo "  https://the-focus-company.github.io/openping/"
 echo ""
 echo "If this is the first deployment, it may take a minute for GitHub Pages to go live."
 

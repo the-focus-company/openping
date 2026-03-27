@@ -6,7 +6,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-OWNER_REPO="PingCompany/Platform"
+OWNER_REPO="the-focus-company/openping"
 
 # ─── Step 1: Build static HTML from the OpenAPI spec ──────────────────────────
 npx @redocly/cli build-docs "$REPO_ROOT/convex/openapi.yaml" --output "$REPO_ROOT/docs/api.html"

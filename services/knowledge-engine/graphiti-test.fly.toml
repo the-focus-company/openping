@@ -1,5 +1,5 @@
 app = "graphiti-test"
-org = "pingcompany"
+org = "the-focus-company"
 primary_region = "arn"
 
 [build]
