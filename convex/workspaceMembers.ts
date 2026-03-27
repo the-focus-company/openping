@@ -137,6 +137,11 @@ export const inviteByEmail = mutation({
     role: v.union(v.literal("admin"), v.literal("member")),
   },
   handler: async (ctx, args) => {
+    const email = args.email.trim().toLowerCase();
+    if (!email || email.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error("Invalid email address");
+    }
+
     const currentUser = await requireAuth(ctx, args.workspaceId);
     if (currentUser.role !== "admin") {
       throw new Error("Only admins can invite members");
@@ -145,7 +150,7 @@ export const inviteByEmail = mutation({
     // Check if already a member
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
 
     if (existingUser) {
@@ -163,7 +168,7 @@ export const inviteByEmail = mutation({
 
     await ctx.db.insert("invitations", {
       workspaceId: args.workspaceId,
-      email: args.email,
+      email,
       role: args.role,
       invitedBy: currentUser._id,
       token,

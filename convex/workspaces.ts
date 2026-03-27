@@ -10,6 +10,11 @@ export const create = mutation({
     slug: v.string(),
   },
   handler: async (ctx, args) => {
+    const name = args.name.trim();
+    if (!name || name.length > 100) {
+      throw new Error("Workspace name must be between 1 and 100 characters");
+    }
+
     const user = await requireUser(ctx);
 
     const existing = await ctx.db
@@ -19,7 +24,7 @@ export const create = mutation({
     if (existing) throw new Error("Workspace slug already taken");
 
     const workspaceId = await ctx.db.insert("workspaces", {
-      name: args.name,
+      name,
       slug: args.slug,
       createdBy: user._id,
     });
@@ -78,7 +83,11 @@ export const update = mutation({
       throw new Error("Only admins can update the workspace");
     }
     if (args.name !== undefined) {
-      await ctx.db.patch(args.workspaceId, { name: args.name });
+      const name = args.name.trim();
+      if (!name || name.length > 100) {
+        throw new Error("Workspace name must be between 1 and 100 characters");
+      }
+      await ctx.db.patch(args.workspaceId, { name });
     }
   },
 });

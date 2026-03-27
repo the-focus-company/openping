@@ -52,18 +52,23 @@ export const create = mutation({
     isPrivate: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const name = args.name.trim();
+    if (!name || name.length > 80) {
+      throw new Error("Channel name must be between 1 and 80 characters");
+    }
+
     const user = await requireAuth(ctx, args.workspaceId);
 
     const existing = await ctx.db
       .query("channels")
       .withIndex("by_workspace_name", (q) =>
-        q.eq("workspaceId", user.workspaceId).eq("name", args.name),
+        q.eq("workspaceId", user.workspaceId).eq("name", name),
       )
       .unique();
     if (existing) throw new Error("Channel name already taken");
 
     const channelId = await ctx.db.insert("channels", {
-      name: args.name,
+      name,
       description: args.description,
       workspaceId: user.workspaceId,
       createdBy: user._id,
@@ -356,12 +361,17 @@ export const update = mutation({
     const user = await requireAuth(ctx, channel.workspaceId);
     requireChannelOwnerOrAdmin(channel, user, "update");
 
+    const name = args.name !== undefined ? args.name.trim() : undefined;
+    if (name !== undefined && (!name || name.length > 80)) {
+      throw new Error("Channel name must be between 1 and 80 characters");
+    }
+
     // Check name uniqueness for public channels only
-    if (args.name && (!channel.type || channel.type === "public")) {
+    if (name && (!channel.type || channel.type === "public")) {
       const existing = await ctx.db
         .query("channels")
         .withIndex("by_workspace_name", (q) =>
-          q.eq("workspaceId", channel.workspaceId).eq("name", args.name!),
+          q.eq("workspaceId", channel.workspaceId).eq("name", name),
         )
         .unique();
       if (existing && existing._id !== args.channelId) {
@@ -370,7 +380,8 @@ export const update = mutation({
     }
 
     const { channelId: _, ...updates } = args;
-    await ctx.db.patch(args.channelId, updates);
+    const patchData = name !== undefined ? { ...updates, name } : updates;
+    await ctx.db.patch(args.channelId, patchData);
   },
 });
 
