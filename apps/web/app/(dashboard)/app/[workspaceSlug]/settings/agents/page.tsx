@@ -9,6 +9,7 @@ import { AgentCard, AgentConfigDialog, type Agent, type AgentSaveData } from "@/
 import { AgentTokenDialog } from "@/components/bot/AgentTokenDialog";
 import { useToast } from "@/components/ui/toast-provider";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import * as Sentry from "@sentry/nextjs";
 
 export default function AgentsPage() {
   const { role } = useWorkspace();
@@ -44,7 +45,7 @@ function AgentsPageContent() {
   useEffect(() => {
     if (agents && !hasManaged && !provisioned) {
       setProvisioned(true);
-      provisionManaged({ workspaceId }).catch(() => {});
+      provisionManaged({ workspaceId }).catch((e) => Sentry.captureException(e));
     }
   }, [agents, hasManaged, provisioned, provisionManaged, workspaceId]);
 
@@ -52,7 +53,8 @@ function AgentsPageContent() {
     try {
       await updateAgent({ agentId: id, workspaceId, status });
       toast(status === "active" ? "Agent enabled" : "Agent disabled", "success");
-    } catch {
+    } catch (e) {
+      Sentry.captureException(e);
       toast("Failed to update agent", "error");
     }
   };
@@ -91,7 +93,8 @@ function AgentsPageContent() {
         });
         toast("Agent created", "success");
       }
-    } catch {
+    } catch (e) {
+      Sentry.captureException(e);
       toast("Failed to save agent", "error");
     }
   };
@@ -100,7 +103,8 @@ function AgentsPageContent() {
     try {
       const token = await generateTokenMutation({ agentId: id, workspaceId });
       setGeneratedToken(token);
-    } catch {
+    } catch (e) {
+      Sentry.captureException(e);
       toast("Failed to generate token", "error");
     }
   };
@@ -110,7 +114,8 @@ function AgentsPageContent() {
       await removeAgent({ agentId: id, workspaceId });
       setConfiguring(null);
       toast("Agent deleted", "success");
-    } catch {
+    } catch (e) {
+      Sentry.captureException(e);
       toast("Failed to delete agent", "error");
     }
   };

@@ -12,6 +12,7 @@ import {
   X,
   SlidersHorizontal,
 } from "lucide-react";
+import * as Sentry from "@sentry/nextjs";
 import { cn } from "@/lib/utils";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
@@ -174,7 +175,7 @@ function loadForceConfig(): ForceConfig {
   try {
     const raw = localStorage.getItem(FORCE_STORAGE_KEY);
     if (raw) return { ...DEFAULT_FORCES, ...JSON.parse(raw) };
-  } catch {}
+  } catch (e) { Sentry.captureException(e); }
   return DEFAULT_FORCES;
 }
 

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import localFont from "next/font/local";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import * as Sentry from "@sentry/nextjs";
 
 const geist = localFont({
   src: "./fonts/GeistVF.woff",
@@ -24,7 +25,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[GlobalError]", error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (
