@@ -114,19 +114,26 @@ export const connectIntegration = mutation({
 
     // Update integrationConfig (UI state)
     const existingConfig = workspace.integrationConfig ?? {};
-    const updatedConfig = {
-      ...existingConfig,
-      [args.provider]: {
-        connected: true,
-        ...(args.provider === "github"
-          ? { accountName: args.accountName }
-          : { orgName: args.accountName }),
-        connectedAt: Date.now(),
-      },
-    };
+    const updatedConfig = args.provider === "github"
+      ? {
+          ...existingConfig,
+          github: {
+            connected: true as const,
+            accountName: args.accountName,
+            connectedAt: Date.now(),
+          },
+        }
+      : {
+          ...existingConfig,
+          linear: {
+            connected: true as const,
+            orgName: args.accountName,
+            connectedAt: Date.now(),
+          },
+        };
 
     // Update integrations (webhook lookup) with orgId for multi-workspace routing
-    const existingIntegrations = (workspace.integrations as Record<string, unknown>) ?? {};
+    const existingIntegrations = workspace.integrations ?? {};
     const updatedIntegrations = {
       ...existingIntegrations,
       ...(args.provider === "github" && args.orgId
@@ -165,10 +172,9 @@ export const disconnectIntegration = mutation({
     if (!workspace) throw new Error("Workspace not found");
 
     const existing = workspace.integrationConfig ?? {};
-    const updated = {
-      ...existing,
-      [args.provider]: { connected: false },
-    };
+    const updated = args.provider === "github"
+      ? { ...existing, github: { connected: false as const } }
+      : { ...existing, linear: { connected: false as const } };
 
     await ctx.db.patch(args.workspaceId, { integrationConfig: updated });
   },
