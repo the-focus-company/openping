@@ -309,30 +309,134 @@ http.route({
 });
 
 // ---------------------------------------------------------------------------
-// Agent REST API
+// Shared helpers for API authentication & rate limiting
 // ---------------------------------------------------------------------------
 
-/** Extract and validate a Bearer token from the Authorization header. */
-async function authenticateAgent(
-  ctx: { runQuery: (ref: any, args: any) => Promise<any>; runMutation: (ref: any, args: any) => Promise<any> },
+type ApiCtx = {
+  runQuery: (ref: any, args: any) => Promise<any>;
+  runMutation: (ref: any, args: any) => Promise<any>;
+};
+
+type ApiCallerUser = {
+  kind: "user";
+  user: { _id: string; name: string; email: string };
+  workspaceId: string;
+  tokenId: string;
+};
+
+type ApiCallerAgent = {
+  kind: "agent";
+  agent: any;
+  user: any;
+  workspaceId: string;
+  tokenId: string;
+};
+
+type ApiCaller = ApiCallerUser | ApiCallerAgent;
+
+async function hashToken(raw: string): Promise<string> {
+  const encoded = new TextEncoder().encode(raw);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Authenticate a Bearer token as either a user API key (ping_u_*) or agent token. */
+async function authenticateApiCaller(
+  ctx: ApiCtx,
   request: Request,
-) {
+): Promise<ApiCaller | null> {
   const authHeader = request.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
 
   const rawToken = authHeader.slice(7);
-  const encoded = new TextEncoder().encode(rawToken);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
-  const tokenHash = Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  const tokenHash = await hashToken(rawToken);
+
+  if (rawToken.startsWith("ping_u_")) {
+    const result = await ctx.runQuery(internal.apiAuth.getUserByTokenHash, {
+      tokenHash,
+    });
+    if (!result) return null;
+
+    await ctx.runMutation(internal.apiAuth.touchUserToken, {
+      tokenId: result.tokenId,
+    });
+
+    return {
+      kind: "user",
+      user: result.user,
+      workspaceId: result.workspaceId,
+      tokenId: result.tokenId,
+    };
+  }
+
+  // Fall back to agent token lookup
+  const result = await ctx.runQuery(internal.agentApi.getAgentByTokenHash, {
+    tokenHash,
+  });
+  if (!result) return null;
+
+  await ctx.runMutation(internal.agentApi.touchToken, {
+    tokenId: result.tokenId,
+  });
+
+  return {
+    kind: "agent",
+    agent: result.agent,
+    user: result.user,
+    workspaceId: result.workspaceId,
+    tokenId: result.tokenId,
+  };
+}
+
+async function checkApiRateLimit(
+  ctx: ApiCtx,
+  tokenId: string,
+  isWrite: boolean,
+): Promise<Response | null> {
+  const result = await ctx.runMutation(internal.rateLimit.checkRateLimit, {
+    key: `token:${tokenId}`,
+    maxPerWindow: isWrite ? 30 : 60,
+  });
+  if (!result.allowed) {
+    const retryAfter = Math.ceil((result.resetAt - Date.now()) / 1000);
+    return new Response(
+      JSON.stringify({
+        error: "Rate limit exceeded",
+        retryAfter,
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(result.resetAt),
+          "Retry-After": String(retryAfter),
+        },
+      },
+    );
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Agent REST API
+// ---------------------------------------------------------------------------
+
+/** Extract and validate a Bearer token from the Authorization header. */
+async function authenticateAgent(ctx: ApiCtx, request: Request) {
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const rawToken = authHeader.slice(7);
+  const tokenHash = await hashToken(rawToken);
 
   const result = await ctx.runQuery(internal.agentApi.getAgentByTokenHash, {
     tokenHash,
   });
   if (!result) return null;
 
-  // Touch token last-used timestamp
   await ctx.runMutation(internal.agentApi.touchToken, {
     tokenId: result.tokenId,
   });
@@ -486,6 +590,132 @@ http.route({
   method: "GET",
   handler: httpAction(async () => {
     return jsonResponse({ status: "ok", timestamp: new Date().toISOString() });
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// User / Unified API (v1)
+// ---------------------------------------------------------------------------
+
+// GET /api/v1/me — Caller identity (user or agent)
+http.route({
+  path: "/api/v1/me",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const caller = await authenticateApiCaller(ctx, request);
+    if (!caller) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const rateLimited = await checkApiRateLimit(ctx, caller.tokenId, false);
+    if (rateLimited) return rateLimited;
+
+    if (caller.kind === "user") {
+      return jsonResponse({
+        kind: "user",
+        user: caller.user,
+        workspaceId: caller.workspaceId,
+      });
+    }
+
+    return jsonResponse({
+      kind: "agent",
+      agent: caller.agent,
+      user: caller.user,
+      workspaceId: caller.workspaceId,
+    });
+  }),
+});
+
+// GET /api/v1/keys — List caller's API keys (user tokens only)
+http.route({
+  path: "/api/v1/keys",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const caller = await authenticateApiCaller(ctx, request);
+    if (!caller) return jsonResponse({ error: "Unauthorized" }, 401);
+    if (caller.kind !== "user") {
+      return jsonResponse({ error: "Only user tokens can manage keys" }, 403);
+    }
+
+    const rateLimited = await checkApiRateLimit(ctx, caller.tokenId, false);
+    if (rateLimited) return rateLimited;
+
+    const tokens = await ctx.runQuery(internal.apiAuth.listTokens, {
+      userId: caller.user._id,
+      workspaceId: caller.workspaceId,
+    });
+
+    return jsonResponse({ keys: tokens });
+  }),
+});
+
+// POST /api/v1/keys — Generate a new API key
+http.route({
+  path: "/api/v1/keys",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const caller = await authenticateApiCaller(ctx, request);
+    if (!caller) return jsonResponse({ error: "Unauthorized" }, 401);
+    if (caller.kind !== "user") {
+      return jsonResponse({ error: "Only user tokens can manage keys" }, 403);
+    }
+
+    const rateLimited = await checkApiRateLimit(ctx, caller.tokenId, true);
+    if (rateLimited) return rateLimited;
+
+    const body = await request.json();
+    const label = body.label as string | undefined;
+
+    const rawToken = `ping_u_${crypto.randomUUID()}`;
+    const tokenHash = await hashToken(rawToken);
+    const tokenPrefix = rawToken.slice(0, 12) + "...";
+
+    const result = await ctx.runMutation(internal.apiAuth.generateToken, {
+      userId: caller.user._id,
+      workspaceId: caller.workspaceId,
+      tokenHash,
+      tokenPrefix,
+      label,
+    });
+
+    return jsonResponse({
+      token: rawToken,
+      tokenId: result.tokenId,
+      tokenPrefix,
+      label,
+    });
+  }),
+});
+
+// DELETE /api/v1/keys — Revoke a key
+http.route({
+  path: "/api/v1/keys",
+  method: "DELETE",
+  handler: httpAction(async (ctx, request) => {
+    const caller = await authenticateApiCaller(ctx, request);
+    if (!caller) return jsonResponse({ error: "Unauthorized" }, 401);
+    if (caller.kind !== "user") {
+      return jsonResponse({ error: "Only user tokens can manage keys" }, 403);
+    }
+
+    const rateLimited = await checkApiRateLimit(ctx, caller.tokenId, true);
+    if (rateLimited) return rateLimited;
+
+    const body = await request.json();
+    const keyId = body.keyId as string;
+    if (!keyId) {
+      return jsonResponse({ error: "keyId required" }, 400);
+    }
+
+    const result = await ctx.runMutation(internal.apiAuth.revokeToken, {
+      tokenId: keyId,
+      userId: caller.user._id,
+    });
+
+    if (!result.success) {
+      return jsonResponse({ error: result.error }, 400);
+    }
+
+    return jsonResponse({ success: true });
   }),
 });
 

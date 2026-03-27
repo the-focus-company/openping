@@ -13,4 +13,6 @@ crons.interval("cleanup-typing-indicators", { seconds: 30 }, internal.typing.cle
 // crons.interval("check-email-reminders", { minutes: 1 }, internal.emailAgent.checkReminders);
 // crons.interval("generate-email-summaries", { minutes: 15 }, internal.summaries.generateEmailSummaries);
 
+crons.interval("cleanup-rate-limit-counters", { hours: 1 }, internal.rateLimit.cleanupExpiredWindows);
+
 export default crons;
