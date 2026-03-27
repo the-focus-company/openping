@@ -11,6 +11,8 @@ export default authkitMiddleware({
       "/sign-out",
       "/api/webhooks(.*)",
       "/invite/(.*)",
+      "/privacy",
+      "/terms",
     ],
   },
 });

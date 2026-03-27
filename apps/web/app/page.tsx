@@ -643,6 +643,12 @@ function LandingPage() {
             >
               GitHub
             </Link>
+            <Link href="/privacy" className="text-xs text-muted-foreground hover:text-white">
+              Privacy
+            </Link>
+            <Link href="/terms" className="text-xs text-muted-foreground hover:text-white">
+              Terms
+            </Link>
             <Link href="/sign-in" className="text-xs text-muted-foreground hover:text-white">
               Sign in
             </Link>
