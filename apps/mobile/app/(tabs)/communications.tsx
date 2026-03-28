@@ -16,7 +16,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getDMDisplayName } from "@/lib/dmDisplayName";
 import { useRouter, Stack } from "expo-router";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
-import { User, Users, SlidersHorizontal } from "lucide-react-native";
+import { User, Users, SlidersHorizontal, Plus } from "lucide-react-native";
 
 type CommunicationItem = {
   id: string;
@@ -270,6 +270,14 @@ export default function CommunicationsScreen() {
             sections.every((s) => s.data.length === 0) ? styles.emptyContainer : undefined
           }
         />
+
+        {/* Floating Action Button */}
+        <Pressable
+          style={styles.fab}
+          onPress={() => router.push("/new-conversation")}
+        >
+          <Plus size={24} color="#fff" />
+        </Pressable>
       </View>
     </>
   );
@@ -351,4 +359,20 @@ const styles = StyleSheet.create({
   emptyText: { color: "#888", fontSize: 16, marginBottom: 4 },
   emptySubtext: { color: "#666", fontSize: 14 },
   emptyContainer: { flex: 1 },
+  fab: {
+    position: "absolute" as const,
+    bottom: 20,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#7c3aed",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
 });

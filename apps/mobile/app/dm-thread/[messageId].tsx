@@ -97,6 +97,9 @@ export default function DMThreadScreen() {
                 })
               }
             />
+            {(thread.parent as any).attachments && (thread.parent as any).attachments.length > 0 && (
+              <CollapsibleAttachments attachments={(thread.parent as any).attachments} />
+            )}
             <View style={styles.divider}>
               <Text style={styles.dividerText}>
                 {thread.replies.length}{" "}
