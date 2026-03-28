@@ -114,15 +114,12 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBarWrap: {
-    backgroundColor: "#111",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#333",
+    backgroundColor: "transparent",
     paddingBottom: 20,
   },
   searchContainer: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingBottom: 6,
   },
   searchInputWrap: {
     flexDirection: "row",
@@ -142,6 +139,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     paddingVertical: 8,
+    backgroundColor: "#111",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#333",
   },
   tabItem: {
     flex: 1,
