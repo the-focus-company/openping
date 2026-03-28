@@ -1,0 +1,11 @@
+# Default owners for everything
+* @rafalw @alfaro-konrad
+
+# Backend
+convex/ @rafalw @alfaro-konrad
+
+# Mobile
+apps/mobile/ @rafalw
+
+# Infra
+.github/ @rafalw

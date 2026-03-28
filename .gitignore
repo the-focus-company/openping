@@ -25,6 +25,7 @@ convex/_generated/
 .agent/
 .agents/
 .augment/
+.cursor/
 .goose/
 .junie/
 .kilocode/
