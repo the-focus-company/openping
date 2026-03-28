@@ -41,7 +41,7 @@ export default function TabLayout() {
         headerTintColor: "#fff",
       }}
       tabBar={(props: any) => (
-        <View style={styles.tabBarWrap}>
+        <View>
           <FloatingSearchBar />
           <View style={styles.tabBarInner}>
             {props.state.routes
@@ -113,10 +113,6 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  tabBarWrap: {
-    backgroundColor: "transparent",
-    paddingBottom: 20,
-  },
   searchContainer: {
     paddingHorizontal: 16,
     paddingBottom: 6,
@@ -138,7 +134,8 @@ const styles = StyleSheet.create({
   tabBarInner: {
     flexDirection: "row",
     justifyContent: "space-around",
-    paddingVertical: 8,
+    paddingTop: 8,
+    paddingBottom: 24,
     backgroundColor: "#111",
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#333",
