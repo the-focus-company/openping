@@ -30,8 +30,6 @@ export default function TabLayout() {
             backgroundColor: "#111",
           },
           headerTintColor: "#fff",
-          // Extra padding at bottom of content for the floating search
-          sceneStyle: { paddingBottom: 50 },
         }}
       >
         <Tabs.Screen
@@ -93,7 +91,7 @@ const styles = StyleSheet.create({
   searchInputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#222",
+    backgroundColor: "rgba(34,34,34,0.95)",
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 10,
