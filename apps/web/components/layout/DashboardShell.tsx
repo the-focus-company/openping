@@ -14,7 +14,7 @@ import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
 import { ThemeToggle } from "./ThemeToggle";
 import { PanelLeftOpen } from "lucide-react";
-import { SIDEBAR_WIDTH_DEFAULT, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX, TOPBAR_HEIGHT, THREAD_PANEL_WIDTH } from "@/lib/constants";
+import { SIDEBAR_WIDTH_DEFAULT, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX, TOPBAR_HEIGHT, THREAD_PANEL_WIDTH_DEFAULT, THREAD_PANEL_WIDTH_MIN, THREAD_PANEL_WIDTH_MAX } from "@/lib/constants";
 import { usePresenceHeartbeat } from "@/hooks/usePresenceHeartbeat";
 import { ThreadPanelProvider, useThreadPanel } from "@/hooks/useThreadPanel";
 import { SidebarContext } from "@/hooks/useSidebar";
@@ -35,6 +35,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const isResizingRef = useRef(false);
+  const [threadPanelWidth, setThreadPanelWidth] = useState(THREAD_PANEL_WIDTH_DEFAULT);
+  const isResizingThreadRef = useRef(false);
   const router = useRouter();
   const pathname = usePathname();
   const pendingKeyRef = useRef<string | null>(null);
@@ -54,6 +56,45 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const markChannelRead = useMutation(api.channels.markRead);
   const markDMRead = useMutation(api.directConversations.markRead);
   const { toast } = useToast();
+  const startChannelMeeting = useMutation(api.meetings.startInChannel);
+  const startDMMeeting = useMutation(api.meetings.startInDM);
+  const activeMeetingForChannel = useQuery(
+    api.meetings.getActiveMeeting,
+    isAuthenticated && pathname.match(/\/channel\/([^/]+)$/)
+      ? { channelId: pathname.match(/\/channel\/([^/]+)$/)?.[1] as Id<"channels"> }
+      : "skip",
+  );
+  const activeMeetingForDM = useQuery(
+    api.meetings.getActiveMeeting,
+    isAuthenticated && pathname.match(/\/dm\/([^/]+)$/)
+      ? { conversationId: pathname.match(/\/dm\/([^/]+)$/)?.[1] as Id<"directConversations"> }
+      : "skip",
+  );
+
+  const handleStartMeeting = useCallback(async () => {
+    const channelMatch = pathname.match(/\/channel\/([^/]+)$/);
+    const dmMatch = pathname.match(/\/dm\/([^/]+)$/);
+
+    if (channelMatch) {
+      const channelId = channelMatch[1] as Id<"channels">;
+      if (activeMeetingForChannel) {
+        window.open(activeMeetingForChannel.meetingUrl, "_blank");
+      } else {
+        const result = await startChannelMeeting({ channelId });
+        window.open(result.meetingUrl, "_blank");
+      }
+    } else if (dmMatch) {
+      const conversationId = dmMatch[1] as Id<"directConversations">;
+      if (activeMeetingForDM) {
+        window.open(activeMeetingForDM.meetingUrl, "_blank");
+      } else {
+        const result = await startDMMeeting({ conversationId });
+        window.open(result.meetingUrl, "_blank");
+      }
+    } else {
+      toast("Navigate to a channel or DM to start a meeting");
+    }
+  }, [pathname, activeMeetingForChannel, activeMeetingForDM, startChannelMeeting, startDMMeeting, toast]);
 
   // Ordered list of navigable sidebar items for Alt+Arrow shortcuts
   const navItems = useMemo(() => {
@@ -131,6 +172,32 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     document.addEventListener("mouseup", onMouseUp);
   }, [sidebarWidth]);
 
+  const handleThreadResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizingThreadRef.current = true;
+    const startX = e.clientX;
+    const startWidth = threadPanelWidth;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const onMouseMove = (ev: MouseEvent) => {
+      const maxWidth = Math.min(THREAD_PANEL_WIDTH_MAX, window.innerWidth * 0.5);
+      const newWidth = Math.min(maxWidth, Math.max(THREAD_PANEL_WIDTH_MIN, startWidth - (ev.clientX - startX)));
+      setThreadPanelWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      isResizingThreadRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }, [threadPanelWidth]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // ⌘B — toggle sidebar (skip if focus is in a rich text editor)
@@ -145,6 +212,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setCmdOpen(true);
+        return;
+      }
+      // ⌘⇧M — start meeting
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        handleStartMeeting();
         return;
       }
 
@@ -230,7 +303,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       window.removeEventListener("keydown", handleKeyDown);
       clearChord();
     };
-  }, [toggleSidebar, clearChord, router, workspacePrefix, pathname, navItems, channels, markChannelRead, markDMRead, toast]);
+  }, [toggleSidebar, clearChord, router, workspacePrefix, pathname, navItems, channels, markChannelRead, markDMRead, toast, handleStartMeeting]);
 
   return (
     <SidebarContext.Provider value={{ sidebarOpen, setSidebarOpen }}>
@@ -307,7 +380,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             {/* Main content + Thread panel */}
             <div className="flex min-w-0 flex-1 overflow-hidden">
               <main id="main-content" className="min-w-0 flex-1 overflow-y-auto">{children}</main>
-              <ThreadPanelSlot />
+              <ThreadPanelSlot
+                threadPanelWidth={threadPanelWidth}
+                setThreadPanelWidth={setThreadPanelWidth}
+                handleThreadResizeStart={handleThreadResizeStart}
+              />
             </div>
           </div>
 
@@ -328,6 +405,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             open={cmdOpen}
             onOpenChange={setCmdOpen}
             onToggleSidebar={toggleSidebar}
+            onStartMeeting={handleStartMeeting}
           />
           <KeyboardShortcutsDialog
             open={shortcutsOpen}
@@ -340,7 +418,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   );
 }
 
-function ThreadPanelSlot() {
+function ThreadPanelSlot({
+  threadPanelWidth,
+  setThreadPanelWidth,
+  handleThreadResizeStart,
+}: {
+  threadPanelWidth: number;
+  setThreadPanelWidth: (w: number) => void;
+  handleThreadResizeStart: (e: React.MouseEvent) => void;
+}) {
   const { openThread, closeThreadPanel } = useThreadPanel();
   const workspaceCtxValue = useMemo(() => {
     if (!openThread?.workspaceId) return null;
@@ -408,20 +494,28 @@ function ThreadPanelSlot() {
       <motion.div
         key="thread-desktop"
         initial={{ width: 0 }}
-        animate={{ width: THREAD_PANEL_WIDTH }}
+        animate={{ width: threadPanelWidth }}
         exit={{ width: 0 }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="hidden h-full overflow-hidden border-l border-subtle md:block"
+        className="hidden h-full overflow-hidden md:flex"
       >
-        <div className="h-full" style={{ width: THREAD_PANEL_WIDTH }}>
-          <ThreadPanel
-            parentMessageId={openThread.parentMessageId}
-            messageTable={openThread.messageTable}
-            channelId={openThread.channelId}
-            conversationId={openThread.conversationId}
-            contextName={openThread.contextName}
-            onClose={closeThreadPanel}
-          />
+        {/* Resize handle (left edge of thread panel) */}
+        <div
+          className="shrink-0 w-0 cursor-col-resize flex items-center justify-center relative z-10 after:absolute after:inset-y-0 after:-right-1 after:w-2 after:transition-colors hover:after:bg-ping-purple/20 active:after:bg-ping-purple/30"
+          onMouseDown={handleThreadResizeStart}
+          onDoubleClick={() => setThreadPanelWidth(THREAD_PANEL_WIDTH_DEFAULT)}
+        />
+        <div className="h-full flex-1 overflow-hidden border-l border-subtle">
+          <div className="h-full" style={{ width: threadPanelWidth }}>
+            <ThreadPanel
+              parentMessageId={openThread.parentMessageId}
+              messageTable={openThread.messageTable}
+              channelId={openThread.channelId}
+              conversationId={openThread.conversationId}
+              contextName={openThread.contextName}
+              onClose={closeThreadPanel}
+            />
+          </div>
         </div>
       </motion.div>
     </>

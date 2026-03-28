@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { attachmentValidator } from "./files";
 
 export default defineSchema({
   users: defineTable({
@@ -144,6 +145,8 @@ export default defineSchema({
     threadLastReplyAt: v.optional(v.number()),
     threadLastReplyAuthorId: v.optional(v.id("users")),
     threadParticipantIds: v.optional(v.array(v.id("users"))),
+    attachments: v.optional(v.array(attachmentValidator)),
+    meetingId: v.optional(v.id("meetings")),
   })
     .index("by_channel", ["channelId"])
     .index("by_author", ["authorId"])
@@ -326,6 +329,7 @@ export default defineSchema({
     userId: v.id("users"),
     isAgent: v.boolean(),
     lastReadAt: v.optional(v.number()),
+    isStarred: v.optional(v.boolean()),
   })
     .index("by_conversation", ["conversationId"])
     .index("by_user", ["userId"])
@@ -345,6 +349,8 @@ export default defineSchema({
     threadLastReplyAt: v.optional(v.number()),
     threadLastReplyAuthorId: v.optional(v.id("users")),
     threadParticipantIds: v.optional(v.array(v.id("users"))),
+    attachments: v.optional(v.array(attachmentValidator)),
+    meetingId: v.optional(v.id("meetings")),
   })
     .index("by_conversation", ["conversationId"])
     .index("by_author", ["authorId"])
@@ -638,4 +644,79 @@ export default defineSchema({
     promotedToConversationId: v.optional(v.id("directConversations")),
   })
     .index("by_user", ["userId"]),
+
+  // Sidebar layout tables (per-user, per-workspace)
+  sidebarSections: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    name: v.string(),
+    sortOrder: v.number(),
+    isCollapsed: v.boolean(),
+    isDefault: v.boolean(),
+    sortMode: v.optional(
+      v.union(
+        v.literal("alphabetical"),
+        v.literal("recent"),
+        v.literal("custom"),
+      ),
+    ),
+  })
+    .index("by_user_workspace", ["userId", "workspaceId"]),
+
+  sidebarItems: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    sectionId: v.id("sidebarSections"),
+    channelId: v.optional(v.id("channels")),
+    conversationId: v.optional(v.id("directConversations")),
+    sortOrder: v.number(),
+  })
+    .index("by_user_workspace", ["userId", "workspaceId"])
+    .index("by_section", ["sectionId"])
+    .index("by_user_channel", ["userId", "channelId"])
+    .index("by_user_conversation", ["userId", "conversationId"]),
+
+  sidebarPreferences: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    sortMode: v.union(
+      v.literal("alphabetical"),
+      v.literal("recent"),
+      v.literal("custom"),
+    ),
+  })
+    .index("by_user_workspace", ["userId", "workspaceId"]),
+
+  meetings: defineTable({
+    workspaceId: v.id("workspaces"),
+    channelId: v.optional(v.id("channels")),
+    conversationId: v.optional(v.id("directConversations")),
+    threadMessageId: v.optional(v.id("messages")),
+    threadDmMessageId: v.optional(v.id("directMessages")),
+    title: v.string(),
+    provider: v.union(
+      v.literal("jitsi"),
+      v.literal("google_meet"),
+      v.literal("zoom"),
+    ),
+    meetingUrl: v.string(),
+    externalMeetingId: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("ended")),
+    startedBy: v.id("users"),
+    startedAt: v.number(),
+    endedAt: v.optional(v.number()),
+    messageId: v.optional(v.id("messages")),
+    dmMessageId: v.optional(v.id("directMessages")),
+    participants: v.optional(
+      v.array(
+        v.object({
+          userId: v.id("users"),
+          joinedAt: v.number(),
+        }),
+      ),
+    ),
+  })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_channel_status", ["channelId", "status"])
+    .index("by_conversation_status", ["conversationId", "status"]),
 });

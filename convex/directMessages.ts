@@ -64,6 +64,52 @@ export const list = query({
             .map((u) => ({ _id: u._id, name: u.name, avatarUrl: u.avatarUrl }));
         }
 
+        // Resolve meeting data
+        let meeting: {
+          _id: string;
+          title: string;
+          provider: string;
+          meetingUrl: string;
+          status: string;
+          startedBy: { name: string; avatarUrl?: string | null };
+          startedAt: number;
+          endedAt?: number;
+          participants: Array<{
+            userId: string;
+            name: string;
+            avatarUrl?: string | null;
+            joinedAt: number;
+          }>;
+        } | undefined;
+        if (message.meetingId) {
+          const m = await ctx.db.get(message.meetingId);
+          if (m) {
+            const starter = await ctx.db.get(m.startedBy);
+            const participants = await Promise.all(
+              (m.participants ?? []).map(async (p) => {
+                const u = await ctx.db.get(p.userId);
+                return {
+                  userId: p.userId as string,
+                  name: u?.name ?? "Unknown",
+                  avatarUrl: u?.avatarUrl,
+                  joinedAt: p.joinedAt,
+                };
+              }),
+            );
+            meeting = {
+              _id: m._id,
+              title: m.title,
+              provider: m.provider,
+              meetingUrl: m.meetingUrl,
+              status: m.status,
+              startedBy: { name: starter?.name ?? "Unknown", avatarUrl: starter?.avatarUrl },
+              startedAt: m.startedAt,
+              endedAt: m.endedAt,
+              participants,
+            };
+          }
+        }
+
         return {
           ...message,
           author: author
@@ -71,6 +117,7 @@ export const list = query({
             : null,
           isAgent: memberRecord?.isAgent ?? false,
           threadParticipants,
+          meeting,
         };
       }),
     );

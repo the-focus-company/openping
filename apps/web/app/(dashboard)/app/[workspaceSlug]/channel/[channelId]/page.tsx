@@ -7,8 +7,11 @@ import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { MessageList, type Message } from "@/components/channel/MessageList";
 import { ChannelTopBar } from "@/components/channel/ChannelTopBar";
+import { ChannelTopBarSkeleton } from "@/components/channel/ChannelSkeleton";
 import { AlertBanner } from "@/components/proactive/AlertBanner";
 import { UserProfileDialog } from "@/components/user/UserProfileDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Archive } from "lucide-react";
 import { useChannelTyping } from "@/hooks/useTyping";
 import { useThreadPanel } from "@/hooks/useThreadPanel";
 import { useReactions } from "@/hooks/useReactions";
@@ -52,13 +55,21 @@ export default function ChannelPage({ params }: Props) {
   const alerts = useQuery(api.inboxItems.list, isAuthenticated ? {} : "skip");
   const dismissAlert = useMutation(api.inboxItems.archive);
   const leaveChannel = useMutation(api.channels.leave);
+  const archiveChannel = useMutation(api.channels.archive);
+  const unarchiveChannel = useMutation(api.channels.unarchive);
   const toggleStar = useMutation(api.channels.toggleStar);
+  const startMeeting = useMutation(api.meetings.startInChannel);
+  const joinMeetingMut = useMutation(api.meetings.joinMeeting);
+  const endMeetingMut = useMutation(api.meetings.endMeeting);
+  const activeMeeting = useQuery(api.meetings.getActiveMeeting, isAuthenticated ? { channelId: typedChannelId } : "skip");
   const { typingUsers, onTyping, onSendClear } = useChannelTyping(typedChannelId, isMember);
   const { openThreadPanel, closeThreadPanel } = useThreadPanel();
   const currentUser = useQuery(api.users.getMe, isAuthenticated ? {} : "skip");
   const { toast } = useToast();
   const router = useRouter();
-  const { buildPath, workspaceId } = useWorkspace();
+  const { buildPath, workspaceId, role: workspaceRole } = useWorkspace();
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || !isMember) return;
@@ -81,6 +92,17 @@ export default function ChannelPage({ params }: Props) {
     router.push(buildPath("/channels"));
   }, [leaveChannel, typedChannelId, toast, router, buildPath]);
 
+  const handleArchive = useCallback(async () => {
+    await archiveChannel({ channelId: typedChannelId, workspaceId });
+    toast("Channel archived", "success");
+    router.push(buildPath("/channels"));
+  }, [archiveChannel, typedChannelId, workspaceId, toast, router, buildPath]);
+
+  const handleUnarchive = useCallback(async () => {
+    await unarchiveChannel({ channelId: typedChannelId, workspaceId });
+    toast("Channel unarchived", "success");
+  }, [unarchiveChannel, typedChannelId, workspaceId, toast]);
+
   const handleToggleStar = useCallback(() => {
     toggleStar({ channelId: typedChannelId });
   }, [toggleStar, typedChannelId]);
@@ -89,10 +111,11 @@ export default function ChannelPage({ params }: Props) {
     if (!results) return [];
     return [...results].reverse().map((msg) => ({
       id: msg._id,
-      type: msg.type === "bot" ? ("bot" as const) : ("user" as const),
+      type: msg.type === "system" ? ("system" as const) : msg.type === "bot" ? ("bot" as const) : ("user" as const),
       authorId: msg.authorId,
       author: msg.author?.name ?? "Unknown",
       authorInitials: getInitials(msg.author?.name ?? "?"),
+      authorAvatarUrl: msg.author?.avatarUrl,
       content: msg.body,
       timestamp: new Date(msg._creationTime),
       citations: msg.citations?.map((c) => ({
@@ -111,6 +134,9 @@ export default function ChannelPage({ params }: Props) {
       integrationHistory: msg.integrationHistory as Array<{ body: string; timestamp: number }> | undefined,
       integrationObject: msg.integrationObject,
       messageType: msg.type,
+      attachments: msg.attachments as Array<{ storageId: string; filename: string; mimeType: string; size: number }> | undefined,
+      meetingId: msg.meetingId,
+      meeting: msg.meeting,
     }));
   }, [results]);
 
@@ -123,8 +149,15 @@ export default function ChannelPage({ params }: Props) {
     enabled: isAuthenticated,
   });
 
-  const handleSend = (content: string) => {
-    sendMessage({ channelId: typedChannelId, body: content });
+  const handleSend = (
+    content: string,
+    attachments?: Array<{ storageId: string; filename: string; mimeType: string; size: number }>,
+  ) => {
+    sendMessage({
+      channelId: typedChannelId,
+      body: content,
+      ...(attachments ? { attachments } : {}),
+    });
     onSendClear();
   };
 
@@ -171,9 +204,37 @@ export default function ChannelPage({ params }: Props) {
     }
   }, [channelMembers]);
 
+  const handleStartMeeting = useCallback(async () => {
+    if (activeMeeting) {
+      // Join existing meeting
+      await joinMeetingMut({ meetingId: activeMeeting._id as Id<"meetings"> });
+      window.open(activeMeeting.meetingUrl, "_blank");
+    } else {
+      const result = await startMeeting({ channelId: typedChannelId });
+      window.open(result.meetingUrl, "_blank");
+    }
+  }, [activeMeeting, joinMeetingMut, startMeeting, typedChannelId]);
+
+  const handleJoinMeeting = useCallback(async (meetingId: string, meetingUrl: string) => {
+    await joinMeetingMut({ meetingId: meetingId as Id<"meetings"> });
+    window.open(meetingUrl, "_blank");
+  }, [joinMeetingMut]);
+
+  const handleEndMeeting = useCallback(async (meetingId: string) => {
+    await endMeetingMut({ meetingId: meetingId as Id<"meetings"> });
+  }, [endMeetingMut]);
+
+  const handleCopyMessageLink = useCallback((messageId: string) => {
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.searchParams.set("msg", messageId);
+    navigator.clipboard.writeText(url.toString());
+    toast("Link copied", "success");
+  }, [toast]);
+
   return (
     <div className="relative flex h-full flex-col">
-      {channel && channelMembers && (
+      {channel && channelMembers ? (
         <ChannelTopBar
           name={channel.name}
           description={channel.description}
@@ -181,15 +242,24 @@ export default function ChannelPage({ params }: Props) {
           memberCount={memberCount ?? channelMembers.length}
           isStarred={channel.isStarred ?? false}
           isPrivate={channel.isPrivate ?? false}
+          isArchived={channel.isArchived ?? false}
+          isDefault={channel.isDefault ?? false}
+          isOwnerOrAdmin={channel.createdBy === currentUser?._id || workspaceRole === "admin"}
           onToggleStar={handleToggleStar}
           onCopyLink={handleCopyLink}
-          onLeave={handleLeave}
+          onLeave={() => setLeaveDialogOpen(true)}
+          onArchive={() => setArchiveDialogOpen(true)}
+          onUnarchive={handleUnarchive}
+          onStartMeeting={isMember ? handleStartMeeting : undefined}
+          hasActiveMeeting={!!activeMeeting}
         />
+      ) : (
+        <ChannelTopBarSkeleton />
       )}
       <MessageList
         channelName={channel?.name ?? channelId}
         messages={messages}
-        onSend={isMember ? handleSend : undefined}
+        onSend={isMember && !channel?.isArchived ? handleSend : undefined}
         isLoading={results === undefined}
         typingUsers={typingUsers}
         onTyping={isMember ? onTyping : undefined}
@@ -202,6 +272,9 @@ export default function ChannelPage({ params }: Props) {
         onClickAuthor={handleClickAuthor}
         onClickMention={handleClickMention}
         highlightMessageId={highlightMessageId}
+        onCopyMessageLink={handleCopyMessageLink}
+        onJoinMeeting={isMember ? handleJoinMeeting : undefined}
+        onEndMeeting={isMember ? handleEndMeeting : undefined}
       />
 
       {!isMember && channel && (
@@ -231,11 +304,84 @@ export default function ChannelPage({ params }: Props) {
         />
       )}
 
+      {channel?.isArchived && (
+        <div className="flex items-center justify-center gap-3 border-t border-subtle bg-surface-2 px-6 py-3">
+          <Archive className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">This channel has been archived</span>
+          {(channel.createdBy === currentUser?._id || workspaceRole === "admin") && (
+            <button
+              onClick={handleUnarchive}
+              className="rounded-md bg-ping-purple px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-ping-purple/90"
+            >
+              Unarchive
+            </button>
+          )}
+        </div>
+      )}
+
       <UserProfileDialog
         userId={profileUserId}
         open={profileUserId !== null}
         onOpenChange={(open) => { if (!open) setProfileUserId(null); }}
       />
+
+      {/* Leave confirmation dialog */}
+      <Dialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Leave channel</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to leave #{channel?.name}? You can rejoin anytime.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setLeaveDialogOpen(false)}
+              className="rounded border border-subtle px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-surface-3"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                handleLeave();
+                setLeaveDialogOpen(false);
+              }}
+              className="rounded bg-status-danger px-3 py-1.5 text-sm text-white transition-colors hover:bg-status-danger/90"
+            >
+              Leave
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive confirmation dialog */}
+      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Archive channel</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to archive #{channel?.name}? Messages will remain readable but no one can send new ones.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setArchiveDialogOpen(false)}
+              className="rounded border border-subtle px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-surface-3"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                handleArchive();
+                setArchiveDialogOpen(false);
+              }}
+              className="rounded bg-status-danger px-3 py-1.5 text-sm text-white transition-colors hover:bg-status-danger/90"
+            >
+              Archive
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

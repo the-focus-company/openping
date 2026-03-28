@@ -39,14 +39,18 @@ export function GroupChatHeader({ name, members }: GroupChatHeaderProps) {
             key={m.userId}
             title={m.name}
             className={cn(
-              "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-background text-2xs font-medium",
+              "relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-background text-2xs font-medium overflow-hidden",
               m.isAgent
                 ? "bg-ping-purple/20 text-ping-purple"
                 : "bg-surface-3 text-foreground",
               i > 0 && "-ml-2",
             )}
           >
-            {getInitials(m.name)}
+            {m.avatarUrl ? (
+              <img src={m.avatarUrl} alt={m.name} className="h-full w-full object-cover" />
+            ) : (
+              getInitials(m.name)
+            )}
           </div>
         ))}
         {overflow > 0 && (
@@ -76,13 +80,17 @@ export function GroupChatHeader({ name, members }: GroupChatHeaderProps) {
               <div key={m.userId} className="flex items-center gap-2 px-3 py-1.5">
                 <div
                   className={cn(
-                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs font-medium",
+                    "relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs font-medium overflow-hidden",
                     m.isAgent
                       ? "bg-ping-purple/20 text-ping-purple"
                       : "bg-surface-3 text-foreground",
                   )}
                 >
-                  {getInitials(m.name)}
+                  {m.avatarUrl ? (
+                    <img src={m.avatarUrl} alt={m.name} className="h-full w-full object-cover" />
+                  ) : (
+                    getInitials(m.name)
+                  )}
                 </div>
                 <span className="truncate text-xs text-foreground">{m.name}</span>
                 {m.isAgent && (

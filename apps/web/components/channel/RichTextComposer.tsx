@@ -1,275 +1,16 @@
 "use client";
 
-import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
-import {
-  Bold,
-  Italic,
-  Strikethrough,
-  Code,
-  CodeSquare,
-  List,
-  ListOrdered,
-  Quote,
-  Link as LinkIcon,
-  Send,
-  AtSign,
-  Paperclip,
-  Smile,
-} from "lucide-react";
-import { EmojiPickerPopover } from "@/components/channel/MessageReactions";
+import { Send } from "lucide-react";
 import { MentionPopover, type MentionUser } from "@/components/channel/MentionPopover";
-import TurndownService from "turndown";
+import { AttachmentPreview, type PendingAttachment } from "@/components/channel/FileUpload";
 import { cn } from "@/lib/utils";
-
-const turndown = new TurndownService({
-  headingStyle: "atx",
-  codeBlockStyle: "fenced",
-  bulletListMarker: "-",
-});
-
-turndown.addRule("strikethrough", {
-  filter: ["del", "s"],
-  replacement: (content) => `~~${content}~~`,
-});
-
-function htmlToMarkdown(html: string): string {
-  if (!html || html === "<p></p>") return "";
-  return turndown.turndown(html).trim();
-}
-
-function markdownToHtml(markdown: string): string {
-  if (!markdown) return "";
-  let html = markdown
-    .replace(/```(\w*)\n([\s\S]*?)```/g, (_m, lang, code) => {
-      return `<pre><code class="language-${lang}">${code.trimEnd()}</code></pre>`;
-    })
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<em>$1</em>")
-    .replace(/~~(.+?)~~/g, "<del>$1</del>")
-    .replace(/^>\s?(.+)$/gm, "<blockquote><p>$1</p></blockquote>")
-    .replace(/^[-*]\s+(.+)$/gm, "<li>$1</li>")
-    .replace(/^\d+\.\s+(.+)$/gm, "<li>$1</li>")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    .split("\n\n")
-    .map((block) => {
-      if (
-        block.startsWith("<pre>") ||
-        block.startsWith("<blockquote>") ||
-        block.startsWith("<li>")
-      ) {
-        return block;
-      }
-      return `<p>${block.replace(/\n/g, "<br>")}</p>`;
-    })
-    .join("");
-
-  html = html.replace(/(<li>.*?<\/li>)+/g, (match) => `<ul>${match}</ul>`);
-  return html;
-}
-
-interface ToolbarButtonProps {
-  onClick: () => void;
-  isActive?: boolean;
-  disabled?: boolean;
-  title: string;
-  children: React.ReactNode;
-}
-
-function ToolbarButton({ onClick, isActive, disabled, title, children }: ToolbarButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      aria-label={title}
-      aria-pressed={isActive}
-      data-toolbar-item
-      tabIndex={-1}
-      className={cn(
-        "rounded p-1 transition-colors",
-        isActive
-          ? "bg-foreground/10 text-foreground"
-          : "text-muted-foreground hover:bg-surface-3 hover:text-foreground",
-        disabled && "cursor-not-allowed opacity-30"
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function ComposerBar({
-  editor,
-  showActions,
-  onTriggerMention,
-}: {
-  editor: Editor;
-  showActions: boolean;
-  onTriggerMention: () => void;
-}) {
-  const setLink = useCallback(() => {
-    const previousUrl = editor.getAttributes("link").href;
-    const url = window.prompt("URL", previousUrl);
-    if (url === null) return;
-    if (url === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
-      return;
-    }
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
-  }, [editor]);
-
-  const handleEmojiSelect = useCallback(
-    (emoji: string) => {
-      editor.commands.insertContent(emoji);
-      editor.commands.focus();
-    },
-    [editor]
-  );
-
-  const toolbarRef = useCallback((node: HTMLDivElement | null) => {
-    if (!node) return;
-    const first = node.querySelector<HTMLElement>("[data-toolbar-item]:not(:disabled)");
-    if (first) first.tabIndex = 0;
-  }, []);
-
-  const handleToolbarKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight" && e.key !== "Home" && e.key !== "End") return;
-    const toolbar = e.currentTarget;
-    const items = Array.from(toolbar.querySelectorAll<HTMLElement>("[data-toolbar-item]:not(:disabled)"));
-    if (items.length === 0) return;
-    const idx = items.indexOf(e.target as HTMLElement);
-    if (idx === -1) return;
-    let next: number;
-    if (e.key === "Home") next = 0;
-    else if (e.key === "End") next = items.length - 1;
-    else if (e.key === "ArrowRight") next = idx < items.length - 1 ? idx + 1 : 0;
-    else next = idx > 0 ? idx - 1 : items.length - 1;
-    e.preventDefault();
-    items.forEach((el, i) => { el.tabIndex = i === next ? 0 : -1; });
-    items[next].focus();
-  }, []);
-
-  return (
-    <div
-      ref={toolbarRef}
-      role="toolbar"
-      aria-label="Formatting"
-      className="flex items-center gap-0.5"
-      onKeyDown={handleToolbarKeyDown}
-    >
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        isActive={editor.isActive("bold")}
-        title="Bold (⌘B)"
-      >
-        <Bold className="h-3.5 w-3.5" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        isActive={editor.isActive("italic")}
-        title="Italic (⌘I)"
-      >
-        <Italic className="h-3.5 w-3.5" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-        isActive={editor.isActive("strike")}
-        title="Strikethrough (⌘⇧X)"
-      >
-        <Strikethrough className="h-3.5 w-3.5" />
-      </ToolbarButton>
-
-      <div className="mx-1 h-4 w-px bg-foreground/10" />
-
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleCode().run()}
-        isActive={editor.isActive("code")}
-        title="Inline code (⌘E)"
-      >
-        <Code className="h-3.5 w-3.5" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        isActive={editor.isActive("codeBlock")}
-        title="Code block"
-      >
-        <CodeSquare className="h-3.5 w-3.5" />
-      </ToolbarButton>
-
-      <div className="mx-1 h-4 w-px bg-foreground/10" />
-
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        isActive={editor.isActive("bulletList")}
-        title="Bullet list"
-      >
-        <List className="h-3.5 w-3.5" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        isActive={editor.isActive("orderedList")}
-        title="Numbered list"
-      >
-        <ListOrdered className="h-3.5 w-3.5" />
-      </ToolbarButton>
-
-      <div className="mx-1 h-4 w-px bg-foreground/10" />
-
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        isActive={editor.isActive("blockquote")}
-        title="Quote"
-      >
-        <Quote className="h-3.5 w-3.5" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={setLink}
-        isActive={editor.isActive("link")}
-        title="Link"
-      >
-        <LinkIcon className="h-3.5 w-3.5" />
-      </ToolbarButton>
-
-      {showActions && (
-        <>
-          <div className="mx-1 h-4 w-px bg-foreground/10" />
-
-          <ToolbarButton
-            onClick={onTriggerMention}
-            title="Mention (@)"
-          >
-            <AtSign className="h-3.5 w-3.5" />
-          </ToolbarButton>
-          <EmojiPickerPopover onSelect={handleEmojiSelect}>
-            <button
-              type="button"
-              data-toolbar-item
-              tabIndex={-1}
-              aria-label="Emoji"
-              className="rounded p-1 text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
-              title="Emoji"
-            >
-              <Smile className="h-3.5 w-3.5" />
-            </button>
-          </EmojiPickerPopover>
-          <ToolbarButton
-            onClick={() => {}}
-            disabled
-            title="File attachments coming soon"
-          >
-            <Paperclip className="h-3.5 w-3.5" />
-          </ToolbarButton>
-        </>
-      )}
-    </div>
-  );
-}
+import { htmlToMarkdown, markdownToHtml } from "./markdown-utils";
+import { ComposerBar } from "./ComposerBar";
 
 export interface RichTextComposerHandle {
   focus: () => void;
@@ -292,6 +33,9 @@ interface RichTextComposerProps {
   onSave?: (markdown: string) => void;
   autoFocus?: boolean;
   className?: string;
+  onAttachFile?: () => void;
+  pendingAttachments?: PendingAttachment[];
+  onRemoveAttachment?: (id: string) => void;
 }
 
 export const RichTextComposer = forwardRef<RichTextComposerHandle, RichTextComposerProps>(
@@ -308,6 +52,9 @@ export const RichTextComposer = forwardRef<RichTextComposerHandle, RichTextCompo
       onSave,
       autoFocus = false,
       className,
+      onAttachFile,
+      pendingAttachments,
+      onRemoveAttachment,
     },
     ref
   ) {
@@ -507,6 +254,18 @@ export const RichTextComposer = forwardRef<RichTextComposerHandle, RichTextCompo
           <EditorContent editor={editor} />
         </div>
 
+        {pendingAttachments && pendingAttachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 border-t border-subtle px-3 py-2">
+            {pendingAttachments.map((att) => (
+              <AttachmentPreview
+                key={att.id}
+                attachment={att}
+                onRemove={() => onRemoveAttachment?.(att.id)}
+              />
+            ))}
+          </div>
+        )}
+
         {editor && (
           <div className="flex items-center justify-between border-t border-subtle px-1 py-1">
             {showToolbar ? (
@@ -514,6 +273,7 @@ export const RichTextComposer = forwardRef<RichTextComposerHandle, RichTextCompo
                 editor={editor}
                 showActions={showActions}
                 onTriggerMention={triggerMention}
+                onAttachFile={onAttachFile}
               />
             ) : (
               <div />

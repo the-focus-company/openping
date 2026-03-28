@@ -77,6 +77,7 @@ export const list = query({
           unreadCount,
           lastMessage: lastMessagePreview,
           myLastReadAt: membership.lastReadAt,
+          isStarred: membership.isStarred ?? false,
         };
       }),
     );
@@ -336,6 +337,26 @@ export const unarchive = mutation({
       isArchived: false,
       archivedAt: undefined,
     });
+  },
+});
+
+export const toggleStar = mutation({
+  args: { conversationId: v.id("directConversations") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const membership = await ctx.db
+      .query("directConversationMembers")
+      .withIndex("by_conversation_user", (q) =>
+        q
+          .eq("conversationId", args.conversationId)
+          .eq("userId", user._id),
+      )
+      .first();
+    if (!membership) throw new Error("Not a member of this conversation");
+    await ctx.db.patch(membership._id, {
+      isStarred: !membership.isStarred,
+    });
+    return !membership.isStarred;
   },
 });
 

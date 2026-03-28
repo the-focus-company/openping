@@ -112,7 +112,7 @@ const components: Components = {
     }
 
     return (
-      <div className="group/code relative my-2 overflow-hidden rounded border border-white/6 bg-[hsl(240,7%,8%)]">
+      <div className="group/code relative my-2 overflow-hidden rounded border border-white/6 bg-[hsl(222,47%,8%)]">
         {/* Header bar with language + copy */}
         <div className="flex items-center justify-between border-b border-white/6 px-3 py-1">
           <span className="text-2xs font-mono text-white/30">

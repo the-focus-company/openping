@@ -1,12 +1,43 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { MutationCtx } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 import { requireUser, requireChannelMember } from "./auth";
+import { attachmentValidator } from "./files";
+
+/** Insert a system message into a channel (no unread tracking, no agent dispatch). */
+export async function insertSystemMsg(
+  ctx: MutationCtx,
+  channelId: Id<"channels">,
+  authorId: Id<"users">,
+  body: string,
+) {
+  await ctx.db.insert("messages", {
+    channelId,
+    authorId,
+    body,
+    type: "system",
+    isEdited: false,
+  });
+}
+
+export const insertSystemMessage = internalMutation({
+  args: {
+    channelId: v.id("channels"),
+    authorId: v.id("users"),
+    body: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await insertSystemMsg(ctx, args.channelId, args.authorId, args.body);
+  },
+});
 
 export const send = mutation({
   args: {
     channelId: v.id("channels"),
     body: v.string(),
+    attachments: v.optional(v.array(attachmentValidator)),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
@@ -18,6 +49,9 @@ export const send = mutation({
       body: args.body,
       type: "user",
       isEdited: false,
+      ...(args.attachments && args.attachments.length > 0
+        ? { attachments: args.attachments }
+        : {}),
     });
 
     // Ingest into knowledge graph
@@ -221,11 +255,58 @@ export const listByChannel = query({
           }
         }
 
+        // Resolve meeting data for meeting messages
+        let meeting: {
+          _id: string;
+          title: string;
+          provider: string;
+          meetingUrl: string;
+          status: string;
+          startedBy: { name: string; avatarUrl?: string | null };
+          startedAt: number;
+          endedAt?: number;
+          participants: Array<{
+            userId: string;
+            name: string;
+            avatarUrl?: string | null;
+            joinedAt: number;
+          }>;
+        } | undefined;
+        if (msg.meetingId) {
+          const m = await ctx.db.get(msg.meetingId);
+          if (m) {
+            const starter = await ctx.db.get(m.startedBy);
+            const participants = await Promise.all(
+              (m.participants ?? []).map(async (p) => {
+                const u = await ctx.db.get(p.userId);
+                return {
+                  userId: p.userId as string,
+                  name: u?.name ?? "Unknown",
+                  avatarUrl: u?.avatarUrl,
+                  joinedAt: p.joinedAt,
+                };
+              }),
+            );
+            meeting = {
+              _id: m._id,
+              title: m.title,
+              provider: m.provider,
+              meetingUrl: m.meetingUrl,
+              status: m.status,
+              startedBy: { name: starter?.name ?? "Unknown", avatarUrl: starter?.avatarUrl },
+              startedAt: m.startedAt,
+              endedAt: m.endedAt,
+              participants,
+            };
+          }
+        }
+
         return {
           ...msg,
           author: author ? { name: author.name, avatarUrl: author.avatarUrl } : null,
           threadParticipants,
           integrationObject,
+          meeting,
         };
       }),
     );

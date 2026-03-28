@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { requireUser, requireChannelMember, requireDMmember, requirePublicChannelOrMember } from "./auth";
+import { attachmentValidator } from "./files";
 
 // ── Channel threads ─────────────────────────────────────────────────
 
@@ -11,6 +12,7 @@ export const sendReply = mutation({
     threadId: v.id("messages"),
     body: v.string(),
     alsoSendToChannel: v.optional(v.boolean()),
+    attachments: v.optional(v.array(attachmentValidator)),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
@@ -33,6 +35,9 @@ export const sendReply = mutation({
       isEdited: false,
       threadId: args.threadId,
       alsoSentToChannel: args.alsoSendToChannel ?? false,
+      ...(args.attachments && args.attachments.length > 0
+        ? { attachments: args.attachments }
+        : {}),
     });
 
     // Ingest into knowledge graph with thread context
@@ -117,6 +122,7 @@ export const sendReplyDM = mutation({
     threadId: v.id("directMessages"),
     body: v.string(),
     alsoSendToConversation: v.optional(v.boolean()),
+    attachments: v.optional(v.array(attachmentValidator)),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
@@ -143,6 +149,9 @@ export const sendReplyDM = mutation({
       isEdited: false,
       threadId: args.threadId,
       alsoSentToConversation: args.alsoSendToConversation ?? false,
+      ...(args.attachments && args.attachments.length > 0
+        ? { attachments: args.attachments }
+        : {}),
     });
 
     // Ingest into knowledge graph with thread context
