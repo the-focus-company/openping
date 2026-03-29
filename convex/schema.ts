@@ -189,6 +189,17 @@ export default defineSchema({
     mentions: v.optional(v.array(v.string())),
     graphitiEpisodeId: v.optional(v.string()),
     isEdited: v.boolean(),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          storageId: v.string(),
+          filename: v.string(),
+          mimeType: v.string(),
+          size: v.number(),
+        }),
+      ),
+    ),
+    meetingId: v.optional(v.string()),
     // Integration update history (previous states when message is edited by webhook)
     integrationHistory: v.optional(v.array(v.object({
       body: v.string(),
