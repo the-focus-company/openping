@@ -57,7 +57,7 @@ function mapStatus(status: "active" | "invited" | "deactivated"): Status {
 const roleConfig: Record<Role, { label: string; className: string }> = {
   admin:  { label: "Admin",  className: "border-ping-purple/40 bg-ping-purple/10 text-ping-purple" },
   member: { label: "Member", className: "border-foreground/15 bg-foreground/5 text-foreground/60" },
-  guest:  { label: "Guest",  className: "border-amber-500/40 bg-amber-500/10 text-amber-500" },
+  guest:  { label: "Guest",  className: "border-amber-500/40 bg-amber-500/10 text-amber-600" },
 };
 
 const statusConfig: Record<Status, { dot: "online" | "pending" | "offline"; label: string }> = {
@@ -131,7 +131,12 @@ function TeamPageContent() {
   };
 
   const filtered = useMemo(() => {
-    const base = tab === "all" ? members : members.filter((m) => m.status === tab);
+    let base = members;
+    if (tab === "guest") {
+      base = members.filter((m) => m.role === "guest");
+    } else if (tab !== "all") {
+      base = members.filter((m) => m.status === tab);
+    }
     return base.slice().sort((a, b) => {
       const aVal = a[sortCol].toLowerCase();
       const bVal = b[sortCol].toLowerCase();
@@ -316,6 +321,7 @@ function TeamPageContent() {
           <TabsTrigger value="active" className="h-6 px-2.5 text-xs">Active</TabsTrigger>
           <TabsTrigger value="invited" className="h-6 px-2.5 text-xs">Pending</TabsTrigger>
           <TabsTrigger value="deprovisioned" className="h-6 px-2.5 text-xs">Deprovisioned</TabsTrigger>
+          <TabsTrigger value="guest" className="h-6 px-2.5 text-xs">Guests</TabsTrigger>
           <TabsTrigger value="requests" className="h-6 px-2.5 text-xs">
             <span className="flex items-center gap-1.5">
               Requests
@@ -667,6 +673,11 @@ function TeamPageContent() {
                     </button>
                   ))}
                 </div>
+                <p className="text-2xs text-muted-foreground mt-1">
+                  {inviteRole === "admin" && "Full access to all workspace settings and channels"}
+                  {inviteRole === "member" && "Access to all channels, cannot manage workspace settings"}
+                  {inviteRole === "guest" && "Access only to assigned channels, limited features"}
+                </p>
               </div>
               <div className="flex justify-end gap-2 pt-1">
                 <Button
