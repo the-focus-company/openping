@@ -27,7 +27,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { UserProfileDialog } from "@/components/user/UserProfileDialog";
 
-type Role = "admin" | "member";
+type Role = "admin" | "member" | "guest";
 type Status = "active" | "invited" | "deprovisioned";
 
 interface TeamMember {
@@ -57,6 +57,7 @@ function mapStatus(status: "active" | "invited" | "deactivated"): Status {
 const roleConfig: Record<Role, { label: string; className: string }> = {
   admin:  { label: "Admin",  className: "border-ping-purple/40 bg-ping-purple/10 text-ping-purple" },
   member: { label: "Member", className: "border-foreground/15 bg-foreground/5 text-foreground/60" },
+  guest:  { label: "Guest",  className: "border-amber-500/40 bg-amber-500/10 text-amber-500" },
 };
 
 const statusConfig: Record<Status, { dot: "online" | "pending" | "offline"; label: string }> = {
@@ -520,7 +521,7 @@ function TeamPageContent() {
             <DialogTitle className="text-sm font-semibold">Change role for {roleTarget?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 pt-1">
-            {(["admin", "member"] as Role[]).map((r) => (
+            {(["admin", "member", "guest"] as Role[]).map((r) => (
               <button
                 key={r}
                 onClick={() => roleTarget && handleChangeRole(roleTarget.id, r)}
@@ -650,8 +651,8 @@ function TeamPageContent() {
                 <label className="mb-1.5 block text-2xs font-medium uppercase tracking-widest text-foreground/40">
                   Role
                 </label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(["member", "admin"] as Role[]).map((r) => (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(["member", "admin", "guest"] as Role[]).map((r) => (
                     <button
                       key={r}
                       onClick={() => setInviteRole(r)}

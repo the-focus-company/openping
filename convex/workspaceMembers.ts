@@ -2,6 +2,7 @@ import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireUser } from "./auth";
 import { cleanupEmptyPersonalWorkspaces } from "./invitations";
+import { roleValidator } from "./schema";
 
 export const listMyWorkspaces = query({
   args: {},
@@ -84,7 +85,7 @@ export const updateRole = mutation({
   args: {
     workspaceId: v.id("workspaces"),
     userId: v.id("users"),
-    role: v.union(v.literal("admin"), v.literal("member")),
+    role: roleValidator,
   },
   handler: async (ctx, args) => {
     const currentUser = await requireAuth(ctx, args.workspaceId);
@@ -134,7 +135,7 @@ export const inviteByEmail = mutation({
   args: {
     workspaceId: v.id("workspaces"),
     email: v.string(),
-    role: v.union(v.literal("admin"), v.literal("member")),
+    role: roleValidator,
   },
   handler: async (ctx, args) => {
     const email = args.email.trim().toLowerCase();
@@ -222,7 +223,10 @@ export const acceptInvite = mutation({
 
     await ctx.db.patch(invite._id, { status: "accepted" });
 
-    await cleanupEmptyPersonalWorkspaces(ctx, user._id, invite.workspaceId);
+    // Only clean up personal workspaces for non-guest roles
+    if (invite.role !== "guest") {
+      await cleanupEmptyPersonalWorkspaces(ctx, user._id, invite.workspaceId);
+    }
 
     const workspace = await ctx.db.get(invite.workspaceId);
     return { workspaceId: invite.workspaceId, slug: workspace?.slug ?? "" };

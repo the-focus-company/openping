@@ -3,6 +3,7 @@ import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { requireAuth, requireUser } from "./auth";
+import { roleValidator } from "./schema";
 
 export async function createOrUpdateUserHandler(
   ctx: MutationCtx,
@@ -131,7 +132,7 @@ async function provisionInvitedUser(
   invitation: {
     _id: Id<"invitations">;
     workspaceId: Id<"workspaces">;
-    role: "admin" | "member";
+    role: "admin" | "member" | "guest";
   },
 ) {
   const workspace = await ctx.db.get(invitation.workspaceId);
@@ -156,18 +157,21 @@ async function provisionInvitedUser(
 
   await ctx.db.patch(invitation._id, { status: "accepted" });
 
-  const generalChannel = await ctx.db
-    .query("channels")
-    .withIndex("by_workspace_name", (q) =>
-      q.eq("workspaceId", invitation.workspaceId).eq("name", "general"),
-    )
-    .unique();
+  // Auto-join #general channel (guests must be explicitly added to channels)
+  if (invitation.role !== "guest") {
+    const generalChannel = await ctx.db
+      .query("channels")
+      .withIndex("by_workspace_name", (q) =>
+        q.eq("workspaceId", invitation.workspaceId).eq("name", "general"),
+      )
+      .unique();
 
-  if (generalChannel) {
-    await ctx.db.insert("channelMembers", {
-      channelId: generalChannel._id,
-      userId,
-    });
+    if (generalChannel) {
+      await ctx.db.insert("channelMembers", {
+        channelId: generalChannel._id,
+        userId,
+      });
+    }
   }
 
   return { userId, workspaceId: invitation.workspaceId, workspaceName: workspace.name };
@@ -343,7 +347,7 @@ async function requireAdminAndTarget(
 export const updateRole = mutation({
   args: {
     userId: v.id("users"),
-    role: v.union(v.literal("admin"), v.literal("member")),
+    role: roleValidator,
     workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args) => {

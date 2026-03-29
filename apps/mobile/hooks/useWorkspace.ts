@@ -7,7 +7,7 @@ export interface WorkspaceContextValue {
   workspaceId: Id<"workspaces">;
   workspaceName: string;
   workspaceSlug: string;
-  role: "admin" | "member";
+  role: "admin" | "member" | "guest";
 }
 
 export const WorkspaceContext = createContext<WorkspaceContextValue | null>(

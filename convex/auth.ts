@@ -92,3 +92,13 @@ export async function requirePublicChannelOrMember(
 
   return { channel, membership };
 }
+
+export function isGuest(role: string): boolean {
+  return role === "guest";
+}
+
+export function requireNonGuest(role: string, action: string): void {
+  if (role === "guest") {
+    throw new Error(`Guests cannot ${action}`);
+  }
+}

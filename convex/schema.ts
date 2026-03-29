@@ -1,6 +1,13 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+/** Validator for workspace/invitation roles. */
+export const roleValidator = v.union(
+  v.literal("admin"),
+  v.literal("member"),
+  v.literal("guest"),
+);
+
 /** Typed metadata for integration objects (GitHub PRs and Linear tickets). */
 export const integrationMetadataValidator = v.union(
   v.object({
@@ -69,7 +76,7 @@ export default defineSchema({
   workspaceMembers: defineTable({
     userId: v.id("users"),
     workspaceId: v.id("workspaces"),
-    role: v.union(v.literal("admin"), v.literal("member")),
+    role: roleValidator,
     joinedAt: v.number(),
   })
     .index("by_user", ["userId"])
@@ -437,7 +444,7 @@ export default defineSchema({
     workspaceId: v.id("workspaces"),
     email: v.string(),
     invitedBy: v.id("users"),
-    role: v.union(v.literal("admin"), v.literal("member")),
+    role: roleValidator,
     status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("expired")),
     token: v.string(),
     expiresAt: v.number(),
