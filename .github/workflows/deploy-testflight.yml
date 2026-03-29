@@ -33,6 +33,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: .
 
+      - name: Generate Convex types
+        run: npx convex codegen
+        working-directory: .
+
       - name: Generate native project
         run: npx expo prebuild --platform ios --clean
 
