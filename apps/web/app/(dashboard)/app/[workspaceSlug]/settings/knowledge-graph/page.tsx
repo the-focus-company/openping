@@ -55,13 +55,6 @@ interface GNode {
   val: number;
 }
 
-interface ForceGNode extends GNode {
-  x: number;
-  y: number;
-  vx?: number;
-  vy?: number;
-}
-
 interface GLink {
   source: string;
   target: string;
@@ -333,8 +326,9 @@ export default function KnowledgeGraphPage() {
   // ── Node paint ──────────────────────────────────────────────────
 
   const paintNode = useCallback(
-    (node: ForceGNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
-      const n = node;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-force-graph-2d callback type
+    (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+      const n = node as GNode;
       const r = Math.max(4, n.val * 1.5);
       const isSel = selectedNode?.id === n.id;
       const fs = Math.max(11 / globalScale, 2.5);
@@ -369,7 +363,8 @@ export default function KnowledgeGraphPage() {
   // ── Link paint ────────────────────────────────────────────────
 
   const paintLink = useCallback(
-    (link: GLink & { source: ForceGNode; target: ForceGNode }, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-force-graph-2d callback type
+    (link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
       const s = link.source;
       const t = link.target;
       if (!s || !t || typeof s.x !== "number") return;
@@ -394,15 +389,17 @@ export default function KnowledgeGraphPage() {
     [linkStroke, labelDimColor],
   );
 
-  const onNodeClick = useCallback((node: ForceGNode) => {
-    setSelectedNode((prev) => (prev?.id === node.id ? null : node));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-force-graph-2d callback type
+  const onNodeClick = useCallback((node: any) => {
+    setSelectedNode((prev) => (prev?.id === (node as GNode).id ? null : (node as GNode)));
   }, []);
 
   const focusNode = useCallback((node: GNode) => {
     setSelectedNode(node);
     setSearchQuery("");
     if (fgRef.current) {
-      fgRef.current.centerAt((node as ForceGNode).x, (node as ForceGNode).y, 500);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- force-graph adds x/y at runtime
+      fgRef.current.centerAt((node as any).x, (node as any).y, 500);
       fgRef.current.zoom(2.5, 500);
     }
   }, []);
@@ -596,9 +593,10 @@ export default function KnowledgeGraphPage() {
               height={dims.h}
               graphData={graphData}
               nodeCanvasObject={paintNode}
-              nodePointerAreaPaint={(node: ForceGNode, color: string, ctx: CanvasRenderingContext2D) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-force-graph-2d callback type
+              nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D) => {
                 ctx.beginPath();
-                ctx.arc(node.x, node.y, Math.max(4, node.val * 1.5) + 6, 0, 2 * Math.PI);
+                ctx.arc(node.x, node.y, Math.max(4, (node as GNode).val * 1.5) + 6, 0, 2 * Math.PI);
                 ctx.fillStyle = color;
                 ctx.fill();
               }}
