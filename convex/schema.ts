@@ -20,6 +20,7 @@ export const integrationMetadataValidator = v.union(
   v.object({
     linearId: v.optional(v.string()),
     identifier: v.optional(v.string()),
+    description: v.optional(v.string()),
     priority: v.optional(v.string()),
     labels: v.optional(v.array(v.string())),
     assigneeEmail: v.optional(v.string()),
