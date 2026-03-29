@@ -14,6 +14,13 @@ EXPORT_OPTIONS="scripts/ExportOptions.plist"
 
 cd "$(dirname "$0")/.."
 
+# Load local env if present
+[[ -f .env.local ]] && set -a && source .env.local && set +a
+
+# App Store Connect API credentials (set via env or .env.local)
+: "${APP_STORE_API_KEY_ID:?Set APP_STORE_API_KEY_ID}"
+: "${APP_STORE_API_ISSUER_ID:?Set APP_STORE_API_ISSUER_ID}"
+
 echo "==> Bundling JS..."
 npx expo export --platform ios
 
