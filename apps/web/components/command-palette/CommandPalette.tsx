@@ -315,13 +315,13 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar }: CommandP
               : "Search or type @ to chat with an agent..."
         }
         value={search}
-        onValueChange={(v) => {
+        onValueChange={(v: string) => {
           setSearch(v);
           if (!v.startsWith("@")) {
             setQuickChatId(null);
           }
         }}
-        onKeyDown={(e) => {
+        onKeyDown={(e: React.KeyboardEvent) => {
           if (e.key === "Enter" && isChatMode && !quickChatId) {
             e.preventDefault();
             e.stopPropagation();

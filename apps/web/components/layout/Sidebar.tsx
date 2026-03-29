@@ -688,7 +688,7 @@ function MainNav({
                   )}
                   tabIndex={-1}
                   aria-label={channel.isStarred ? "Unstar channel" : "Star channel"}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleStar(channel._id); }}
+                  onClick={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); onToggleStar(channel._id); }}
                 />
               )}
               {/* Mention count badge — only when user is mentioned */}
