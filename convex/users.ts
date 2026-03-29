@@ -2,7 +2,7 @@ import { query, mutation, internalQuery, MutationCtx } from "./_generated/server
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { requireAuth, requireUser } from "./auth";
+import { requireAuth, requireUser, getGuestVisibleUserIds } from "./auth";
 import { roleValidator } from "./schema";
 
 export async function createOrUpdateUserHandler(
@@ -197,7 +197,8 @@ export const listAll = query({
     workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx, args.workspaceId);
+    const user = await requireAuth(ctx, args.workspaceId);
+    const visibleUserIds = await getGuestVisibleUserIds(ctx, user._id, user.role);
 
     const wsMembers = await ctx.db
       .query("workspaceMembers")
@@ -206,6 +207,7 @@ export const listAll = query({
 
     const users = await Promise.all(
       wsMembers.map(async (m) => {
+        if (visibleUserIds && !visibleUserIds.has(m.userId)) return null;
         const u = await ctx.db.get(m.userId);
         if (!u) return null;
 

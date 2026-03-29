@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth, requireUser, requireDMmember } from "./auth";
+import { requireAuth, requireUser, requireDMmember, getGuestVisibleUserIds } from "./auth";
 
 export const list = query({
   args: {},
@@ -227,6 +227,16 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireAuth(ctx, args.workspaceId);
+
+    // Guests can only DM members of shared channels
+    const visibleUserIds = await getGuestVisibleUserIds(ctx, user._id, user.role);
+    if (visibleUserIds) {
+      for (const memberId of args.memberIds) {
+        if (!visibleUserIds.has(memberId)) {
+          throw new Error("Guests can only message members of shared channels");
+        }
+      }
+    }
 
     // For 1-to-1, check if conversation already exists
     if (args.kind === "1to1" && args.memberIds.length === 1) {

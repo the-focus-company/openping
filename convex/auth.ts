@@ -93,6 +93,36 @@ export async function requirePublicChannelOrMember(
   return { channel, membership };
 }
 
+/**
+ * For a guest user, compute the set of user IDs visible to them
+ * (members of channels they share). Returns null for non-guest users.
+ */
+export async function getGuestVisibleUserIds(
+  ctx: QueryCtx | MutationCtx,
+  userId: Id<"users">,
+  role: string,
+): Promise<Set<string> | null> {
+  if (role !== "guest") return null;
+
+  const myMemberships = await ctx.db
+    .query("channelMembers")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+
+  const visibleIds = new Set<string>();
+  visibleIds.add(userId);
+  for (const m of myMemberships) {
+    const channelMembers = await ctx.db
+      .query("channelMembers")
+      .withIndex("by_channel", (q) => q.eq("channelId", m.channelId))
+      .collect();
+    for (const cm of channelMembers) {
+      visibleIds.add(cm.userId);
+    }
+  }
+  return visibleIds;
+}
+
 export function isGuest(role: string): boolean {
   return role === "guest";
 }
