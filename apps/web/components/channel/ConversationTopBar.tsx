@@ -10,6 +10,7 @@ import {
   Copy,
   Bot,
   Users,
+  Video,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,6 +37,8 @@ interface ConversationTopBarProps {
   onCopyId?: () => void;
   onPinned?: () => void;
   onAttachments?: () => void;
+  onStartMeeting?: () => void;
+  hasActiveMeeting?: boolean;
 }
 
 function getInitials(name: string): string {
@@ -56,6 +59,8 @@ export function ConversationTopBar({
   onCopyId,
   onPinned,
   onAttachments,
+  onStartMeeting,
+  hasActiveMeeting,
 }: ConversationTopBarProps) {
   const [showMembers, setShowMembers] = useState(false);
   const isAgent = kind === "agent_1to1" || kind === "agent_group";
@@ -74,7 +79,7 @@ export function ConversationTopBar({
             key={m.userId}
             title={m.name}
             className={cn(
-              "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-background text-2xs font-medium",
+              "relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-background text-2xs font-medium overflow-hidden",
               m.isAgent
                 ? "bg-ping-purple/20 text-ping-purple"
                 : "bg-surface-3 text-foreground",
@@ -83,6 +88,8 @@ export function ConversationTopBar({
           >
             {m.isAgent ? (
               <Bot className="h-3 w-3" />
+            ) : m.avatarUrl ? (
+              <img src={m.avatarUrl} alt={m.name} className="h-full w-full object-cover" />
             ) : (
               getInitials(m.name)
             )}
@@ -112,6 +119,14 @@ export function ConversationTopBar({
 
       {/* Action icons */}
       <div className="flex items-center gap-0.5">
+        <button
+          onClick={onStartMeeting}
+          className="rounded p-1.5 text-foreground/45 transition-colors hover:bg-surface-3 hover:text-foreground/80"
+          title={hasActiveMeeting ? "Join active meeting" : "Start meeting"}
+        >
+          <Video className={cn("h-3.5 w-3.5", hasActiveMeeting && "text-green-400")} />
+        </button>
+
         <button
           onClick={onPinned}
           className="rounded p-1.5 text-foreground/45 transition-colors hover:bg-surface-3 hover:text-foreground/80"
@@ -149,7 +164,7 @@ export function ConversationTopBar({
                   <div key={m.userId} className="flex items-center gap-2 px-3 py-1.5">
                     <div
                       className={cn(
-                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs font-medium",
+                        "relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs font-medium overflow-hidden",
                         m.isAgent
                           ? "bg-ping-purple/20 text-ping-purple"
                           : "bg-surface-3 text-foreground",
@@ -157,6 +172,8 @@ export function ConversationTopBar({
                     >
                       {m.isAgent ? (
                         <Bot className="h-2.5 w-2.5" />
+                      ) : m.avatarUrl ? (
+                        <img src={m.avatarUrl} alt={m.name} className="h-full w-full object-cover" />
                       ) : (
                         getInitials(m.name)
                       )}

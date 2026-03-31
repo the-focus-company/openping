@@ -352,17 +352,6 @@ export const unarchive = mutation({
   },
 });
 
-export const remove = mutation({
-  args: { conversationId: v.id("directConversations") },
-  handler: async (ctx, args) => {
-    const user = await requireUser(ctx);
-    await requireDMmember(ctx, args.conversationId, user._id);
-    await ctx.db.patch(args.conversationId, {
-      deletedAt: Date.now(),
-    });
-  },
-});
-
 export const toggleStar = mutation({
   args: { conversationId: v.id("directConversations") },
   handler: async (ctx, args) => {
@@ -376,6 +365,17 @@ export const toggleStar = mutation({
     if (!membership) throw new Error("Not a member");
     await ctx.db.patch(membership._id, { isStarred: !membership.isStarred });
     return !membership.isStarred;
+  },
+});
+
+export const remove = mutation({
+  args: { conversationId: v.id("directConversations") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    await requireDMmember(ctx, args.conversationId, user._id);
+    await ctx.db.patch(args.conversationId, {
+      deletedAt: Date.now(),
+    });
   },
 });
 

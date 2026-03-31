@@ -52,8 +52,12 @@ export function UserProfileModal({ userId, onClose }: UserProfileModalProps) {
           <div className="p-5">
             {/* Avatar + name */}
             <div className="flex items-start gap-4 mb-5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-3 text-sm font-semibold text-foreground/70">
-                {initials(user.name)}
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-3 text-sm font-semibold text-foreground/70 overflow-hidden">
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
+                ) : (
+                  initials(user.name)
+                )}
               </div>
               <div className="min-w-0">
                 <h3 className="text-sm font-semibold text-foreground">{user.name}</h3>

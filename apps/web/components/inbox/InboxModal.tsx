@@ -3,20 +3,29 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "convex/react";
-import { useSidebar } from "@/hooks/useSidebar";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import {
-  X, GitPullRequest, Ticket, HelpCircle, AlertTriangle, Search,
-  RefreshCw, FileText, ExternalLink, Loader2, CircleDot, MessageSquare,
+  X, FileText, ExternalLink, Loader2, CircleDot, MessageSquare,
   Link2, History, UserCheck, UserPlus, ChevronRight, Maximize2,
   Minimize2, PenLine,
 } from "lucide-react";
 import { cn, formatRelativeTime } from "@/lib/utils";
+import { useFocusModeSidebar } from "@/hooks/useFocusModeSidebar";
 import type { InboxCategory, PriorityLevel } from "./InboxCard";
 import type { OrgTracePerson } from "./DecisionCard";
 import { UserProfileModal } from "./UserProfileModal";
 import { RelatedDecisionView } from "./RelatedDecisionView";
+import { PersonPill } from "./PersonPill";
+import {
+  typeConfig,
+  categoryConfig,
+  fallbackActions,
+  initials,
+  linkTypeLabel,
+  type RelatedDecisionData,
+  type ContextTab,
+} from "./inbox-config";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -43,69 +52,12 @@ export interface ModalItem {
   quickActions?: Array<{ label: string; primary?: boolean; onClick?: () => void }>;
 }
 
-interface RelatedDecisionData {
-  id: string;
-  title: string;
-  type: string;
-  category: string;
-  summary: string;
-  outcome?: { action: string; comment?: string; decidedAt: number } | null;
-  orgTrace: Array<{ name: string; role: string; userId?: string }>;
-  createdAt: number;
-  status: string;
-}
-
 export interface InboxModalProps {
   item: ModalItem;
   onAction?: (id: string, action: string, comment?: string) => void;
   onClose: () => void;
   focusMode?: boolean;
   onToggleFocusMode?: () => void;
-}
-
-type ContextTab = "messages" | "linked" | "history";
-
-// ── Config ─────────────────────────────────────────────────────────────────────
-
-const typeConfig: Record<string, { icon: typeof GitPullRequest; label: string }> = {
-  pr_review:      { icon: GitPullRequest, label: "PR Review" },
-  ticket_triage:  { icon: Ticket,         label: "Ticket" },
-  question_answer:{ icon: HelpCircle,     label: "Question" },
-  blocked_unblock:{ icon: AlertTriangle,  label: "Blocked" },
-  fact_verify:    { icon: Search,         label: "Fact Check" },
-  cross_team_ack: { icon: RefreshCw,      label: "Cross-Team" },
-  channel_summary:{ icon: FileText,       label: "Summary" },
-};
-
-const categoryConfig: Record<string, { label: string; bg: string; text: string; border: string }> = {
-  do:       { label: "DO",       bg: "bg-priority-urgent/10",    text: "text-priority-urgent",    border: "border-priority-urgent/30" },
-  decide:   { label: "DECIDE",   bg: "bg-priority-important/10", text: "text-priority-important", border: "border-priority-important/30" },
-  delegate: { label: "DELEGATE", bg: "bg-blue-500/10",           text: "text-blue-400",           border: "border-blue-500/30" },
-  skip:     { label: "SKIP",     bg: "bg-white/5",               text: "text-white/30",           border: "border-white/10" },
-};
-
-const ROLE_LABEL: Record<string, string> = {
-  author: "wrote", assignee: "assigned", mentioned: "mentioned", to_consult: "consult?",
-};
-
-const fallbackActions: Record<string, Array<{ label: string; actionKey: string; primary?: boolean }>> = {
-  pr_review:      [{ label: "Approve", actionKey: "approve", primary: true }, { label: "Request changes", actionKey: "request_changes" }, { label: "Skip", actionKey: "snooze" }],
-  question_answer:[{ label: "Reply", actionKey: "reply", primary: true }, { label: "Delegate", actionKey: "delegate" }, { label: "Dismiss", actionKey: "dismiss" }],
-  blocked_unblock:[{ label: "Investigate", actionKey: "investigate", primary: true }, { label: "Reassign", actionKey: "reassign" }, { label: "Snooze", actionKey: "snooze" }],
-  ticket_triage:  [{ label: "Accept", actionKey: "accept", primary: true }, { label: "Reject", actionKey: "reject" }, { label: "Delegate", actionKey: "delegate" }],
-  fact_verify:    [{ label: "Confirm", actionKey: "confirm", primary: true }, { label: "Dispute", actionKey: "dispute" }, { label: "Investigate", actionKey: "investigate" }],
-  cross_team_ack: [{ label: "Acknowledge", actionKey: "acknowledge", primary: true }, { label: "Follow up", actionKey: "follow_up" }],
-  channel_summary:[{ label: "Mark read", actionKey: "mark_read", primary: true }, { label: "Investigate", actionKey: "investigate" }],
-};
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-function initials(name: string) {
-  return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-}
-
-function linkTypeLabel(type: string) {
-  return ({ doc: "Document", sheet: "Spreadsheet", video: "Video", pr: "Pull Request", other: "Link" } as Record<string, string>)[type] ?? "Link";
 }
 
 // ── Internal sub-components ────────────────────────────────────────────────────
@@ -135,34 +87,6 @@ function Accordion({
   );
 }
 
-function PersonPill({
-  name, role, dashed = false, onClick,
-}: {
-  name: string; role: string; userId?: string; dashed?: boolean; onClick?: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-1.5 rounded-full px-2.5 py-1 transition-colors",
-        dashed
-          ? "border border-dashed border-white/15 bg-transparent hover:border-white/25 hover:bg-surface-2"
-          : "bg-surface-2 hover:bg-surface-3",
-        onClick ? "cursor-pointer" : "cursor-default",
-      )}
-    >
-      <span className={cn(
-        "flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-medium",
-        dashed ? "bg-white/10 text-foreground/50" : "bg-surface-3 text-foreground/60",
-      )}>
-        {initials(name)}
-      </span>
-      <span className="text-xs text-foreground/80">{name}</span>
-      <span className="text-2xs text-foreground/50">{ROLE_LABEL[role] ?? role}</span>
-    </button>
-  );
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function InboxModal({
@@ -179,8 +103,8 @@ export function InboxModal({
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [relatedDecisionView, setRelatedDecisionView] = useState<RelatedDecisionData | null>(null);
   const noteInputRef = useRef<HTMLInputElement>(null);
-  const { setSidebarOpen } = useSidebar();
-  const prevSidebarRef = useRef<boolean | null>(null);
+
+  useFocusModeSidebar(focusMode);
 
   const isDecision = item.kind === "decision";
 
@@ -197,19 +121,6 @@ export function InboxModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, profileUserId, relatedDecisionView]);
-
-  // Collapse sidebar in focus mode
-  useEffect(() => {
-    if (focusMode) {
-      if (prevSidebarRef.current === null) prevSidebarRef.current = true;
-      setSidebarOpen(false);
-    } else {
-      if (prevSidebarRef.current !== null) {
-        setSidebarOpen(prevSidebarRef.current);
-        prevSidebarRef.current = null;
-      }
-    }
-  }, [focusMode, setSidebarOpen]);
 
   // Focus note input when revealed
   useEffect(() => {

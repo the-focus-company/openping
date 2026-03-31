@@ -6,6 +6,7 @@ import {
   Paperclip,
   MoreHorizontal,
   Archive,
+  ArchiveRestore,
   Copy,
   Bot,
   Users,
@@ -13,6 +14,7 @@ import {
   LogOut,
   Hash,
   Lock,
+  Video,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,6 +28,7 @@ import { cn } from "@/lib/utils";
 interface Member {
   _id: string;
   name: string;
+  avatarUrl?: string | null;
   role: string;
   presenceStatus?: string;
 }
@@ -37,10 +40,16 @@ interface ChannelTopBarProps {
   memberCount: number;
   isStarred: boolean;
   isPrivate?: boolean;
+  isArchived?: boolean;
+  isDefault?: boolean;
+  isOwnerOrAdmin?: boolean;
   onToggleStar?: () => void;
   onArchive?: () => void;
+  onUnarchive?: () => void;
   onCopyLink?: () => void;
   onLeave?: () => void;
+  onStartMeeting?: () => void;
+  hasActiveMeeting?: boolean;
 }
 
 function getInitials(name: string): string {
@@ -59,10 +68,16 @@ export function ChannelTopBar({
   memberCount,
   isStarred,
   isPrivate,
+  isArchived,
+  isDefault,
+  isOwnerOrAdmin,
   onToggleStar,
   onArchive,
+  onUnarchive,
   onCopyLink,
   onLeave,
+  onStartMeeting,
+  hasActiveMeeting,
 }: ChannelTopBarProps) {
   const [showMembers, setShowMembers] = useState(false);
 
@@ -76,6 +91,11 @@ export function ChannelTopBar({
           <Hash className="h-3.5 w-3.5 shrink-0 text-foreground/50" />
         )}
         <span className="text-sm font-medium text-foreground truncate">{name}</span>
+        {isArchived && (
+          <span className="shrink-0 rounded border border-subtle bg-surface-3 px-1.5 py-0.5 text-2xs text-muted-foreground">
+            archived
+          </span>
+        )}
         {description && (
           <>
             <span className="text-foreground/50">|</span>
@@ -92,6 +112,14 @@ export function ChannelTopBar({
           title={isStarred ? "Unstar channel" : "Star channel"}
         >
           <Star className={cn("h-3.5 w-3.5", isStarred && "fill-yellow-400 text-yellow-400")} />
+        </button>
+
+        <button
+          onClick={onStartMeeting}
+          className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
+          title={hasActiveMeeting ? "Join active meeting" : "Start meeting"}
+        >
+          <Video className={cn("h-3.5 w-3.5", hasActiveMeeting && "text-green-400")} />
         </button>
 
         <button
@@ -130,7 +158,7 @@ export function ChannelTopBar({
                   <div key={m._id} className="flex items-center gap-2 px-3 py-1.5">
                     <div
                       className={cn(
-                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs font-medium",
+                        "relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs font-medium overflow-hidden",
                         m.role === "agent"
                           ? "bg-ping-purple/20 text-ping-purple"
                           : "bg-surface-3 text-foreground",
@@ -138,6 +166,8 @@ export function ChannelTopBar({
                     >
                       {m.role === "agent" ? (
                         <Bot className="h-2.5 w-2.5" />
+                      ) : m.avatarUrl ? (
+                        <img src={m.avatarUrl} alt={m.name} className="h-full w-full object-cover" />
                       ) : (
                         getInitials(m.name)
                       )}
@@ -169,14 +199,23 @@ export function ChannelTopBar({
               Copy link
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onLeave} className="gap-2 text-xs">
-              <LogOut className="h-3.5 w-3.5" />
-              Leave channel
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onArchive} className="gap-2 text-xs text-red-400 focus:text-red-400">
-              <Archive className="h-3.5 w-3.5" />
-              Archive
-            </DropdownMenuItem>
+            {!isArchived && !isDefault && (
+              <DropdownMenuItem onClick={onLeave} className="gap-2 text-xs">
+                <LogOut className="h-3.5 w-3.5" />
+                Leave channel
+              </DropdownMenuItem>
+            )}
+            {isArchived && isOwnerOrAdmin ? (
+              <DropdownMenuItem onClick={onUnarchive} className="gap-2 text-xs">
+                <ArchiveRestore className="h-3.5 w-3.5" />
+                Unarchive
+              </DropdownMenuItem>
+            ) : !isArchived && !isDefault && isOwnerOrAdmin ? (
+              <DropdownMenuItem onClick={onArchive} className="gap-2 text-xs text-red-400 focus:text-red-400">
+                <Archive className="h-3.5 w-3.5" />
+                Archive
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

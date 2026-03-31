@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
@@ -68,8 +69,8 @@ function ImageAttachment({ attachment }: { attachment: Attachment }) {
         </div>
       </button>
 
-      {/* Lightbox */}
-      {expanded && (
+      {/* Lightbox — portaled to body so overflow:auto parents don't clip it */}
+      {expanded && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-8"
           onClick={() => setExpanded(false)}
@@ -87,7 +88,8 @@ function ImageAttachment({ attachment }: { attachment: Attachment }) {
             className="max-h-full max-w-full rounded object-contain"
             onClick={(e) => e.stopPropagation()}
           />
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

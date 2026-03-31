@@ -4,31 +4,31 @@
 
 @layer base {
   :root {
-    /* Surface scale — light (cool blue-violet tint) */
-    --surface-0: 240 20% 100%;
-    --surface-1: 237 25% 98.5%;
-    --surface-2: 237 20% 96%;
-    --surface-3: 237 14% 93%;
+    /* Surface scale — light (slate tint) */
+    --surface-0: 0 0% 100%;
+    --surface-1: 210 40% 98.5%;
+    --surface-2: 210 35% 96%;
+    --surface-3: 214 25% 93%;
 
     /* shadcn token mapping — light */
     --background: 0 0% 100%;
-    --foreground: 240 10% 10%;
-    --card: 0 0% 98%;
-    --card-foreground: 240 10% 10%;
+    --foreground: 222 47% 11%;
+    --card: 210 40% 98%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 10%;
+    --popover-foreground: 222 47% 11%;
     --primary: 237 56% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 92%;
-    --secondary-foreground: 240 6% 30%;
-    --muted: 240 5% 92%;
-    --muted-foreground: 237 8% 38%;
-    --accent: 240 5% 92%;
-    --accent-foreground: 240 10% 10%;
+    --secondary: 210 20% 92%;
+    --secondary-foreground: 215 19% 30%;
+    --muted: 210 20% 92%;
+    --muted-foreground: 215 16% 38%;
+    --accent: 210 20% 92%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 6% 88%;
-    --input: 240 6% 88%;
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
     --ring: 237 56% 60%;
     --radius: 0.25rem;
 
@@ -41,29 +41,29 @@
   }
 
   .dark {
-    --surface-0: 240 7% 6%;
-    --surface-1: 240 6% 9%;
-    --surface-2: 240 5% 11%;
-    --surface-3: 240 4% 15%;
+    --surface-0: 229 84% 5%;
+    --surface-1: 222 47% 9%;
+    --surface-2: 222 47% 11%;
+    --surface-3: 217 33% 15%;
 
-    --background: 240 7% 6%;
-    --foreground: 240 6% 96%;
-    --card: 240 6% 9%;
-    --card-foreground: 240 6% 96%;
-    --popover: 240 5% 11%;
-    --popover-foreground: 240 6% 96%;
+    --background: 229 84% 5%;
+    --foreground: 210 40% 96%;
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 96%;
     --primary: 237 56% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 13%;
-    --secondary-foreground: 240 4% 75%;
-    --muted: 240 5% 13%;
-    --muted-foreground: 240 3% 52%;
-    --accent: 240 5% 13%;
-    --accent-foreground: 240 6% 96%;
+    --secondary: 217 25% 13%;
+    --secondary-foreground: 214 20% 75%;
+    --muted: 217 25% 13%;
+    --muted-foreground: 215 16% 52%;
+    --accent: 217 25% 13%;
+    --accent-foreground: 210 40% 96%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 4% 14%;
-    --input: 240 4% 14%;
+    --border: 217 25% 14%;
+    --input: 217 25% 14%;
     --ring: 237 56% 60%;
 
     --chart-1: 237 56% 60%;
@@ -192,7 +192,7 @@
   font-family: ui-monospace, monospace;
 }
 .tiptap pre {
-  background: hsl(240 7% 8%);
+  background: hsl(222 47% 8%);
   border: 1px solid hsl(var(--foreground) / 0.06);
   border-radius: 4px;
   padding: 0.5em 0.75em;

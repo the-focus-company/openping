@@ -2,6 +2,7 @@ import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc } from "./_generated/dataModel";
 import { requireAuth, requireUser, requireChannelMember } from "./auth";
+import { insertSystemMsg } from "./messages";
 
 function requireChannelOwnerOrAdmin(
   channel: Doc<"channels">,
@@ -87,6 +88,8 @@ export const create = mutation({
       userId: user._id,
     });
 
+    await insertSystemMsg(ctx, channelId, user._id, `${user.name} created this channel`);
+
     return channelId;
   },
 });
@@ -126,12 +129,19 @@ export const list = query({
             )
             .unique();
 
+          const lastMsg = await ctx.db
+            .query("messages")
+            .withIndex("by_channel", (q) => q.eq("channelId", channel._id))
+            .order("desc")
+            .first();
+
           return {
             ...channel,
             isMember: !!membership,
             unreadCount: membership?.unreadCount ?? 0,
             unreadMentionCount: membership?.unreadMentionCount ?? 0,
             isStarred: membership?.isStarred ?? false,
+            lastMessageAt: lastMsg?._creationTime ?? channel._creationTime,
             isMuted: membership?.isMuted ?? false,
             folder: membership?.folder ?? null,
           };
@@ -227,10 +237,14 @@ export const join = mutation({
 
     if (existing) return existing._id;
 
-    return await ctx.db.insert("channelMembers", {
+    const membershipId = await ctx.db.insert("channelMembers", {
       channelId: args.channelId,
       userId: user._id,
     });
+
+    await insertSystemMsg(ctx, args.channelId, user._id, `${user.name} joined the channel`);
+
+    return membershipId;
   },
 });
 
@@ -253,6 +267,7 @@ export const leave = mutation({
     if (!membership) throw new Error("Not a member of this channel");
 
     await ctx.db.delete(membership._id);
+    await insertSystemMsg(ctx, args.channelId, user._id, `${user.name} left the channel`);
   },
 });
 
@@ -267,6 +282,7 @@ export const archive = mutation({
     requireChannelOwnerOrAdmin(channel, user, "archive");
 
     await ctx.db.patch(args.channelId, { isArchived: true });
+    await insertSystemMsg(ctx, args.channelId, user._id, `${user.name} archived this channel`);
   },
 });
 
@@ -280,6 +296,7 @@ export const unarchive = mutation({
     requireChannelOwnerOrAdmin(channel, user, "unarchive");
 
     await ctx.db.patch(args.channelId, { isArchived: false });
+    await insertSystemMsg(ctx, args.channelId, user._id, `${user.name} unarchived this channel`);
   },
 });
 
@@ -340,6 +357,13 @@ export const invite = mutation({
         channelId: args.channelId,
         userId: targetUserId,
       });
+
+      await insertSystemMsg(
+        ctx,
+        args.channelId,
+        user._id,
+        `${user.name} added ${targetUser.name} to the channel`,
+      );
     }
   },
 });

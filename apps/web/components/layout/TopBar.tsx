@@ -3,6 +3,7 @@
 import { type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Menu } from "lucide-react";
 import { TOPBAR_HEIGHT } from "@/lib/constants";
 import { SearchField } from "./SearchField";
@@ -60,10 +61,9 @@ export function TopBar({
           <Menu className="h-4 w-4" />
         </button>
         <Link href={inboxHref} className="flex items-center gap-1.5 transition-opacity hover:opacity-80">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/bw_logotype_onwhite_padding.png" alt="PING" height={20} className="h-5 w-auto dark:hidden" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/bw_logotype_onbalck_padding.png" alt="PING" height={20} className="hidden h-5 w-auto dark:block" />
+          <Image src="/ping-logo.png" alt="PING" width={20} height={20} className="dark:hidden" unoptimized />
+          <Image src="/ping-logo-white.png" alt="PING" width={20} height={20} className="hidden dark:block" unoptimized />
+          <span className="text-sm font-bold text-foreground">PING</span>
           {workspaceName && (
             <>
               <span className="text-foreground/40">·</span>

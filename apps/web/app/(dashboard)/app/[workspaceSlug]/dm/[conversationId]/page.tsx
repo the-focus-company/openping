@@ -7,8 +7,9 @@ import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { MessageList, type Message } from "@/components/channel/MessageList";
 import { ConversationTopBar } from "@/components/channel/ConversationTopBar";
+import { ConversationTopBarSkeleton, ComposerSkeleton } from "@/components/channel/ChannelSkeleton";
+import { MessageSkeleton } from "@/components/channel/MessageSkeleton";
 import { UserProfileDialog } from "@/components/user/UserProfileDialog";
-import { Loader2 } from "lucide-react";
 import { useDMTyping } from "@/hooks/useTyping";
 import { useThreadPanel } from "@/hooks/useThreadPanel";
 import { useToast } from "@/components/ui/toast-provider";
@@ -48,6 +49,10 @@ export default function DMPage({ params }: Props) {
   const archiveConversation = useMutation(api.directConversations.archive);
   const removeConversation = useMutation(api.directConversations.remove);
   const currentUser = useQuery(api.users.getMe);
+  const startMeeting = useMutation(api.meetings.startInDM);
+  const joinMeetingMut = useMutation(api.meetings.joinMeeting);
+  const endMeetingMut = useMutation(api.meetings.endMeeting);
+  const activeMeeting = useQuery(api.meetings.getActiveMeeting, { conversationId: typedId });
   const { typingUsers, onTyping, onSendClear } = useDMTyping(typedId);
   const { openThreadPanel, closeThreadPanel } = useThreadPanel();
   const { toast } = useToast();
@@ -72,6 +77,7 @@ export default function DMPage({ params }: Props) {
       authorId: msg.authorId,
       author: msg.author?.name ?? "Unknown",
       authorInitials: getInitials(msg.author?.name ?? "?"),
+      authorAvatarUrl: msg.author?.avatarUrl,
       content: msg.body,
       timestamp: new Date(msg._creationTime),
       botName: msg.isAgent ? msg.author?.name ?? "Agent" : undefined,
@@ -81,6 +87,9 @@ export default function DMPage({ params }: Props) {
       threadId: msg.threadId,
       alsoSentToChannel: msg.alsoSentToConversation,
       isEdited: msg.isEdited,
+      attachments: msg.attachments as Array<{ storageId: string; filename: string; mimeType: string; size: number }> | undefined,
+      meetingId: msg.meetingId,
+      meeting: msg.meeting,
     }));
   }, [results]);
 
@@ -140,8 +149,35 @@ export default function DMPage({ params }: Props) {
     }
   }, [conversation?.members]);
 
+  const handleStartMeeting = useCallback(async () => {
+    if (activeMeeting) {
+      await joinMeetingMut({ meetingId: activeMeeting._id as Id<"meetings"> });
+      window.open(activeMeeting.meetingUrl, "_blank");
+    } else {
+      const result = await startMeeting({ conversationId: typedId });
+      window.open(result.meetingUrl, "_blank");
+    }
+  }, [activeMeeting, joinMeetingMut, startMeeting, typedId]);
+
+  const handleJoinMeeting = useCallback(async (meetingId: string, meetingUrl: string) => {
+    await joinMeetingMut({ meetingId: meetingId as Id<"meetings"> });
+    window.open(meetingUrl, "_blank");
+  }, [joinMeetingMut]);
+
+  const handleEndMeeting = useCallback(async (meetingId: string) => {
+    await endMeetingMut({ meetingId: meetingId as Id<"meetings"> });
+  }, [endMeetingMut]);
+
   const handleCopyLink = useCallback(() => {
     navigator.clipboard.writeText(window.location.href);
+    toast("Link copied", "success");
+  }, [toast]);
+
+  const handleCopyMessageLink = useCallback((messageId: string) => {
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.searchParams.set("msg", messageId);
+    navigator.clipboard.writeText(url.toString());
     toast("Link copied", "success");
   }, [toast]);
 
@@ -157,19 +193,12 @@ export default function DMPage({ params }: Props) {
     router.push(buildPath("/dms"));
   }, [removeConversation, typedId, toast, router, buildPath]);
 
-  if (status === "LoadingFirstPage") {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-foreground/40" />
-      </div>
-    );
-  }
-
+  const isLoadingFirstPage = status === "LoadingFirstPage";
   const convKind = (conversation?.kind ?? "1to1") as "1to1" | "group" | "agent_1to1" | "agent_group";
 
   return (
     <div className="relative flex h-full flex-col">
-      {conversation && (
+      {conversation ? (
         <ConversationTopBar
           name={displayName}
           members={otherMembers}
@@ -177,23 +206,42 @@ export default function DMPage({ params }: Props) {
           onCopyId={handleCopyLink}
           onArchive={handleArchive}
           onDelete={handleDeleteConversation}
+          onStartMeeting={handleStartMeeting}
+          hasActiveMeeting={!!activeMeeting}
+        />
+      ) : (
+        <ConversationTopBarSkeleton />
+      )}
+
+      {isLoadingFirstPage ? (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="mt-auto py-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <MessageSkeleton key={i} />
+            ))}
+          </div>
+          <ComposerSkeleton />
+        </div>
+      ) : (
+        <MessageList
+          channelName={displayName}
+          messages={messages}
+          onSend={handleSend}
+          isDM
+          typingUsers={typingUsers}
+          onTyping={onTyping}
+          onOpenThread={handleOpenThread}
+          currentUserId={currentUser?._id}
+          onEditMessage={handleEditMessage}
+          onDeleteMessage={handleDeleteMessage}
+          onClickAuthor={handleClickAuthor}
+          onClickMention={handleClickMention}
+          highlightMessageId={highlightMessageId}
+          onCopyMessageLink={handleCopyMessageLink}
+          onJoinMeeting={handleJoinMeeting}
+          onEndMeeting={handleEndMeeting}
         />
       )}
-      <MessageList
-        channelName={displayName}
-        messages={messages}
-        onSend={handleSend}
-        isDM
-        typingUsers={typingUsers}
-        onTyping={onTyping}
-        onOpenThread={handleOpenThread}
-        currentUserId={currentUser?._id}
-        onEditMessage={handleEditMessage}
-        onDeleteMessage={handleDeleteMessage}
-        onClickAuthor={handleClickAuthor}
-        onClickMention={handleClickMention}
-        highlightMessageId={highlightMessageId}
-      />
 
       <UserProfileDialog
         userId={profileUserId}

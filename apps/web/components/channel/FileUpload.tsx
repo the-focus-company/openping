@@ -31,6 +31,7 @@ interface FileUploadProps {
   children: React.ReactNode;
   /** Exposes a function to programmatically open the file picker */
   onFileInputReady?: (trigger: () => void) => void;
+  className?: string;
 }
 
 let nextId = 0;
@@ -43,6 +44,7 @@ export function FileUpload({
   onAttachmentsChange,
   children,
   onFileInputReady,
+  className,
 }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const dragCounterRef = useRef(0);
@@ -89,15 +91,6 @@ export function FileUpload({
       }
 
       onAttachmentsChange([...attachments, ...newAttachments]);
-    },
-    [attachments, onAttachmentsChange],
-  );
-
-  const removeAttachment = useCallback(
-    (id: string) => {
-      const att = attachments.find((a) => a.id === id);
-      if (att?.previewUrl) URL.revokeObjectURL(att.previewUrl);
-      onAttachmentsChange(attachments.filter((a) => a.id !== id));
     },
     [attachments, onAttachmentsChange],
   );
@@ -180,7 +173,7 @@ export function FileUpload({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onPaste={handlePaste}
-      className="relative"
+      className={cn("relative", className)}
     >
       {isDragging && (
         <div className="absolute inset-0 z-20 flex items-center justify-center rounded border-2 border-dashed border-ping-purple bg-ping-purple/10 backdrop-blur-sm">
@@ -202,18 +195,6 @@ export function FileUpload({
       />
 
       {children}
-
-      {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-3 pb-2">
-          {attachments.map((att) => (
-            <AttachmentPreview
-              key={att.id}
-              attachment={att}
-              onRemove={() => removeAttachment(att.id)}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -296,7 +277,7 @@ export async function uploadAttachments(
   return results;
 }
 
-function AttachmentPreview({
+export function AttachmentPreview({
   attachment,
   onRemove,
 }: {

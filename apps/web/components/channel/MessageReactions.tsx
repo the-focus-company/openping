@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -10,12 +10,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-
-const POPULAR_EMOJI = [
-  "👍", "👎", "😂", "❤️", "🎉", "🙌", "👀", "🔥",
-  "💯", "✅", "❌", "🤔", "😍", "🚀", "👏", "💪",
-  "😢", "😮", "🙏", "💡", "⭐", "🫡", "👋", "➕",
-];
 
 export interface ReactionGroup {
   emoji: string;
@@ -34,6 +28,20 @@ function EmojiPickerPopover({
   onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [Picker, setPicker] = useState<React.ComponentType<Record<string, unknown>> | null>(null);
+  const [emojiData, setEmojiData] = useState<unknown>(null);
+
+  useEffect(() => {
+    if (open && !Picker) {
+      Promise.all([
+        import("@emoji-mart/react"),
+        import("@emoji-mart/data"),
+      ]).then(([pickerModule, dataModule]) => {
+        setPicker(() => pickerModule.default);
+        setEmojiData(dataModule.default);
+      });
+    }
+  }, [open, Picker]);
 
   const handleOpenChange = (v: boolean) => {
     setOpen(v);
@@ -43,21 +51,25 @@ function EmojiPickerPopover({
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent side="top" align="start" className="w-auto p-2">
-        <div className="grid grid-cols-8 gap-0.5">
-          {POPULAR_EMOJI.map((emoji) => (
-            <button
-              key={emoji}
-              onClick={() => {
-                onSelect(emoji);
-                setOpen(false);
-              }}
-              className="flex h-7 w-7 items-center justify-center rounded text-lg transition-colors hover:bg-surface-3"
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
+      <PopoverContent side="top" align="start" className="w-auto p-0 border-none bg-transparent shadow-none">
+        {Picker && emojiData ? (
+          <Picker
+            data={emojiData}
+            onEmojiSelect={(emoji: { native: string }) => {
+              onSelect(emoji.native);
+              setOpen(false);
+            }}
+            theme="dark"
+            set="native"
+            previewPosition="none"
+            skinTonePosition="search"
+            maxFrequentRows={2}
+          />
+        ) : (
+          <div className="flex h-[435px] w-[352px] items-center justify-center rounded-xl bg-surface-2 border border-subtle">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
@@ -89,8 +101,8 @@ function ReactionPill({
           className={cn(
             "inline-flex h-6 items-center gap-1 rounded-full px-1.5 text-xs transition-colors hover:bg-surface-3",
             isActive
-              ? "border border-ping-purple/30 bg-ping-purple/10 text-ping-purple"
-              : "border border-subtle bg-surface-2 text-muted-foreground",
+              ? "bg-ping-purple/10 text-ping-purple"
+              : "bg-surface-2 text-muted-foreground",
           )}
         >
           <span>{emoji}</span>

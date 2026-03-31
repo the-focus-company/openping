@@ -11,6 +11,7 @@ export interface MentionUser {
   id: string;
   name: string;
   role: string;
+  avatarUrl?: string | null;
   isBot?: boolean;
   isAgent?: boolean;
   agentColor?: string;
@@ -52,6 +53,7 @@ export function MentionPopover({
         id: u._id,
         name: u.name,
         role: u.role,
+        avatarUrl: u.avatarUrl,
         isBot: !!u.isAgent,
         isAgent: !!u.isAgent,
         agentColor: u.agentColor ?? undefined,
@@ -158,6 +160,10 @@ export function MentionPopover({
                 style={{ backgroundColor: `${user.agentColor ?? "#5E6AD2"}20` }}
               >
                 <Bot className="h-3 w-3" style={{ color: user.agentColor ?? "#5E6AD2" }} />
+              </div>
+            ) : user.avatarUrl ? (
+              <div className="h-5 w-5 shrink-0 overflow-hidden rounded-full">
+                <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
               </div>
             ) : (
               <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-3 text-2xs font-medium text-foreground">
