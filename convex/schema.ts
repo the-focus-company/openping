@@ -190,17 +190,8 @@ export default defineSchema({
     mentions: v.optional(v.array(v.string())),
     graphitiEpisodeId: v.optional(v.string()),
     isEdited: v.boolean(),
-    attachments: v.optional(
-      v.array(
-        v.object({
-          storageId: v.string(),
-          filename: v.string(),
-          mimeType: v.string(),
-          size: v.number(),
-        }),
-      ),
-    ),
-    meetingId: v.optional(v.string()),
+    attachments: v.optional(v.array(attachmentValidator)),
+    meetingId: v.optional(v.id("meetings")),
     // Integration update history (previous states when message is edited by webhook)
     integrationHistory: v.optional(v.array(v.object({
       body: v.string(),
@@ -213,8 +204,6 @@ export default defineSchema({
     threadLastReplyAt: v.optional(v.number()),
     threadLastReplyAuthorId: v.optional(v.id("users")),
     threadParticipantIds: v.optional(v.array(v.id("users"))),
-    attachments: v.optional(v.array(attachmentValidator)),
-    meetingId: v.optional(v.id("meetings")),
   })
     .index("by_channel", ["channelId"])
     .index("by_author", ["authorId"])
@@ -412,18 +401,8 @@ export default defineSchema({
     type: v.union(v.literal("user"), v.literal("bot"), v.literal("system")),
     isEdited: v.boolean(),
     graphitiEpisodeId: v.optional(v.string()),
-    attachments: v.optional(
-      v.array(
-        v.object({
-          storageId: v.string(),
-          filename: v.string(),
-          mimeType: v.string(),
-          size: v.number(),
-        }),
-      ),
-    ),
-    // Legacy field (kept for schema compat with existing documents)
-    meetingId: v.optional(v.string()),
+    attachments: v.optional(v.array(attachmentValidator)),
+    meetingId: v.optional(v.id("meetings")),
     // Thread fields
     threadId: v.optional(v.id("directMessages")),
     alsoSentToConversation: v.optional(v.boolean()),
@@ -431,8 +410,6 @@ export default defineSchema({
     threadLastReplyAt: v.optional(v.number()),
     threadLastReplyAuthorId: v.optional(v.id("users")),
     threadParticipantIds: v.optional(v.array(v.id("users"))),
-    attachments: v.optional(v.array(attachmentValidator)),
-    meetingId: v.optional(v.id("meetings")),
   })
     .index("by_conversation", ["conversationId"])
     .index("by_author", ["authorId"])

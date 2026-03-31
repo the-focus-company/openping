@@ -359,15 +359,11 @@ export const toggleStar = mutation({
     const membership = await ctx.db
       .query("directConversationMembers")
       .withIndex("by_conversation_user", (q) =>
-        q
-          .eq("conversationId", args.conversationId)
-          .eq("userId", user._id),
+        q.eq("conversationId", args.conversationId).eq("userId", user._id),
       )
       .first();
-    if (!membership) throw new Error("Not a member of this conversation");
-    await ctx.db.patch(membership._id, {
-      isStarred: !membership.isStarred,
-    });
+    if (!membership) throw new Error("Not a member");
+    await ctx.db.patch(membership._id, { isStarred: !membership.isStarred });
     return !membership.isStarred;
   },
 });
@@ -380,22 +376,6 @@ export const remove = mutation({
     await ctx.db.patch(args.conversationId, {
       deletedAt: Date.now(),
     });
-  },
-});
-
-export const toggleStar = mutation({
-  args: { conversationId: v.id("directConversations") },
-  handler: async (ctx, args) => {
-    const user = await requireUser(ctx);
-    const membership = await ctx.db
-      .query("directConversationMembers")
-      .withIndex("by_conversation_user", (q) =>
-        q.eq("conversationId", args.conversationId).eq("userId", user._id),
-      )
-      .first();
-    if (!membership) throw new Error("Not a member");
-    await ctx.db.patch(membership._id, { isStarred: !membership.isStarred });
-    return !membership.isStarred;
   },
 });
 
