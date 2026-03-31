@@ -1,17 +1,67 @@
 # Product Mission
 
-**"To be the unified AI operating layer for engineering teams, accelerating workflows and automatically resolving blockers."**
+**"To reduce the cognitive load of work by turning communication into decision-ready context and turning decisions into coordinated action."**
 
-Our mission is to move far beyond the concept of "chat replacement." Chat is simply an implementation detail. We exist to build an intelligent, proactive system that actively accelerates product development and removes friction.
+We exist for teams whose performance is constrained not by lack of talent, but by fragmented context, constant interruptions, and the invisible tax of having to manually assemble the truth before acting.
 
-We believe in empowering teams of all sizes. Even for a 1-person team, we deliver immediate value upon onboarding through:
-*   **Temporal Knowledge Graphs:** Understanding how your project and code evolve over time.
-*   **Channels, DMs, & Group Chats:** Every conversation space is actively monitored and enhanced by specialized AI agents.
-*   **Deep Integrations & Proactivity:** We don't just wait for queries; we actively rank noise and push work forward.
+Modern work software is still designed around message exchange. PING is designed around **decision velocity**.
 
-We aim to be the absolute best proactive coordination tool specifically tailored for **50-200 person product teams**. We aren't building a universal company chat; we are building workflow acceleration where the **Workspace Agent** automatically resolves blockers without human intervention:
-*   **Information Overload?** AI automatically ranks your DMs and Channels using the Eisenhower Matrix.
-*   **PR stuck?** AI automatically nudges the right reviewer on a system heartbeat.
-*   **Siloed Knowledge?** AI proactively fact-checks ongoing discussions and syncs context between teams instantly.
+---
 
-Our key leverage is being **free and open-source**. We gamify functionality—the more you use the platform, the more advanced features you unlock. We believe you should own your data entirely. By offering a true open-core foundation, we allow engineering leaders to train bespoke models securely on their own proprietary data.
+## What We Are Building
+
+PING is not another chat app with AI bolted on. It is not a smarter notification feed. It is not a prettier Slack clone.
+
+**PING is a decision-first workspace** — the operating layer where fragmented organizational context is turned into momentum.
+
+---
+
+## Who We Help
+
+Product and engineering teams where performance bottlenecks are not technical but cognitive: too much noise, too little clarity, important choices buried in threads, and talented people spending their sharpest hours on coordination overhead rather than judgment and creation.
+
+Specifically: engineering leads, product leaders, CTOs, and technical decision-makers who carry real responsibility and need signal, clarity, leverage, and confidence — not more novelty.
+
+---
+
+## The Job To Be Done
+
+In real organizations, value is not created when information moves.
+Value is created when **the right person makes the right decision with the right context at the right time**.
+
+Our mission is to help individuals and teams:
+- spend less time searching, sending, receiving, and clarifying
+- spend more time judging, creating, leading, and building
+- make better calls with less friction and more confidence
+- move work forward immediately after a decision is made
+
+---
+
+## How We Do It
+
+PING creates a workspace where:
+- priorities are ranked automatically
+- context is progressively disclosed
+- missing information is resolved proactively
+- decisions are easy to make
+- actions are easy to trigger
+- outcomes remain linked to the source truth behind them
+
+The AI gathers, ranks, links, traces, and orchestrates context.
+Humans do the judgment.
+
+That combination is the real product.
+
+---
+
+## The Internal Product Standard
+
+Every feature we build should answer:
+
+1. Does this help users make a better decision?
+2. Does this reduce the effort required to gather context?
+3. Does this preserve trust, traceability, and human judgment?
+4. Does this accelerate action after a decision is made?
+5. Does this reduce noise rather than create more of it?
+
+If not, it may be useful — but it is not core to PING.

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function GET() {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const cookieStore = await cookies();
   let sessionId: string | undefined;
 
@@ -19,10 +20,10 @@ export async function GET() {
     const workos = getWorkOS();
     const logoutUrl = workos.userManagement.getLogoutUrl({
       sessionId,
-      returnTo: "http://localhost:3000",
+      returnTo: baseUrl,
     });
     return NextResponse.redirect(logoutUrl);
   }
 
-  return NextResponse.redirect(new URL("/sign-in", "http://localhost:3000"));
+  return NextResponse.redirect(new URL("/sign-in", baseUrl));
 }

@@ -4,8 +4,8 @@ import { Copy, Check, Sparkles } from "lucide-react";
 
 const AGENT_PROMPT = `Help me deploy PING — an open-source AI team messenger (Slack replacement with AI triage).
 
-1. Clone github.com/PingCompany/Platform
-2. Follow the quickstart at pingcompany.github.io/platform/getting-started/quickstart/
+1. Clone github.com/the-focus-company/openping
+2. Follow the quickstart at the-focus-company.github.io/openping/getting-started/quickstart/
 3. Set up Convex (backend), WorkOS (auth), and OpenAI (AI features)
 4. Run \`pnpm dev\` to start locally
 

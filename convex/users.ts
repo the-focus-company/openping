@@ -2,7 +2,8 @@ import { query, mutation, internalQuery, MutationCtx } from "./_generated/server
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { requireAuth, requireUser } from "./auth";
+import { requireAuth, requireUser, getGuestVisibleUserIds } from "./auth";
+import { roleValidator } from "./schema";
 
 export async function createOrUpdateUserHandler(
   ctx: MutationCtx,
@@ -131,7 +132,7 @@ async function provisionInvitedUser(
   invitation: {
     _id: Id<"invitations">;
     workspaceId: Id<"workspaces">;
-    role: "admin" | "member";
+    role: "admin" | "member" | "guest";
   },
 ) {
   const workspace = await ctx.db.get(invitation.workspaceId);
@@ -156,18 +157,21 @@ async function provisionInvitedUser(
 
   await ctx.db.patch(invitation._id, { status: "accepted" });
 
-  const generalChannel = await ctx.db
-    .query("channels")
-    .withIndex("by_workspace_name", (q) =>
-      q.eq("workspaceId", invitation.workspaceId).eq("name", "general"),
-    )
-    .unique();
+  // Auto-join #general channel (guests must be explicitly added to channels)
+  if (invitation.role !== "guest") {
+    const generalChannel = await ctx.db
+      .query("channels")
+      .withIndex("by_workspace_name", (q) =>
+        q.eq("workspaceId", invitation.workspaceId).eq("name", "general"),
+      )
+      .unique();
 
-  if (generalChannel) {
-    await ctx.db.insert("channelMembers", {
-      channelId: generalChannel._id,
-      userId,
-    });
+    if (generalChannel) {
+      await ctx.db.insert("channelMembers", {
+        channelId: generalChannel._id,
+        userId,
+      });
+    }
   }
 
   return { userId, workspaceId: invitation.workspaceId, workspaceName: workspace.name };
@@ -193,7 +197,8 @@ export const listAll = query({
     workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx, args.workspaceId);
+    const user = await requireAuth(ctx, args.workspaceId);
+    const visibleUserIds = await getGuestVisibleUserIds(ctx, user._id, user.role);
 
     const wsMembers = await ctx.db
       .query("workspaceMembers")
@@ -202,6 +207,7 @@ export const listAll = query({
 
     const users = await Promise.all(
       wsMembers.map(async (m) => {
+        if (visibleUserIds && !visibleUserIds.has(m.userId)) return null;
         const u = await ctx.db.get(m.userId);
         if (!u) return null;
 
@@ -343,7 +349,7 @@ async function requireAdminAndTarget(
 export const updateRole = mutation({
   args: {
     userId: v.id("users"),
-    role: v.union(v.literal("admin"), v.literal("member")),
+    role: roleValidator,
     workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args) => {
@@ -391,6 +397,19 @@ export const listByWorkspace = internalQuery({
     );
 
     return users.filter((u): u is NonNullable<typeof u> => u !== null);
+  },
+});
+
+export const registerPushToken = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const existing = user.pushTokens ?? [];
+    if (!existing.includes(args.token)) {
+      await ctx.db.patch(user._id, {
+        pushTokens: [...existing, args.token],
+      });
+    }
   },
 });
 

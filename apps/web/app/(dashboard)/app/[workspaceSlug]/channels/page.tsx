@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dialog";
 
 export default function ChannelsPage() {
-  const { workspaceId, buildPath } = useWorkspace();
+  const { workspaceId, buildPath, role } = useWorkspace();
+  const isGuest = role === "guest";
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -120,14 +121,16 @@ export default function ChannelsPage() {
             Recent threads and mentions from your channels
           </p>
         </div>
-        <Button
-          size="sm"
-          className="h-7 gap-1.5 bg-ping-purple text-xs text-white hover:bg-ping-purple-hover"
-          onClick={() => setAddChannelOpen(true)}
-        >
-          <Plus className="h-3 w-3" />
-          New
-        </Button>
+        {!isGuest && (
+          <Button
+            size="sm"
+            className="h-7 gap-1.5 bg-ping-purple text-xs text-white hover:bg-ping-purple-hover"
+            onClick={() => setAddChannelOpen(true)}
+          >
+            <Plus className="h-3 w-3" />
+            New
+          </Button>
+        )}
       </div>
 
       {groupedActivity.length === 0 && (

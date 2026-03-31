@@ -17,7 +17,6 @@ import {
   ChevronDown,
   Sparkles,
   ArrowUpDown,
-  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 
 interface PersonalContextStepProps {
   userName: string;
-  role: "admin" | "member";
+  role: "admin" | "member" | "guest";
   onNext: () => void;
 }
 

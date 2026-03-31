@@ -9,7 +9,6 @@ import { InboxModal, type ModalItem } from "@/components/inbox/InboxModal";
 import { DraftReminderCard } from "@/components/inbox/DraftReminderCard";
 import { type InboxCategory, type PriorityLevel, CATEGORY_ORDER, CATEGORY_TO_PRIORITY } from "@/components/inbox/InboxCard";
 import { CheckCircle2, Loader2, FlaskConical, Sparkles, ChevronDown, Check, Archive } from "lucide-react";
-import { useWorkspace } from "@/hooks/useWorkspace";
 import { cn } from "@/lib/utils";
 
 // ── Section labels ──
@@ -102,7 +101,6 @@ function itemToModalItem(d: InboxItemData): ModalItem {
 }
 
 export default function InboxPage() {
-  const { buildPath } = useWorkspace();
   const { isAuthenticated } = useConvexAuth();
   const inboxItems = useQuery(api.inboxItems.list, isAuthenticated ? {} : "skip");
   const drafts = useQuery(api.drafts.listActive, isAuthenticated ? {} : "skip");

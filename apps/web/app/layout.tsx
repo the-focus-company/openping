@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
+import "@/lib/env";
 import "./globals.css";
 
 const geist = localFont({

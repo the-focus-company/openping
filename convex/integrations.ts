@@ -2,6 +2,7 @@ import { query, mutation, internalMutation, internalQuery } from "./_generated/s
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { requireAuth, requireUser } from "./auth";
+import { integrationMetadataValidator } from "./schema";
 
 function truncate(text: string, maxLen: number): string {
   return text.length > maxLen ? text.slice(0, maxLen) + "..." : text;
@@ -53,10 +54,7 @@ export const findWorkspaceByLinearOrgId = internalQuery({
     const workspaces = await ctx.db.query("workspaces").collect();
 
     for (const ws of workspaces) {
-      const integrations = ws.integrations as
-        | { linearOrgId?: string }
-        | undefined;
-      if (integrations?.linearOrgId === args.linearOrgId) {
+      if (ws.integrations?.linearOrgId === args.linearOrgId) {
         return ws;
       }
     }
@@ -71,8 +69,7 @@ export const findWorkspaceByGithubOrg = internalQuery({
   handler: async (ctx, args) => {
     const workspaces = await ctx.db.query("workspaces").collect();
     for (const ws of workspaces) {
-      const integrations = ws.integrations as { githubOrgLogin?: string } | undefined;
-      if (integrations?.githubOrgLogin === args.orgLogin) {
+      if (ws.integrations?.githubOrgLogin === args.orgLogin) {
         return ws;
       }
     }
@@ -90,7 +87,7 @@ export const upsert = internalMutation({
     status: v.string(),
     url: v.string(),
     author: v.string(),
-    metadata: v.any(),
+    metadata: integrationMetadataValidator,
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db

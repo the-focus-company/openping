@@ -31,8 +31,6 @@ function AgentsPageContent() {
   const agents = useQuery(api.agents.list, { workspaceId });
   const createAgent = useMutation(api.agents.create);
   const updateAgent = useMutation(api.agents.update);
-  const generateTokenMutation = useMutation(api.agents.generateToken);
-
   const { toast } = useToast();
 
   const [configOpen, setConfigOpen] = useState(false);
@@ -41,6 +39,7 @@ function AgentsPageContent() {
 
   const [tokenDialogOpen, setTokenDialogOpen] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [tokenAgentName, setTokenAgentName] = useState<string>("");
 
   if (agents === undefined) {

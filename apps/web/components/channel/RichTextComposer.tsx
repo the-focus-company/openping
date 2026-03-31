@@ -285,7 +285,7 @@ export const RichTextComposer = forwardRef<RichTextComposerHandle, RichTextCompo
                 onClick={handleSendClick}
                 disabled={isEmpty}
                 className={cn(
-                  "rounded p-1 transition-colors",
+                  "rounded p-1 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                   !isEmpty
                     ? "bg-ping-purple text-white hover:bg-ping-purple-hover"
                     : "text-muted-foreground/60"

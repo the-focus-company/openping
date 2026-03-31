@@ -2,6 +2,35 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { attachmentValidator } from "./files";
 
+/** Validator for workspace/invitation roles. */
+export const roleValidator = v.union(
+  v.literal("admin"),
+  v.literal("member"),
+  v.literal("guest"),
+);
+
+/** Typed metadata for integration objects (GitHub PRs and Linear tickets). */
+export const integrationMetadataValidator = v.union(
+  v.object({
+    number: v.optional(v.number()),
+    repo: v.optional(v.string()),
+    description: v.optional(v.string()),
+    draft: v.optional(v.boolean()),
+    merged: v.optional(v.boolean()),
+  }),
+  v.object({
+    linearId: v.optional(v.string()),
+    identifier: v.optional(v.string()),
+    description: v.optional(v.string()),
+    priority: v.optional(v.string()),
+    labels: v.optional(v.array(v.string())),
+    assigneeEmail: v.optional(v.string()),
+    teamKey: v.optional(v.string()),
+    createdAt: v.optional(v.string()),
+    updatedAt: v.optional(v.string()),
+  }),
+);
+
 export default defineSchema({
   users: defineTable({
     workosUserId: v.string(),
@@ -23,6 +52,8 @@ export default defineSchema({
         proactiveAlerts: v.boolean(),
       }),
     ),
+    // Push notification tokens (one per device)
+    pushTokens: v.optional(v.array(v.string())),
     // Onboarding fields
     onboardingStatus: v.optional(v.union(v.literal("pending"), v.literal("completed"))),
     title: v.optional(v.string()),
@@ -47,7 +78,7 @@ export default defineSchema({
   workspaceMembers: defineTable({
     userId: v.id("users"),
     workspaceId: v.id("workspaces"),
-    role: v.union(v.literal("admin"), v.literal("member")),
+    role: roleValidator,
     joinedAt: v.number(),
   })
     .index("by_user", ["userId"])
@@ -59,8 +90,32 @@ export default defineSchema({
     slug: v.string(),
     workosOrgId: v.optional(v.string()),
     createdBy: v.optional(v.id("users")),
-    integrations: v.optional(v.any()),
-    integrationConfig: v.optional(v.any()),
+    integrations: v.optional(
+      v.object({
+        githubOrgLogin: v.optional(v.string()),
+        githubWebhookSecret: v.optional(v.string()),
+        linearOrgId: v.optional(v.string()),
+        linearWebhookSecret: v.optional(v.string()),
+      }),
+    ),
+    integrationConfig: v.optional(
+      v.object({
+        github: v.optional(
+          v.object({
+            connected: v.boolean(),
+            accountName: v.optional(v.string()),
+            connectedAt: v.optional(v.number()),
+          }),
+        ),
+        linear: v.optional(
+          v.object({
+            connected: v.boolean(),
+            orgName: v.optional(v.string()),
+            connectedAt: v.optional(v.number()),
+          }),
+        ),
+      }),
+    ),
     industry: v.optional(v.string()),
     companySize: v.optional(v.string()),
     companyDescription: v.optional(v.string()),
@@ -105,6 +160,8 @@ export default defineSchema({
     unreadCount: v.optional(v.number()),
     unreadMentionCount: v.optional(v.number()),
     isStarred: v.optional(v.boolean()),
+    isMuted: v.optional(v.boolean()),
+    folder: v.optional(v.string()),
   })
     .index("by_channel", ["channelId"])
     .index("by_user", ["userId"])
@@ -133,6 +190,17 @@ export default defineSchema({
     mentions: v.optional(v.array(v.string())),
     graphitiEpisodeId: v.optional(v.string()),
     isEdited: v.boolean(),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          storageId: v.string(),
+          filename: v.string(),
+          mimeType: v.string(),
+          size: v.number(),
+        }),
+      ),
+    ),
+    meetingId: v.optional(v.string()),
     // Integration update history (previous states when message is edited by webhook)
     integrationHistory: v.optional(v.array(v.object({
       body: v.string(),
@@ -164,7 +232,7 @@ export default defineSchema({
     status: v.string(),
     url: v.string(),
     author: v.string(),
-    metadata: v.any(),
+    metadata: integrationMetadataValidator,
     lastSyncedAt: v.number(),
     graphitiEpisodeId: v.optional(v.string()),
   })
@@ -330,6 +398,8 @@ export default defineSchema({
     isAgent: v.boolean(),
     lastReadAt: v.optional(v.number()),
     isStarred: v.optional(v.boolean()),
+    isMuted: v.optional(v.boolean()),
+    folder: v.optional(v.string()),
   })
     .index("by_conversation", ["conversationId"])
     .index("by_user", ["userId"])
@@ -342,6 +412,18 @@ export default defineSchema({
     type: v.union(v.literal("user"), v.literal("bot"), v.literal("system")),
     isEdited: v.boolean(),
     graphitiEpisodeId: v.optional(v.string()),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          storageId: v.string(),
+          filename: v.string(),
+          mimeType: v.string(),
+          size: v.number(),
+        }),
+      ),
+    ),
+    // Legacy field (kept for schema compat with existing documents)
+    meetingId: v.optional(v.string()),
     // Thread fields
     threadId: v.optional(v.id("directMessages")),
     alsoSentToConversation: v.optional(v.boolean()),
@@ -381,7 +463,7 @@ export default defineSchema({
     workspaceId: v.id("workspaces"),
     email: v.string(),
     invitedBy: v.id("users"),
-    role: v.union(v.literal("admin"), v.literal("member")),
+    role: roleValidator,
     status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("expired")),
     token: v.string(),
     expiresAt: v.number(),
@@ -392,6 +474,14 @@ export default defineSchema({
 
   reactions: defineTable({
     messageId: v.id("messages"),
+    userId: v.id("users"),
+    emoji: v.string(),
+  })
+    .index("by_message", ["messageId"])
+    .index("by_message_user", ["messageId", "userId"]),
+
+  dmReactions: defineTable({
+    messageId: v.id("directMessages"),
     userId: v.id("users"),
     emoji: v.string(),
   })
@@ -548,6 +638,21 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_status", ["userId", "status"]),
 
+  userApiTokens: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    tokenHash: v.string(),
+    tokenPrefix: v.string(),
+    label: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    expiresAt: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_user", ["userId"])
+    .index("by_user_workspace", ["userId", "workspaceId"]),
+
   // Agent platform tables
   agents: defineTable({
     workspaceId: v.id("workspaces"),
@@ -598,7 +703,7 @@ export default defineSchema({
     action: v.string(),
     resourceType: v.optional(v.string()),
     resourceId: v.optional(v.string()),
-    metadata: v.optional(v.any()),
+    metadata: v.optional(v.record(v.string(), v.any())),
     tokenPrefix: v.string(),
     durationMs: v.optional(v.number()),
     timestamp: v.number(),
@@ -719,4 +824,11 @@ export default defineSchema({
     .index("by_workspace", ["workspaceId"])
     .index("by_channel_status", ["channelId", "status"])
     .index("by_conversation_status", ["conversationId", "status"]),
+
+  rateLimitCounters: defineTable({
+    key: v.string(),
+    windowStart: v.number(),
+    count: v.number(),
+  })
+    .index("by_key", ["key"]),
 });

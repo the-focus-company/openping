@@ -3,8 +3,15 @@ const base = import.meta.env.BASE_URL;
 ---
 
 <section class="ping-hero">
+  <div class="ping-hero-bg">
+    <div class="ping-hero-grid"></div>
+    <div class="ping-hero-glow"></div>
+  </div>
   <div class="ping-hero-inner">
-    <div class="ping-hero-badge">Documentation</div>
+    <div class="ping-hero-badge">
+      <span class="ping-hero-badge-dot"></span>
+      Documentation
+    </div>
     <h1 class="ping-hero-title">
       Build with <span class="ping-hero-accent">PING</span>
     </h1>
@@ -23,43 +30,100 @@ const base = import.meta.env.BASE_URL;
         API Reference
       </a>
     </div>
+    <div class="ping-hero-stack">
+      <span class="ping-hero-stack-label">Built with</span>
+      <span class="ping-hero-stack-pill">Next.js 15</span>
+      <span class="ping-hero-stack-pill">Convex</span>
+      <span class="ping-hero-stack-pill">WorkOS</span>
+      <span class="ping-hero-stack-pill">OpenAI</span>
+    </div>
   </div>
 </section>
 
 <style>
   .ping-hero {
+    position: relative;
     width: 100%;
-    padding: 5rem 1.5rem 4rem;
+    padding: 6rem 1.5rem 5rem;
     text-align: center;
     border-bottom: 1px solid var(--ping-border);
+    overflow: hidden;
+  }
+
+  /* Grid dot background — matches landing page */
+  .ping-hero-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .ping-hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, var(--ping-border) 1px, transparent 1px);
+    background-size: 32px 32px;
+    opacity: 0.35;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 20%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 20%, transparent 100%);
+  }
+
+  .ping-hero-glow {
+    position: absolute;
+    width: 600px;
+    height: 350px;
+    top: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ping-accent);
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.1;
   }
 
   .ping-hero-inner {
+    position: relative;
     max-width: 48rem;
     margin: 0 auto;
   }
 
+  /* Badge — matches landing page badge */
   .ping-hero-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--ping-accent);
-    background: var(--sl-color-accent-low);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.875rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.025em;
+    color: var(--ping-text-muted);
+    background: var(--ping-surface-raised);
     border: 1px solid var(--ping-border);
     border-radius: 999px;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.75rem;
+    backdrop-filter: blur(8px);
+  }
+
+  .ping-hero-badge-dot {
+    display: inline-flex;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    animation: hero-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes hero-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
   }
 
   .ping-hero-title {
-    font-size: clamp(2rem, 5vw, 3rem);
+    font-size: clamp(2.25rem, 5vw, 3.25rem);
     font-weight: 700;
     color: var(--ping-text);
-    margin: 0 0 1rem;
-    line-height: 1.15;
-    letter-spacing: -0.025em;
+    margin: 0 0 1.25rem;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
   }
 
   .ping-hero-accent {
@@ -70,10 +134,11 @@ const base = import.meta.env.BASE_URL;
   }
 
   .ping-hero-subtitle {
-    font-size: 1.125rem;
+    font-size: 1rem;
     color: var(--ping-text-muted);
-    margin: 0 0 2rem;
-    line-height: 1.6;
+    margin: 0 auto 2.25rem;
+    max-width: 32rem;
+    line-height: 1.7;
   }
 
   .ping-hero-actions {
@@ -86,11 +151,11 @@ const base = import.meta.env.BASE_URL;
   .ping-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
-    padding: 0.625rem 1.25rem;
+    gap: 0.5rem;
+    padding: 0.6875rem 1.5rem;
     border-radius: 0.5rem;
     font-weight: 500;
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     text-decoration: none;
     transition: all 0.15s ease;
   }
@@ -104,6 +169,11 @@ const base = import.meta.env.BASE_URL;
   .ping-btn-primary:hover {
     background: #4f5bc4;
     box-shadow: 0 2px 8px rgba(94, 106, 210, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .ping-btn-primary:active {
+    transform: scale(0.98);
   }
 
   .ping-btn-secondary {
@@ -116,5 +186,64 @@ const base = import.meta.env.BASE_URL;
     background: var(--ping-surface-raised);
     border-color: var(--ping-accent);
     color: var(--ping-accent);
+  }
+
+  /* Tech stack pills — matches landing page */
+  .ping-hero-stack {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 2.25rem;
+    flex-wrap: wrap;
+  }
+
+  .ping-hero-stack-label {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ping-text-muted);
+    opacity: 0.5;
+    margin-right: 0.25rem;
+  }
+
+  .ping-hero-stack-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.3125rem 0.625rem;
+    font-size: 0.6875rem;
+    font-family: var(--sl-font-mono);
+    color: var(--ping-text-muted);
+    background: var(--ping-surface-raised);
+    border: 1px solid var(--ping-border);
+    border-radius: 0.375rem;
+  }
+
+  /* Dark mode refinements */
+  :root[data-theme="dark"] .ping-hero-badge {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  :root[data-theme="dark"] .ping-hero-glow {
+    opacity: 0.08;
+  }
+
+  :root[data-theme="dark"] .ping-btn-secondary {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  :root[data-theme="dark"] .ping-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+
+  :root[data-theme="dark"] .ping-hero-stack-pill {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.06);
   }
 </style>

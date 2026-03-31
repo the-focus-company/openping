@@ -97,23 +97,28 @@ http.route({
       | { linearWebhookSecret?: string }
       | undefined;
     const secret = integrations?.linearWebhookSecret ?? process.env.LINEAR_WEBHOOK_SECRET;
-    if (secret) {
-      const signatureHeader = request.headers.get("linear-signature");
-      if (!signatureHeader) {
-        return new Response(
-          JSON.stringify({ error: "Missing linear-signature header" }),
-          { status: 401, headers: { "Content-Type": "application/json" } },
-        );
-      }
+    if (!secret) {
+      return new Response(
+        JSON.stringify({ error: "Webhook secret not configured" }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
 
-      const expected = await hmacSha256Hex(secret, rawBody);
+    const signatureHeader = request.headers.get("linear-signature");
+    if (!signatureHeader) {
+      return new Response(
+        JSON.stringify({ error: "Missing linear-signature header" }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      );
+    }
 
-      if (signatureHeader !== expected) {
-        return new Response(
-          JSON.stringify({ error: "Invalid signature" }),
-          { status: 401, headers: { "Content-Type": "application/json" } },
-        );
-      }
+    const expected = await hmacSha256Hex(secret, rawBody);
+
+    if (signatureHeader !== expected) {
+      return new Response(
+        JSON.stringify({ error: "Invalid signature" }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      );
     }
 
     const action = body.action as string | undefined;
@@ -254,21 +259,26 @@ http.route({
       | { githubWebhookSecret?: string }
       | undefined;
     const secret = integrations?.githubWebhookSecret ?? process.env.GITHUB_WEBHOOK_SECRET;
-    if (secret) {
-      const sigHeader = request.headers.get("x-hub-signature-256");
-      if (!sigHeader) {
-        return new Response(JSON.stringify({ error: "Missing x-hub-signature-256" }), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      const expected = "sha256=" + await hmacSha256Hex(secret, rawBody);
-      if (sigHeader !== expected) {
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+    if (!secret) {
+      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const sigHeader = request.headers.get("x-hub-signature-256");
+    if (!sigHeader) {
+      return new Response(JSON.stringify({ error: "Missing x-hub-signature-256" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const expected = "sha256=" + await hmacSha256Hex(secret, rawBody);
+    if (sigHeader !== expected) {
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     const isMerged = !!(pr.merged as boolean);
@@ -293,10 +303,10 @@ http.route({
       url: (pr.html_url as string) ?? "",
       author: (prUser?.login as string) ?? "unknown",
       metadata: {
-        number: pr.number,
+        number: pr.number as number | undefined,
         repo: repoFullName,
         description: pr.body ? String(pr.body).slice(0, 200) : "",
-        draft: pr.draft,
+        draft: pr.draft as boolean | undefined,
         merged: isMerged,
       },
     });
@@ -309,30 +319,141 @@ http.route({
 });
 
 // ---------------------------------------------------------------------------
-// Agent REST API
+// Shared helpers for API authentication & rate limiting
 // ---------------------------------------------------------------------------
 
-/** Extract and validate a Bearer token from the Authorization header. */
-async function authenticateAgent(
-  ctx: { runQuery: (ref: any, args: any) => Promise<any>; runMutation: (ref: any, args: any) => Promise<any> },
+type ApiCtx = {
+  runQuery: (ref: any, args: any) => Promise<any>;
+  runMutation: (ref: any, args: any) => Promise<any>;
+};
+
+type ApiCallerUser = {
+  kind: "user";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  user: { _id: any; name: string; email: string };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  workspaceId: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tokenId: any;
+};
+
+type ApiCallerAgent = {
+  kind: "agent";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  agent: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  user: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  workspaceId: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tokenId: any;
+};
+
+type ApiCaller = ApiCallerUser | ApiCallerAgent;
+
+async function hashToken(raw: string): Promise<string> {
+  const encoded = new TextEncoder().encode(raw);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Authenticate a Bearer token as either a user API key (ping_u_*) or agent token. */
+async function authenticateApiCaller(
+  ctx: ApiCtx,
   request: Request,
-) {
+): Promise<ApiCaller | null> {
   const authHeader = request.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
 
   const rawToken = authHeader.slice(7);
-  const encoded = new TextEncoder().encode(rawToken);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
-  const tokenHash = Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  const tokenHash = await hashToken(rawToken);
+
+  if (rawToken.startsWith("ping_u_")) {
+    const result = await ctx.runQuery(internal.apiAuth.getUserByTokenHash, {
+      tokenHash,
+    });
+    if (!result) return null;
+
+    await ctx.runMutation(internal.apiAuth.touchUserToken, {
+      tokenId: result.tokenId,
+    });
+
+    return {
+      kind: "user",
+      user: result.user,
+      workspaceId: result.workspaceId,
+      tokenId: result.tokenId,
+    };
+  }
+
+  // Fall back to agent token lookup
+  const result = await ctx.runQuery(internal.agentApi.getAgentByTokenHash, {
+    tokenHash,
+  });
+  if (!result) return null;
+
+  await ctx.runMutation(internal.agentApi.touchToken, {
+    tokenId: result.tokenId,
+  });
+
+  return {
+    kind: "agent",
+    agent: result.agent,
+    user: result.user,
+    workspaceId: result.workspaceId,
+    tokenId: result.tokenId,
+  };
+}
+
+async function checkApiRateLimit(
+  ctx: ApiCtx,
+  tokenId: string,
+  isWrite: boolean,
+): Promise<Response | null> {
+  const result = await ctx.runMutation(internal.rateLimit.checkRateLimit, {
+    key: `token:${tokenId}`,
+    maxPerWindow: isWrite ? 30 : 60,
+  });
+  if (!result.allowed) {
+    const retryAfter = Math.ceil((result.resetAt - Date.now()) / 1000);
+    return new Response(
+      JSON.stringify({
+        error: "Rate limit exceeded",
+        retryAfter,
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(result.resetAt),
+          "Retry-After": String(retryAfter),
+        },
+      },
+    );
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Agent REST API
+// ---------------------------------------------------------------------------
+
+/** Extract and validate a Bearer token from the Authorization header. */
+async function authenticateAgent(ctx: ApiCtx, request: Request) {
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const rawToken = authHeader.slice(7);
+  const tokenHash = await hashToken(rawToken);
 
   const result = await ctx.runQuery(internal.agentApi.getAgentByTokenHash, {
     tokenHash,
   });
   if (!result) return null;
 
-  // Touch token last-used timestamp
   await ctx.runMutation(internal.agentApi.touchToken, {
     tokenId: result.tokenId,
   });
@@ -477,6 +598,593 @@ http.route({
     );
 
     return jsonResponse({ conversations });
+  }),
+});
+
+// Health check
+http.route({
+  path: "/health",
+  method: "GET",
+  handler: httpAction(async () => {
+    return jsonResponse({ status: "ok", timestamp: new Date().toISOString() });
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// Mobile Auth — Token Exchange
+// ---------------------------------------------------------------------------
+
+http.route({
+  path: "/auth/mobile-token",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { code, redirect_uri } = body;
+
+      if (!code) {
+        return jsonResponse({ error: "code is required" }, 400);
+      }
+
+      const clientId = process.env.WORKOS_CLIENT_ID;
+      const clientSecret = process.env.WORKOS_API_KEY;
+
+      if (!clientId || !clientSecret) {
+        return jsonResponse({ error: "Server misconfigured" }, 500);
+      }
+
+      const tokenResponse = await fetch(
+        "https://api.workos.com/user_management/authenticate",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            grant_type: "authorization_code",
+            client_id: clientId,
+            client_secret: clientSecret,
+            code,
+            ...(redirect_uri ? { redirect_uri } : {}),
+          }),
+        },
+      );
+
+      if (!tokenResponse.ok) {
+        const errorBody = await tokenResponse.text();
+        return jsonResponse(
+          { error: "Token exchange failed", details: errorBody },
+          tokenResponse.status,
+        );
+      }
+
+      const tokenData = await tokenResponse.json();
+      const { access_token, refresh_token, user: workosUser } = tokenData;
+
+      if (workosUser) {
+        await ctx.runMutation(api.users.createOrUpdate, {
+          workosUserId: workosUser.id,
+          email: workosUser.email ?? "",
+          name:
+            [workosUser.first_name, workosUser.last_name]
+              .filter(Boolean)
+              .join(" ") || "User",
+          avatarUrl: workosUser.profile_picture_url ?? undefined,
+        });
+      }
+
+      return jsonResponse({
+        accessToken: access_token,
+        refreshToken: refresh_token,
+      });
+    } catch (e: any) {
+      return jsonResponse(
+        { error: "Internal error", message: e?.message },
+        500,
+      );
+    }
+  }),
+});
+
+http.route({
+  path: "/auth/mobile-refresh",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { refresh_token } = body;
+
+      if (!refresh_token) {
+        return jsonResponse({ error: "refresh_token is required" }, 400);
+      }
+
+      const clientId = process.env.WORKOS_CLIENT_ID;
+      const clientSecret = process.env.WORKOS_API_KEY;
+
+      if (!clientId || !clientSecret) {
+        return jsonResponse({ error: "Server misconfigured" }, 500);
+      }
+
+      const tokenResponse = await fetch(
+        "https://api.workos.com/user_management/authenticate",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            grant_type: "refresh_token",
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token,
+          }),
+        },
+      );
+
+      if (!tokenResponse.ok) {
+        const errorBody = await tokenResponse.text();
+        return jsonResponse(
+          { error: "Token refresh failed", details: errorBody },
+          tokenResponse.status,
+        );
+      }
+
+      const tokenData = await tokenResponse.json();
+      return jsonResponse({
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token,
+      });
+    } catch (e: any) {
+      return jsonResponse(
+        { error: "Internal error", message: e?.message },
+        500,
+      );
+    }
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// User / Unified API (v1)
+// ---------------------------------------------------------------------------
+
+// GET /api/v1/me — Caller identity (user or agent)
+http.route({
+  path: "/api/v1/me",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const caller = await authenticateApiCaller(ctx, request);
+    if (!caller) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const rateLimited = await checkApiRateLimit(ctx, caller.tokenId, false);
+    if (rateLimited) return rateLimited;
+
+    if (caller.kind === "user") {
+      return jsonResponse({
+        kind: "user",
+        user: caller.user,
+        workspaceId: caller.workspaceId,
+      });
+    }
+
+    return jsonResponse({
+      kind: "agent",
+      agent: caller.agent,
+      user: caller.user,
+      workspaceId: caller.workspaceId,
+    });
+  }),
+});
+
+// GET /api/v1/keys — List caller's API keys (user tokens only)
+http.route({
+  path: "/api/v1/keys",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const caller = await authenticateApiCaller(ctx, request);
+    if (!caller) return jsonResponse({ error: "Unauthorized" }, 401);
+    if (caller.kind !== "user") {
+      return jsonResponse({ error: "Only user tokens can manage keys" }, 403);
+    }
+
+    const rateLimited = await checkApiRateLimit(ctx, caller.tokenId, false);
+    if (rateLimited) return rateLimited;
+
+    const tokens = await ctx.runQuery(internal.apiAuth.listTokens, {
+      userId: caller.user._id,
+      workspaceId: caller.workspaceId,
+    });
+
+    return jsonResponse({ keys: tokens });
+  }),
+});
+
+// POST /api/v1/keys — Generate a new API key
+http.route({
+  path: "/api/v1/keys",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const caller = await authenticateApiCaller(ctx, request);
+    if (!caller) return jsonResponse({ error: "Unauthorized" }, 401);
+    if (caller.kind !== "user") {
+      return jsonResponse({ error: "Only user tokens can manage keys" }, 403);
+    }
+
+    const rateLimited = await checkApiRateLimit(ctx, caller.tokenId, true);
+    if (rateLimited) return rateLimited;
+
+    const body = await request.json();
+    const label = body.label as string | undefined;
+
+    const rawToken = `ping_u_${crypto.randomUUID()}`;
+    const tokenHash = await hashToken(rawToken);
+    const tokenPrefix = rawToken.slice(0, 12) + "...";
+
+    const result = await ctx.runMutation(internal.apiAuth.generateToken, {
+      userId: caller.user._id,
+      workspaceId: caller.workspaceId,
+      tokenHash,
+      tokenPrefix,
+      label,
+    });
+
+    return jsonResponse({
+      token: rawToken,
+      tokenId: result.tokenId,
+      tokenPrefix,
+      label,
+    });
+  }),
+});
+
+// DELETE /api/v1/keys — Revoke a key
+http.route({
+  path: "/api/v1/keys",
+  method: "DELETE",
+  handler: httpAction(async (ctx, request) => {
+    const caller = await authenticateApiCaller(ctx, request);
+    if (!caller) return jsonResponse({ error: "Unauthorized" }, 401);
+    if (caller.kind !== "user") {
+      return jsonResponse({ error: "Only user tokens can manage keys" }, 403);
+    }
+
+    const rateLimited = await checkApiRateLimit(ctx, caller.tokenId, true);
+    if (rateLimited) return rateLimited;
+
+    const body = await request.json();
+    const keyId = body.keyId as string;
+    if (!keyId) {
+      return jsonResponse({ error: "keyId required" }, 400);
+    }
+
+    const result = await ctx.runMutation(internal.apiAuth.revokeToken, {
+      tokenId: keyId as any,
+      userId: caller.user._id,
+    });
+
+    if (!result.success) {
+      return jsonResponse({ error: result.error }, 400);
+    }
+
+    return jsonResponse({ success: true });
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// Public Channel API (v1)
+// ---------------------------------------------------------------------------
+
+// GET /api/v1/channels — List workspace channels
+http.route({
+  path: "/api/v1/channels",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const channels = await ctx.runQuery(internal.publicApi.listChannels, {
+      workspaceId: auth.workspaceId,
+    });
+    return jsonResponse({ channels });
+  }),
+});
+
+// POST /api/v1/channels — Create channel
+http.route({
+  path: "/api/v1/channels",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const body = await request.json();
+    const { name, description, isPrivate } = body;
+    if (!name) return jsonResponse({ error: "name is required" }, 400);
+
+    const result = await ctx.runMutation(internal.publicApi.createChannel, {
+      workspaceId: auth.workspaceId,
+      userId: auth.user._id,
+      name,
+      description,
+      isPrivate,
+    });
+    return jsonResponse(result, 201);
+  }),
+});
+
+// POST /api/v1/channels/members — List channel members
+http.route({
+  path: "/api/v1/channels/members",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const body = await request.json();
+    const { channelId } = body;
+    if (!channelId) return jsonResponse({ error: "channelId is required" }, 400);
+
+    const members = await ctx.runQuery(internal.publicApi.listChannelMembers, {
+      channelId,
+      workspaceId: auth.workspaceId,
+    });
+    return jsonResponse({ members });
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// Public API v1 — Channel Messages
+// ---------------------------------------------------------------------------
+
+// POST /api/v1/channels/messages — List messages with date filtering
+http.route({
+  path: "/api/v1/channels/messages",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const body = await request.json();
+    const { channelId, limit = 50, startTime, endTime } = body;
+    if (!channelId)
+      return jsonResponse({ error: "channelId is required" }, 400);
+
+    const messages = await ctx.runQuery(
+      internal.publicApi.readChannelMessages,
+      {
+        channelId,
+        workspaceId: auth.workspaceId,
+        userId: auth.user._id,
+        limit: Math.min(limit, 200),
+        startTime,
+        endTime,
+      },
+    );
+    return jsonResponse({ messages });
+  }),
+});
+
+// POST /api/v1/channels/messages/send — Send or reply
+http.route({
+  path: "/api/v1/channels/messages/send",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const body = await request.json();
+    const { channelId, message, threadId } = body;
+    if (!channelId || !message)
+      return jsonResponse(
+        { error: "channelId and message are required" },
+        400,
+      );
+
+    const result = await ctx.runMutation(
+      internal.publicApi.sendChannelMessageApi,
+      {
+        channelId,
+        workspaceId: auth.workspaceId,
+        userId: auth.user._id,
+        body: message,
+        messageType: auth.kind === "user" ? "user" : "bot",
+        threadId,
+      },
+    );
+    return jsonResponse(result, 201);
+  }),
+});
+
+// POST /api/v1/channels/messages/thread — List thread replies
+http.route({
+  path: "/api/v1/channels/messages/thread",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const body = await request.json();
+    const { threadId } = body;
+    if (!threadId)
+      return jsonResponse({ error: "threadId is required" }, 400);
+
+    const result = await ctx.runQuery(
+      internal.publicApi.listChannelThreadReplies,
+      {
+        threadId,
+        workspaceId: auth.workspaceId,
+        userId: auth.user._id,
+      },
+    );
+    return jsonResponse(result);
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// Public API v1 — DM Conversations & Messages
+// ---------------------------------------------------------------------------
+
+// GET /api/v1/conversations
+http.route({
+  path: "/api/v1/conversations",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+    const conversations = await ctx.runQuery(
+      internal.publicApi.listConversations,
+      { userId: auth.user._id },
+    );
+    return jsonResponse({ conversations });
+  }),
+});
+
+// POST /api/v1/conversations/create
+http.route({
+  path: "/api/v1/conversations/create",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+    const body = await request.json();
+    const { kind, memberIds, name } = body;
+    if (!kind || !memberIds)
+      return jsonResponse(
+        { error: "kind and memberIds are required" },
+        400,
+      );
+    const result = await ctx.runMutation(
+      internal.publicApi.createConversation,
+      {
+        workspaceId: auth.workspaceId,
+        userId: auth.user._id,
+        kind,
+        memberIds,
+        name,
+      },
+    );
+    return jsonResponse(result, 201);
+  }),
+});
+
+// POST /api/v1/conversations/members
+http.route({
+  path: "/api/v1/conversations/members",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+    const body = await request.json();
+    const { conversationId } = body;
+    if (!conversationId)
+      return jsonResponse(
+        { error: "conversationId is required" },
+        400,
+      );
+    const members = await ctx.runQuery(
+      internal.publicApi.listConversationMembers,
+      {
+        conversationId,
+        userId: auth.user._id,
+      },
+    );
+    return jsonResponse({ members });
+  }),
+});
+
+// POST /api/v1/conversations/messages
+http.route({
+  path: "/api/v1/conversations/messages",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+    const body = await request.json();
+    const { conversationId, limit = 50, startTime, endTime } = body;
+    if (!conversationId)
+      return jsonResponse(
+        { error: "conversationId is required" },
+        400,
+      );
+    const messages = await ctx.runQuery(
+      internal.publicApi.readDMMessages,
+      {
+        conversationId,
+        userId: auth.user._id,
+        limit: Math.min(limit, 200),
+        startTime,
+        endTime,
+      },
+    );
+    return jsonResponse({ messages });
+  }),
+});
+
+// POST /api/v1/conversations/messages/send
+http.route({
+  path: "/api/v1/conversations/messages/send",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+    const body = await request.json();
+    const { conversationId, message, threadId } = body;
+    if (!conversationId || !message)
+      return jsonResponse(
+        { error: "conversationId and message are required" },
+        400,
+      );
+    const result = await ctx.runMutation(internal.publicApi.sendDMApi, {
+      conversationId,
+      userId: auth.user._id,
+      body: message,
+      messageType: auth.kind === "user" ? "user" : "bot",
+      threadId,
+    });
+    return jsonResponse(result, 201);
+  }),
+});
+
+// POST /api/v1/conversations/messages/thread
+http.route({
+  path: "/api/v1/conversations/messages/thread",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+    const body = await request.json();
+    const { threadId } = body;
+    if (!threadId)
+      return jsonResponse({ error: "threadId is required" }, 400);
+    const result = await ctx.runQuery(
+      internal.publicApi.listDMThreadReplies,
+      {
+        threadId,
+        userId: auth.user._id,
+      },
+    );
+    return jsonResponse(result);
+  }),
+});
+
+// POST /api/v1/reactions/toggle — Add/remove emoji reaction
+http.route({
+  path: "/api/v1/reactions/toggle",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateApiCaller(ctx, request);
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401);
+
+    const body = await request.json();
+    const { messageId, emoji } = body;
+
+    if (!messageId || !emoji) {
+      return jsonResponse({ error: "messageId and emoji are required" }, 400);
+    }
+
+    const result = await ctx.runMutation(internal.publicApi.toggleReaction, {
+      messageId,
+      userId: auth.user._id,
+      workspaceId: auth.workspaceId,
+      emoji,
+    });
+
+    return jsonResponse(result);
   }),
 });
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import neo4j, { type Integer } from "neo4j-driver";
+import * as Sentry from "@sentry/nextjs";
 
 const NEO4J_URI = process.env.NEO4J_URI ?? "";
 const NEO4J_USER = process.env.NEO4J_USER ?? "";
@@ -86,10 +87,11 @@ export async function GET() {
     } finally {
       await session.close();
     }
-  } catch (err: any) {
-    console.error("[knowledge-graph] Neo4j query failed:", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Neo4j query failed";
+    Sentry.captureException(err);
     return NextResponse.json(
-      { error: err.message ?? "Neo4j query failed" },
+      { error: message },
       { status: 500 },
     );
   } finally {

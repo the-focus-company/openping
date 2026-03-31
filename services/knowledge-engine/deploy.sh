@@ -33,7 +33,7 @@ fi
 echo "==> Deploying ${APP_NAME} to Fly.io"
 
 echo "==> Step 1: Create app (if needed)"
-fly apps create "$APP_NAME" --org pingcompany 2>/dev/null || echo "App ${APP_NAME} already exists"
+fly apps create "$APP_NAME" --org the-focus-company 2>/dev/null || echo "App ${APP_NAME} already exists"
 
 echo "==> Step 2: Set secrets"
 SECRETS=(

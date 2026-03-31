@@ -18,6 +18,7 @@ import {
   Keyboard,
   LogOut,
   Lock,
+  Key,
   ArrowLeft,
   PanelLeftClose,
   Check,
@@ -94,6 +95,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
   const router = useRouter();
   const wsCtx = useContext(WorkspaceContext);
   const isAdmin = wsCtx?.role === "admin";
+  const isGuest = wsCtx?.role === "guest";
 
   const workspaceSlug = pathname.match(/^\/app\/([^/]+)/)?.[1];
   const workspacePrefix = workspaceSlug ? `/app/${workspaceSlug}` : "";
@@ -822,6 +824,7 @@ function SettingsNav({ pathname, buildPath }: SettingsNavProps) {
   const router = useRouter();
   const wsCtx = useContext(WorkspaceContext);
   const isAdmin = wsCtx?.role === "admin";
+  const isGuest = wsCtx?.role === "guest";
 
   return (
     <>

@@ -1,0 +1,103 @@
+name: Deploy to TestFlight
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'convex/schema.ts'
+
+  workflow_dispatch:
+
+jobs:
+  build-and-upload:
+    name: Build & Upload to TestFlight
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_PUBLIC_CONVEX_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_URL }}
+      EXPO_PUBLIC_WORKOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_WORKOS_CLIENT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Generate Convex types
+        run: npx convex codegen
+        working-directory: .
+
+      - name: Generate native project
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Bundle JS
+        run: npx expo export --platform ios
+
+      - name: Install CocoaPods
+        run: cd ios && pod install
+
+      - name: Import signing certificate
+        env:
+          P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ github.run_id }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo "$P12_BASE64" | base64 --decode > $RUNNER_TEMP/cert.p12
+          security import $RUNNER_TEMP/cert.p12 -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+      - name: Install provisioning profile
+        env:
+          PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/openping.mobileprovision
+
+      - name: Archive
+        run: |
+          xcodebuild archive \
+            -workspace ios/OpenPing.xcworkspace \
+            -scheme OpenPing \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath build/OpenPing.xcarchive \
+            CODE_SIGN_STYLE=Automatic \
+            -quiet
+
+      - name: Export & Upload
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath build/OpenPing.xcarchive \
+            -exportOptionsPlist scripts/ExportOptions.plist \
+            -exportPath build/export \
+            -quiet
+
+      - name: Upload to App Store Connect
+        env:
+          APP_STORE_API_KEY_ID: ${{ secrets.APP_STORE_API_KEY_ID }}
+          APP_STORE_API_ISSUER_ID: ${{ secrets.APP_STORE_API_ISSUER_ID }}
+          APP_STORE_API_KEY_BASE64: ${{ secrets.APP_STORE_API_KEY_BASE64 }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APP_STORE_API_KEY_BASE64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_API_KEY_ID}.p8
+          IPA=$(find build/export -name "*.ipa" | head -1)
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA" \
+            --apiKey "$APP_STORE_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_API_ISSUER_ID"

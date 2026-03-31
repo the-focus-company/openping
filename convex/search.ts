@@ -1,6 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth, requireUser } from "./auth";
+import { requireAuth, requireUser, getGuestVisibleUserIds } from "./auth";
 
 /**
  * Search channel messages using the full-text search index.
@@ -12,7 +12,7 @@ export const searchMessages = query({
     query: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx, args.workspaceId);
+    const user = await requireAuth(ctx, args.workspaceId);
 
     // Get channels in this workspace so we only return relevant results
     const channels = await ctx.db
@@ -20,7 +20,16 @@ export const searchMessages = query({
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
       .take(100);
 
-    const channelIds = new Set(channels.map((c) => c._id));
+    let channelIds = new Set<string>(channels.map((c) => c._id));
+
+    if (user.role === "guest") {
+      const myMemberships = await ctx.db
+        .query("channelMembers")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .collect();
+      const myChannelIds = new Set<string>(myMemberships.map((m) => m.channelId));
+      channelIds = new Set([...channelIds].filter((id) => myChannelIds.has(id)));
+    }
     const channelMap = new Map(channels.map((c) => [c._id, c]));
 
     // Search across all messages (search index doesn't support OR on filterFields,
@@ -113,7 +122,8 @@ export const searchPeople = query({
     query: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx, args.workspaceId);
+    const user = await requireAuth(ctx, args.workspaceId);
+    const visibleUserIds = await getGuestVisibleUserIds(ctx, user._id, user.role);
 
     const wsMembers = await ctx.db
       .query("workspaceMembers")
@@ -126,6 +136,7 @@ export const searchPeople = query({
 
     const users = await Promise.all(
       wsMembers.map(async (m) => {
+        if (visibleUserIds && !visibleUserIds.has(m.userId)) return null;
         const u = await ctx.db.get(m.userId);
         if (!u || u.status === "deactivated") return null;
         if (

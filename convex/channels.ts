@@ -53,18 +53,26 @@ export const create = mutation({
     isPrivate: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const name = args.name.trim();
+    if (!name || name.length > 80) {
+      throw new Error("Channel name must be between 1 and 80 characters");
+    }
+
     const user = await requireAuth(ctx, args.workspaceId);
+    if (user.role === "guest") {
+      throw new Error("Guests cannot create channels");
+    }
 
     const existing = await ctx.db
       .query("channels")
       .withIndex("by_workspace_name", (q) =>
-        q.eq("workspaceId", user.workspaceId).eq("name", args.name),
+        q.eq("workspaceId", user.workspaceId).eq("name", name),
       )
       .unique();
     if (existing) throw new Error("Channel name already taken");
 
     const channelId = await ctx.db.insert("channels", {
-      name: args.name,
+      name,
       description: args.description,
       workspaceId: user.workspaceId,
       createdBy: user._id,
@@ -92,6 +100,17 @@ export const list = query({
   },
   handler: async (ctx, args) => {
     const user = await requireAuth(ctx, args.workspaceId);
+    const isGuest = user.role === "guest";
+
+    // For guests, pre-fetch their channel memberships to restrict visibility
+    let guestChannelIds: Set<string> | null = null;
+    if (isGuest) {
+      const memberships = await ctx.db
+        .query("channelMembers")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .collect();
+      guestChannelIds = new Set(memberships.map((m) => m.channelId));
+    }
 
     const channels = await ctx.db
       .query("channels")
@@ -101,7 +120,7 @@ export const list = query({
     // Get unread counts from denormalized channelMembers field
     const channelsWithUnread = await Promise.all(
       channels
-        .filter((c) => !c.isArchived && (!c.type || c.type === "public"))
+        .filter((c) => !c.isArchived && (!c.type || c.type === "public") && (!isGuest || guestChannelIds!.has(c._id)))
         .map(async (channel) => {
           const membership = await ctx.db
             .query("channelMembers")
@@ -123,6 +142,8 @@ export const list = query({
             unreadMentionCount: membership?.unreadMentionCount ?? 0,
             isStarred: membership?.isStarred ?? false,
             lastMessageAt: lastMsg?._creationTime ?? channel._creationTime,
+            isMuted: membership?.isMuted ?? false,
+            folder: membership?.folder ?? null,
           };
         }),
     );
@@ -194,6 +215,17 @@ export const join = mutation({
     if (!channel) throw new Error("Channel not found");
     if (channel.type === "dm" || channel.type === "group") {
       throw new Error("Cannot self-join a private conversation");
+    }
+
+    // Check if user is a guest (guests cannot self-join)
+    const wsMembership = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_user_workspace", (q) =>
+        q.eq("userId", user._id).eq("workspaceId", channel.workspaceId),
+      )
+      .unique();
+    if (wsMembership?.role === "guest") {
+      throw new Error("Guests cannot self-join channels");
     }
 
     const existing = await ctx.db
@@ -288,6 +320,17 @@ export const invite = mutation({
       .unique();
     if (!callerMembership) throw new Error("You must be a member to invite others");
 
+    // Guests cannot invite others to channels
+    const callerWsMembership = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_user_workspace", (q) =>
+        q.eq("userId", user._id).eq("workspaceId", channel.workspaceId),
+      )
+      .unique();
+    if (callerWsMembership?.role === "guest") {
+      throw new Error("Guests cannot invite others to channels");
+    }
+
     for (const targetUserId of args.userIds) {
       // Verify target user exists and is in same workspace
       const targetUser = await ctx.db.get(targetUserId);
@@ -380,12 +423,17 @@ export const update = mutation({
     const user = await requireAuth(ctx, channel.workspaceId);
     requireChannelOwnerOrAdmin(channel, user, "update");
 
+    const name = args.name !== undefined ? args.name.trim() : undefined;
+    if (name !== undefined && (!name || name.length > 80)) {
+      throw new Error("Channel name must be between 1 and 80 characters");
+    }
+
     // Check name uniqueness for public channels only
-    if (args.name && (!channel.type || channel.type === "public")) {
+    if (name && (!channel.type || channel.type === "public")) {
       const existing = await ctx.db
         .query("channels")
         .withIndex("by_workspace_name", (q) =>
-          q.eq("workspaceId", channel.workspaceId).eq("name", args.name!),
+          q.eq("workspaceId", channel.workspaceId).eq("name", name),
         )
         .unique();
       if (existing && existing._id !== args.channelId) {
@@ -394,7 +442,8 @@ export const update = mutation({
     }
 
     const { channelId: _, ...updates } = args;
-    await ctx.db.patch(args.channelId, updates);
+    const patchData = name !== undefined ? { ...updates, name } : updates;
+    await ctx.db.patch(args.channelId, patchData);
   },
 });
 
@@ -417,6 +466,37 @@ export const toggleStar = mutation({
     });
 
     return !membership.isStarred;
+  },
+});
+
+export const toggleMute = mutation({
+  args: { channelId: v.id("channels") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const membership = await ctx.db
+      .query("channelMembers")
+      .withIndex("by_channel_user", (q) =>
+        q.eq("channelId", args.channelId).eq("userId", user._id),
+      )
+      .unique();
+    if (!membership) throw new Error("Not a member of this channel");
+    await ctx.db.patch(membership._id, { isMuted: !membership.isMuted });
+    return !membership.isMuted;
+  },
+});
+
+export const setFolder = mutation({
+  args: { channelId: v.id("channels"), folder: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const membership = await ctx.db
+      .query("channelMembers")
+      .withIndex("by_channel_user", (q) =>
+        q.eq("channelId", args.channelId).eq("userId", user._id),
+      )
+      .unique();
+    if (!membership) throw new Error("Not a member of this channel");
+    await ctx.db.patch(membership._id, { folder: args.folder });
   },
 });
 

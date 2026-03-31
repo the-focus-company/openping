@@ -2,11 +2,12 @@ import { query, mutation, internalQuery, MutationCtx } from "./_generated/server
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { requireAuth, requireUser } from "./auth";
+import { roleValidator } from "./schema";
 
 export const send = mutation({
   args: {
     email: v.string(),
-    role: v.union(v.literal("admin"), v.literal("member")),
+    role: roleValidator,
     workspaceId: v.id("workspaces"),
   },
   handler: async (ctx, args) => {
@@ -197,19 +198,21 @@ export const accept = mutation({
         joinedAt: Date.now(),
       });
 
-      // Auto-join #general channel
-      const generalChannel = await ctx.db
-        .query("channels")
-        .withIndex("by_workspace_name", (q) =>
-          q.eq("workspaceId", invitation.workspaceId).eq("name", "general"),
-        )
-        .unique();
+      // Auto-join #general channel (guests must be explicitly added to channels)
+      if (invitation.role !== "guest") {
+        const generalChannel = await ctx.db
+          .query("channels")
+          .withIndex("by_workspace_name", (q) =>
+            q.eq("workspaceId", invitation.workspaceId).eq("name", "general"),
+          )
+          .unique();
 
-      if (generalChannel) {
-        await ctx.db.insert("channelMembers", {
-          channelId: generalChannel._id,
-          userId: user._id,
-        });
+        if (generalChannel) {
+          await ctx.db.insert("channelMembers", {
+            channelId: generalChannel._id,
+            userId: user._id,
+          });
+        }
       }
     }
 

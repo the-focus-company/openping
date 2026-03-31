@@ -95,6 +95,93 @@ export const getByMessage = query({
   },
 });
 
+// ─── DM Reactions ────────────────────────────────────────────────
+
+export const toggleDM = mutation({
+  args: {
+    messageId: v.id("directMessages"),
+    emoji: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+
+    // Verify membership
+    const membership = await ctx.db
+      .query("directConversationMembers")
+      .withIndex("by_conversation_user", (q) =>
+        q.eq("conversationId", message.conversationId).eq("userId", user._id),
+      )
+      .first();
+    if (!membership) throw new Error("Not a member of this conversation");
+
+    const existingReactions = await ctx.db
+      .query("dmReactions")
+      .withIndex("by_message_user", (q) =>
+        q.eq("messageId", args.messageId).eq("userId", user._id),
+      )
+      .take(100);
+
+    const existing = existingReactions.find((r) => r.emoji === args.emoji);
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      return null;
+    }
+
+    return await ctx.db.insert("dmReactions", {
+      messageId: args.messageId,
+      userId: user._id,
+      emoji: args.emoji,
+    });
+  },
+});
+
+export const getByDMMessages = query({
+  args: {
+    messageIds: v.array(v.id("directMessages")),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+
+    const result: Record<
+      string,
+      Array<{ emoji: string; count: number; userIds: string[]; userNames: string[] }>
+    > = {};
+
+    await Promise.all(
+      args.messageIds.map(async (messageId) => {
+        const reactions = await ctx.db
+          .query("dmReactions")
+          .withIndex("by_message", (q) => q.eq("messageId", messageId))
+          .take(500);
+
+        const grouped = groupReactionsByEmoji(reactions);
+
+        result[messageId] = await Promise.all(
+          Array.from(grouped.entries()).map(async ([emoji, emojiReactions]) => {
+            const users = await Promise.all(
+              emojiReactions.map((r) => ctx.db.get(r.userId)),
+            );
+            return {
+              emoji,
+              count: emojiReactions.length,
+              userIds: emojiReactions.map((r) => r.userId as string),
+              userNames: users.map((u) => u?.name ?? "Unknown"),
+            };
+          }),
+        );
+      }),
+    );
+
+    return result;
+  },
+});
+
+// ─── Channel Reactions ────────────────────────────────────────────
+
 export const getByMessages = query({
   args: {
     messageIds: v.array(v.id("messages")),

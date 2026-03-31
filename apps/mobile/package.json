@@ -1,0 +1,46 @@
+{
+  "name": "@ping/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "build": "echo \"Use EAS Build for production builds\"",
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~55.0.6",
+    "convex": "^1.34.0",
+    "expo": "~55.0.0",
+    "expo-auth-session": "~55.0.9",
+    "expo-clipboard": "^55.0.9",
+    "expo-constants": "~55.0.9",
+    "expo-crypto": "~55.0.10",
+    "expo-document-picker": "~55.0.9",
+    "expo-image-picker": "~55.0.13",
+    "expo-linking": "~55.0.8",
+    "expo-notifications": "~55.0.13",
+    "expo-router": "~55.0.7",
+    "expo-secure-store": "~55.0.9",
+    "expo-status-bar": "~55.0.4",
+    "expo-web-browser": "~55.0.10",
+    "lucide-react-native": "^1.7.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-native": "0.83.2",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-web": "~0.21.2",
+    "rn-emoji-keyboard": "^1.7.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0",
+    "@types/react": "~19.2.14",
+    "eslint": "^9.39.4",
+    "eslint-config-expo": "~55.0.0",
+    "typescript": "^5.7.0"
+  }
+}

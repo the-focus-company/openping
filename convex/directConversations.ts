@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth, requireUser, requireDMmember } from "./auth";
+import { requireAuth, requireUser, requireDMmember, getGuestVisibleUserIds } from "./auth";
 
 export const list = query({
   args: {},
@@ -78,6 +78,8 @@ export const list = query({
           lastMessage: lastMessagePreview,
           myLastReadAt: membership.lastReadAt,
           isStarred: membership.isStarred ?? false,
+          isMuted: membership.isMuted ?? false,
+          folder: membership.folder ?? null,
         };
       }),
     );
@@ -226,6 +228,16 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const user = await requireAuth(ctx, args.workspaceId);
 
+    // Guests can only DM members of shared channels
+    const visibleUserIds = await getGuestVisibleUserIds(ctx, user._id, user.role);
+    if (visibleUserIds) {
+      for (const memberId of args.memberIds) {
+        if (!visibleUserIds.has(memberId)) {
+          throw new Error("Guests can only message members of shared channels");
+        }
+      }
+    }
+
     // For 1-to-1, check if conversation already exists
     if (args.kind === "1to1" && args.memberIds.length === 1) {
       const otherUserId = args.memberIds[0];
@@ -368,5 +380,52 @@ export const remove = mutation({
     await ctx.db.patch(args.conversationId, {
       deletedAt: Date.now(),
     });
+  },
+});
+
+export const toggleStar = mutation({
+  args: { conversationId: v.id("directConversations") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const membership = await ctx.db
+      .query("directConversationMembers")
+      .withIndex("by_conversation_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", user._id),
+      )
+      .first();
+    if (!membership) throw new Error("Not a member");
+    await ctx.db.patch(membership._id, { isStarred: !membership.isStarred });
+    return !membership.isStarred;
+  },
+});
+
+export const toggleMute = mutation({
+  args: { conversationId: v.id("directConversations") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const membership = await ctx.db
+      .query("directConversationMembers")
+      .withIndex("by_conversation_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", user._id),
+      )
+      .first();
+    if (!membership) throw new Error("Not a member");
+    await ctx.db.patch(membership._id, { isMuted: !membership.isMuted });
+    return !membership.isMuted;
+  },
+});
+
+export const setFolder = mutation({
+  args: { conversationId: v.id("directConversations"), folder: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const membership = await ctx.db
+      .query("directConversationMembers")
+      .withIndex("by_conversation_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", user._id),
+      )
+      .first();
+    if (!membership) throw new Error("Not a member");
+    await ctx.db.patch(membership._id, { folder: args.folder });
   },
 });

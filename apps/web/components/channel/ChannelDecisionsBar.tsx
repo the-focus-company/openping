@@ -14,9 +14,7 @@ import {
 } from "@/components/inbox/DecisionCard";
 import {
   type InboxCategory,
-  type PriorityLevel,
   CATEGORY_TO_PRIORITY,
-  priorityConfig,
 } from "@/components/inbox/InboxCard";
 import { InboxModal, type ModalItem } from "@/components/inbox/InboxModal";
 

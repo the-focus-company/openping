@@ -7,7 +7,7 @@ export interface WorkspaceContextValue {
   workspaceId: Id<"workspaces">;
   workspaceSlug: string;
   workspaceName: string;
-  role: "admin" | "member";
+  role: "admin" | "member" | "guest";
   isSubdomain: boolean;
   /** Build a path for this workspace. In subdomain mode returns bare path, otherwise /app/{slug}/path */
   buildPath: (path: string) => string;
@@ -20,7 +20,7 @@ interface WorkspaceProviderProps {
   workspaceId: Id<"workspaces">;
   workspaceSlug: string;
   workspaceName: string;
-  role: "admin" | "member";
+  role: "admin" | "member" | "guest";
   isSubdomain?: boolean;
 }
 

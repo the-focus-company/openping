@@ -2,6 +2,7 @@ import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireUser } from "./auth";
 import { cleanupEmptyPersonalWorkspaces } from "./invitations";
+import { roleValidator } from "./schema";
 
 export const listMyWorkspaces = query({
   args: {},
@@ -84,7 +85,7 @@ export const updateRole = mutation({
   args: {
     workspaceId: v.id("workspaces"),
     userId: v.id("users"),
-    role: v.union(v.literal("admin"), v.literal("member")),
+    role: roleValidator,
   },
   handler: async (ctx, args) => {
     const currentUser = await requireAuth(ctx, args.workspaceId);
@@ -134,9 +135,14 @@ export const inviteByEmail = mutation({
   args: {
     workspaceId: v.id("workspaces"),
     email: v.string(),
-    role: v.union(v.literal("admin"), v.literal("member")),
+    role: roleValidator,
   },
   handler: async (ctx, args) => {
+    const email = args.email.trim().toLowerCase();
+    if (!email || email.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error("Invalid email address");
+    }
+
     const currentUser = await requireAuth(ctx, args.workspaceId);
     if (currentUser.role !== "admin") {
       throw new Error("Only admins can invite members");
@@ -145,7 +151,7 @@ export const inviteByEmail = mutation({
     // Check if already a member
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
 
     if (existingUser) {
@@ -163,7 +169,7 @@ export const inviteByEmail = mutation({
 
     await ctx.db.insert("invitations", {
       workspaceId: args.workspaceId,
-      email: args.email,
+      email,
       role: args.role,
       invitedBy: currentUser._id,
       token,
@@ -217,7 +223,10 @@ export const acceptInvite = mutation({
 
     await ctx.db.patch(invite._id, { status: "accepted" });
 
-    await cleanupEmptyPersonalWorkspaces(ctx, user._id, invite.workspaceId);
+    // Only clean up personal workspaces for non-guest roles
+    if (invite.role !== "guest") {
+      await cleanupEmptyPersonalWorkspaces(ctx, user._id, invite.workspaceId);
+    }
 
     const workspace = await ctx.db.get(invite.workspaceId);
     return { workspaceId: invite.workspaceId, slug: workspace?.slug ?? "" };
