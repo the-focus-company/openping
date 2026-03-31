@@ -95,7 +95,7 @@ export function FileUpload({
     [attachments, onAttachmentsChange],
   );
 
-  const removeAttachment = useCallback(
+  const _removeAttachment = useCallback(
     (id: string) => {
       const att = attachments.find((a) => a.id === id);
       if (att?.previewUrl) URL.revokeObjectURL(att.previewUrl);

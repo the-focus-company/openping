@@ -3,6 +3,7 @@
 import { type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Menu } from "lucide-react";
 import { TOPBAR_HEIGHT } from "@/lib/constants";
 import { SearchField } from "./SearchField";
