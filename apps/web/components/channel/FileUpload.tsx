@@ -95,15 +95,6 @@ export function FileUpload({
     [attachments, onAttachmentsChange],
   );
 
-  const _removeAttachment = useCallback(
-    (id: string) => {
-      const att = attachments.find((a) => a.id === id);
-      if (att?.previewUrl) URL.revokeObjectURL(att.previewUrl);
-      onAttachmentsChange(attachments.filter((a) => a.id !== id));
-    },
-    [attachments, onAttachmentsChange],
-  );
-
   // Cleanup preview URLs on unmount
   useEffect(() => {
     return () => {
