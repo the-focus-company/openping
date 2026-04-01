@@ -17,12 +17,8 @@ pnpm install --frozen-lockfile
 
 echo ">>> Running Convex codegen..."
 cd "$CI_PRIMARY_REPOSITORY_PATH"
-if [ -n "${CONVEX_DEPLOYMENT:-}" ]; then
-  npx convex codegen --typecheck=disable
-else
-  echo "⚠️  CONVEX_DEPLOYMENT not set — skipping codegen"
-  echo "    Set it in Xcode Cloud Environment Variables (e.g. prod:your-deployment-name)"
-fi
+export CONVEX_DEPLOYMENT="${CONVEX_DEPLOYMENT:-prod:quick-falcon-481}"
+npx convex codegen --typecheck=disable
 
 echo ">>> Installing CocoaPods..."
 cd "$CI_PRIMARY_REPOSITORY_PATH/apps/mobile/ios"
