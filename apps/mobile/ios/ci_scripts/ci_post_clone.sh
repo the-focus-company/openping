@@ -15,6 +15,10 @@ echo ">>> Installing dependencies..."
 cd "$CI_PRIMARY_REPOSITORY_PATH"
 pnpm install --frozen-lockfile
 
+echo ">>> Running Convex codegen..."
+export CONVEX_DEPLOYMENT="${CONVEX_DEPLOYMENT:-prod:quick-falcon-481}"
+npx convex codegen --typecheck=disable
+
 echo ">>> Installing CocoaPods..."
 cd "$CI_PRIMARY_REPOSITORY_PATH/apps/mobile/ios"
 pod install
