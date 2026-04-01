@@ -51,7 +51,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const workspace = useQuery(api.workspaces.getBySlug, isAuthenticated && workspaceSlug ? { slug: workspaceSlug } : "skip");
   const workspaceId = workspace?._id as Id<"workspaces"> | undefined;
   const channels = useQuery(api.channels.list, isAuthenticated && workspaceId ? { workspaceId } : "skip");
-  const dmConversations = useQuery(api.directConversations.list, isAuthenticated ? {} : "skip");
+  const dmConversations = useQuery(api.directConversations.list, isAuthenticated && workspaceId ? { workspaceId } : "skip");
   const inboxUnread = useQuery(api.inboxItems.unreadCount, isAuthenticated ? {} : "skip");
   const markChannelRead = useMutation(api.channels.markRead);
   const markDMRead = useMutation(api.directConversations.markRead);

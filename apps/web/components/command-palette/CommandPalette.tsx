@@ -43,7 +43,7 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar, onStartMee
   const workspaceId = workspace?._id as Id<"workspaces"> | undefined;
 
   const channels = useQuery(api.channels.list, isAuthenticated && workspaceId ? { workspaceId } : "skip");
-  const dmConversations = useQuery(api.directConversations.list, isAuthenticated ? {} : "skip");
+  const dmConversations = useQuery(api.directConversations.list, isAuthenticated && workspaceId ? { workspaceId } : "skip");
   const currentUser = useQuery(api.users.getMe, isAuthenticated ? {} : "skip");
 
   // Fetch managed agents from DB
@@ -80,8 +80,8 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar, onStartMee
   );
   const dmResults = useQuery(
     api.search.searchDirectMessages,
-    isAuthenticated && hasSearch
-      ? { query: debouncedSearch.trim() }
+    isAuthenticated && workspaceId && hasSearch
+      ? { workspaceId, query: debouncedSearch.trim() }
       : "skip",
   );
 

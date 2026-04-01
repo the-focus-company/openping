@@ -68,9 +68,11 @@ export const searchMessages = query({
  */
 export const searchDirectMessages = query({
   args: {
+    workspaceId: v.id("workspaces"),
     query: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx, args.workspaceId);
     const user = await requireUser(ctx);
 
     // Get user's DM conversations
@@ -79,7 +81,15 @@ export const searchDirectMessages = query({
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .take(100);
 
-    const conversationIds = new Set(memberships.map((m) => m.conversationId));
+    // Filter to conversations in this workspace only
+    const conversations = await Promise.all(
+      memberships.map((m) => ctx.db.get(m.conversationId)),
+    );
+    const conversationIds = new Set(
+      conversations
+        .filter((c) => c && c.workspaceId === args.workspaceId)
+        .map((c) => c!._id),
+    );
 
     // Search DMs and post-filter by membership
     const results = await ctx.db

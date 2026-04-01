@@ -85,7 +85,7 @@ export function useSidebarLayout(
   );
   const dmConversations = useQuery(
     api.directConversations.list,
-    isAuthenticated ? {} : "skip",
+    isAuthenticated && workspaceId ? { workspaceId } : "skip",
   );
   const user = useQuery(api.users.getMe, isAuthenticated ? {} : "skip");
 

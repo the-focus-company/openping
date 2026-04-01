@@ -6,15 +6,17 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { MemberListItem } from "@/components/MemberListItem";
 import { AttachmentPreview } from "@/components/AttachmentPreview";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { FileIcon, ImageIcon, Star, BellOff, Bell, FolderPlus } from "lucide-react-native";
 
 export default function ChannelInfoScreen() {
   const { channelId } = useLocalSearchParams<{ channelId: string }>();
   const typedChannelId = channelId as Id<"channels">;
+  const { workspaceId } = useWorkspace();
 
   const channel = useQuery(api.channels.get, { channelId: typedChannelId });
   const allChannels = useQuery(api.channels.list, { workspaceId: channel?.workspaceId ?? ("skip" as any) });
-  const allConvos = useQuery(api.directConversations.list);
+  const allConvos = useQuery(api.directConversations.list, { workspaceId });
   const toggleStar = useMutation(api.channels.toggleStar);
   const toggleMute = useMutation(api.channels.toggleMute);
   const setFolderMut = useMutation(api.channels.setFolder);

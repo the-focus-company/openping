@@ -37,7 +37,7 @@ type CommunicationItem = {
 export default function CommunicationsScreen() {
   const { workspaceId } = useWorkspace();
   const channels = useQuery(api.channels.list, { workspaceId });
-  const conversations = useQuery(api.directConversations.list);
+  const conversations = useQuery(api.directConversations.list, { workspaceId });
   const { user } = useCurrentUser();
   const router = useRouter();
 

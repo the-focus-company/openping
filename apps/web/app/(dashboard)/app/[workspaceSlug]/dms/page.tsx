@@ -126,8 +126,8 @@ function ConvIcon({ kind, initials }: {
 export default function DMsPage() {
   const router = useRouter();
   const { workspaceId, buildPath } = useWorkspace();
-  const conversations = useQuery(api.directConversations.list, {});
-  const archivedConversations = useQuery(api.directConversations.listArchived, {});
+  const conversations = useQuery(api.directConversations.list, { workspaceId });
+  const archivedConversations = useQuery(api.directConversations.listArchived, { workspaceId });
   const allUsers = useQuery(api.users.listAll, { workspaceId });
   const currentUser = useQuery(api.users.getMe, {});
   const createConversation = useMutation(api.directConversations.create);

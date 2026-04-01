@@ -3,9 +3,9 @@ import { v } from "convex/values";
 import { requireAuth, requireUser, requireDMmember, getGuestVisibleUserIds } from "./auth";
 
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
-    const user = await requireUser(ctx);
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const user = await requireAuth(ctx, args.workspaceId);
 
     // Get all conversations this user is a member of
     const memberships = await ctx.db
@@ -17,6 +17,8 @@ export const list = query({
       memberships.map(async (membership) => {
         const conversation = await ctx.db.get(membership.conversationId);
         if (!conversation || conversation.isArchived || conversation.deletedAt) return null;
+        // Filter by workspace
+        if (conversation.workspaceId !== args.workspaceId) return null;
 
         // Get all members of this conversation
         const members = await ctx.db
@@ -95,9 +97,9 @@ export const list = query({
 });
 
 export const listArchived = query({
-  args: {},
-  handler: async (ctx) => {
-    const user = await requireUser(ctx);
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const user = await requireAuth(ctx, args.workspaceId);
 
     const memberships = await ctx.db
       .query("directConversationMembers")
@@ -108,6 +110,7 @@ export const listArchived = query({
       memberships.map(async (membership) => {
         const conversation = await ctx.db.get(membership.conversationId);
         if (!conversation || !conversation.isArchived || conversation.deletedAt) return null;
+        if (conversation.workspaceId !== args.workspaceId) return null;
 
         const members = await ctx.db
           .query("directConversationMembers")

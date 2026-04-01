@@ -40,7 +40,7 @@ export default function SearchTabScreen() {
   );
   const directMessages = useQuery(
     api.search.searchDirectMessages,
-    shouldSearch ? { query: debouncedQuery } : "skip",
+    shouldSearch ? { workspaceId, query: debouncedQuery } : "skip",
   );
   const agents = useQuery(api.agents.list, { workspaceId });
 

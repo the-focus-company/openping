@@ -28,7 +28,7 @@ export default function ProfileScreen() {
   const router = useRouter();
 
   const channels = useQuery(api.channels.list, { workspaceId });
-  const conversations = useQuery(api.directConversations.list);
+  const conversations = useQuery(api.directConversations.list, { workspaceId });
   const setChannelFolder = useMutation(api.channels.setFolder);
   const setDMFolder = useMutation(api.directConversations.setFolder);
 

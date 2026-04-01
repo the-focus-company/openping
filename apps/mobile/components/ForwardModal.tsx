@@ -41,7 +41,7 @@ export function ForwardModal({
   const { workspaceId } = useWorkspace();
   const { user } = useCurrentUser();
   const channels = useQuery(api.channels.list, { workspaceId });
-  const conversations = useQuery(api.directConversations.list);
+  const conversations = useQuery(api.directConversations.list, { workspaceId });
   const sendChannelMessage = useMutation(api.messages.send);
   const sendDM = useMutation(api.directMessages.send);
 

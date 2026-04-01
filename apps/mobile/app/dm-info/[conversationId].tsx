@@ -7,6 +7,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { MemberListItem } from "@/components/MemberListItem";
 import { AttachmentPreview } from "@/components/AttachmentPreview";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { getDMDisplayName } from "@/lib/dmDisplayName";
 import { FileIcon, ImageIcon, Star, Bell, BellOff, FolderPlus } from "lucide-react-native";
 
@@ -15,11 +16,12 @@ export default function DMInfoScreen() {
     conversationId: string;
   }>();
   const typedConversationId = conversationId as Id<"directConversations">;
+  const { workspaceId } = useWorkspace();
 
   const conversation = useQuery(api.directConversations.get, {
     conversationId: typedConversationId,
   });
-  const allConvos = useQuery(api.directConversations.list);
+  const allConvos = useQuery(api.directConversations.list, { workspaceId });
   const toggleStar = useMutation(api.directConversations.toggleStar);
   const toggleMute = useMutation(api.directConversations.toggleMute);
   const setFolderMut = useMutation(api.directConversations.setFolder);
