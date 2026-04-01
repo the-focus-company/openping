@@ -27,8 +27,9 @@ export default function ProfileScreen() {
   const { workspaces } = useWorkspaceData();
   const router = useRouter();
 
-  const channels = useQuery(api.channels.list, { workspaceId });
-  const conversations = useQuery(api.directConversations.list, { workspaceId });
+  const hasWorkspace = workspaceId !== ("" as any) && !!workspaceId;
+  const channels = useQuery(api.channels.list, hasWorkspace ? { workspaceId } : "skip");
+  const conversations = useQuery(api.directConversations.list, hasWorkspace ? { workspaceId } : "skip");
   const setChannelFolder = useMutation(api.channels.setFolder);
   const setDMFolder = useMutation(api.directConversations.setFolder);
 
@@ -65,7 +66,7 @@ export default function ProfileScreen() {
   // Use search to find messages mentioning the user
   const mentionResults = useQuery(
     api.search.searchMessages,
-    user?.name
+    user?.name && hasWorkspace
       ? { workspaceId, query: `@${user.name}` }
       : "skip",
   );
