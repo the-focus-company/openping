@@ -18,10 +18,10 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "PING",
+  title: "OpenPing",
   description: "Your team's second brain",
   openGraph: {
-    title: "PING — AI-Native Workspace",
+    title: "OpenPing — AI-Native Workspace",
     description:
       "AI-powered team communication with Eisenhower inbox, smart alerts, and deep integrations.",
     images: ["/og-image.png"],
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "PING — AI-Native Workspace",
+    title: "OpenPing — AI-Native Workspace",
     description:
       "AI-powered team communication with Eisenhower inbox, smart alerts, and deep integrations.",
     images: ["/og-image.png"],

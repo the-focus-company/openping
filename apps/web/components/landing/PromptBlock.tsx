@@ -2,10 +2,10 @@
 import { useState } from "react";
 import { Copy, Check, Sparkles } from "lucide-react";
 
-const AGENT_PROMPT = `Help me deploy PING — an open-source AI team messenger (Slack replacement with AI triage).
+const AGENT_PROMPT = `Help me deploy OpenPing — an open-source AI team messenger (Slack replacement with AI triage).
 
 1. Clone github.com/the-focus-company/openping
-2. Follow the quickstart at the-focus-company.github.io/openping/getting-started/quickstart/
+2. Follow the quickstart at docs.openping.app/getting-started/quickstart/
 3. Set up Convex (backend), WorkOS (auth), and OpenAI (AI features)
 4. Run \`pnpm dev\` to start locally
 

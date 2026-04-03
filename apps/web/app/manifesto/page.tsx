@@ -315,9 +315,9 @@ export default function ManifestoPage() {
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/bw_logotype_onwhite_padding.png" alt="PING" className="h-5 w-auto dark:hidden" />
+            <img src="/bw_logotype_onwhite_padding.png" alt="OpenPing" className="h-5 w-auto dark:hidden" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/bw_logotype_onbalck_padding.png" alt="PING" className="hidden h-5 w-auto dark:block" />
+            <img src="/bw_logotype_onbalck_padding.png" alt="OpenPing" className="hidden h-5 w-auto dark:block" />
           </Link>
           <div className="flex items-center gap-5">
             <span className="text-xs font-medium uppercase tracking-[0.2em] text-black/25 dark:text-white/25">
@@ -353,7 +353,7 @@ export default function ManifestoPage() {
         {/* Title overlaid on knot */}
         <div className="relative z-10 text-center">
           <h1 className="text-6xl font-bold tracking-tight text-black dark:text-white sm:text-8xl md:text-9xl">
-            PING
+            OpenPing
           </h1>
           <p className="mt-4 text-sm uppercase tracking-[0.4em] text-black/30 dark:text-white/30">
             Decision-first workspace
@@ -405,7 +405,7 @@ export default function ManifestoPage() {
             Judgment, accountability, taste, strategic intuition, the principled risk — those still belong to people.
           </p>
           <p className="text-lg font-medium text-black dark:text-white">
-            PING is built on a simple idea: let AI do the assembly. Let humans do the deciding.
+            OpenPing is built on a simple idea: let AI do the assembly. Let humans do the deciding.
           </p>
         </section>
 
@@ -416,7 +416,7 @@ export default function ManifestoPage() {
               {
                 num: "01",
                 title: "Surfaces the right decisions",
-                body: "Not everything deserves attention. PING identifies what actually needs a human call — nothing more, nothing less.",
+                body: "Not everything deserves attention. OpenPing identifies what actually needs a human call — nothing more, nothing less.",
               },
               {
                 num: "02",
@@ -468,7 +468,7 @@ export default function ManifestoPage() {
             Clearer judgment. Faster coordinated action.
           </p>
           <p className="mt-4 text-lg text-black/50 dark:text-white/50">
-            That is what PING is here to build.
+            That is what OpenPing is here to build.
           </p>
         </section>
       </main>
@@ -476,7 +476,7 @@ export default function ManifestoPage() {
       {/* Footer */}
       <footer className="border-t border-black/[0.06] py-12 text-center dark:border-white/[0.06]">
         <Link href="/" className="text-sm text-black/25 transition-colors hover:text-black/50 dark:text-white/25 dark:hover:text-white/50">
-          &larr; Back to PING
+          &larr; Back to OpenPing
         </Link>
       </footer>
     </div>

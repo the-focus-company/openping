@@ -2,11 +2,11 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 
 export default defineConfig({
-  site: "https://the-focus-company.github.io",
-  base: "/openping/",
+  site: "https://docs.openping.app",
+  base: "/",
   integrations: [
     starlight({
-      title: "PING Docs",
+      title: "OpenPing Docs",
       favicon: "/favicon.ico",
       logo: {
         light: "./src/assets/ping-logo-light.png",

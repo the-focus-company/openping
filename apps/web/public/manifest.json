@@ -1,6 +1,6 @@
 {
-  "name": "PING",
-  "short_name": "PING",
+  "name": "OpenPing",
+  "short_name": "OpenPing",
   "description": "Your team's second brain",
   "start_url": "/",
   "display": "standalone",
