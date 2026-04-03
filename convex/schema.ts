@@ -412,6 +412,19 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_workspace", ["workspaceId"]),
 
+  conversationInvitations: defineTable({
+    conversationId: v.id("conversations"),
+    workspaceId: v.id("workspaces"),
+    createdBy: v.id("users"),
+    email: v.optional(v.string()),
+    token: v.string(),
+    expiresAt: v.number(),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+  })
+    .index("by_token", ["token"])
+    .index("by_conversation", ["conversationId"])
+    .index("by_conversation_and_email", ["conversationId", "email"]),
+
   reactions: defineTable({
     messageId: v.id("messages"),
     userId: v.id("users"),

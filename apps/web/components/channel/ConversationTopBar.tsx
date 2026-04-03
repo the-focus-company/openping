@@ -11,6 +11,7 @@ import {
   Bot,
   Users,
   Video,
+  Link2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,6 +40,8 @@ interface ConversationTopBarProps {
   onAttachments?: () => void;
   onStartMeeting?: () => void;
   hasActiveMeeting?: boolean;
+  onShareLink?: () => void;
+  isGuest?: boolean;
 }
 
 function getInitials(name: string): string {
@@ -61,6 +64,8 @@ export function ConversationTopBar({
   onAttachments,
   onStartMeeting,
   hasActiveMeeting,
+  onShareLink,
+  isGuest,
 }: ConversationTopBarProps) {
   const [showMembers, setShowMembers] = useState(false);
   const isAgent = kind === "agent_1to1" || kind === "agent_group";
@@ -204,6 +209,12 @@ export function ConversationTopBar({
               <Copy className="h-3.5 w-3.5" />
               Copy link
             </DropdownMenuItem>
+            {!isGuest && onShareLink && (
+              <DropdownMenuItem onClick={onShareLink} className="gap-2 text-xs">
+                <Link2 className="h-3.5 w-3.5" />
+                Get invite link
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onArchive} className="gap-2 text-xs">
               <Archive className="h-3.5 w-3.5" />
