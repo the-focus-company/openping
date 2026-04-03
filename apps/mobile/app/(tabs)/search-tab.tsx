@@ -19,7 +19,7 @@ export default function SearchTabScreen() {
   const { workspaceId } = useWorkspace();
   const router = useRouter();
 
-  const createDM = useMutation(api.directConversations.create);
+  const createConversation = useMutation(api.conversations.create);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
@@ -38,15 +38,11 @@ export default function SearchTabScreen() {
     api.search.searchMessages,
     shouldSearch ? { workspaceId, query: debouncedQuery } : "skip",
   );
-  const directMessages = useQuery(
-    api.search.searchDirectMessages,
-    shouldSearch ? { workspaceId, query: debouncedQuery } : "skip",
-  );
   const agents = useQuery(api.agents.list, { workspaceId });
 
   const isLoading =
     shouldSearch &&
-    (people === undefined || messages === undefined || directMessages === undefined);
+    (people === undefined || messages === undefined);
 
   type ResultItem = {
     key: string;
@@ -79,14 +75,15 @@ export default function SearchTabScreen() {
         context: isAgent ? "AI" : undefined,
         initials: getInitials(p.name),
         onPress: async () => {
-          const conversationId = await createDM({
+          const conversationId = await createConversation({
             kind: isAgent ? "agent_1to1" : "1to1",
+            visibility: "secret",
             memberIds: [p._id as Id<"users">],
             ...(isAgent ? { agentMemberIds: [p._id as Id<"users">] } : {}),
             workspaceId,
           });
           router.push({
-            pathname: "/dm/[conversationId]",
+            pathname: "/conversation/[conversationId]" as any,
             params: { conversationId },
           });
         },
@@ -111,14 +108,15 @@ export default function SearchTabScreen() {
             initials: a.name.charAt(0).toUpperCase(),
             onPress: async () => {
               if (a.agentUserId) {
-                const conversationId = await createDM({
+                const conversationId = await createConversation({
                   kind: "agent_1to1",
+                  visibility: "secret",
                   memberIds: [a.agentUserId as Id<"users">],
                   agentMemberIds: [a.agentUserId as Id<"users">],
                   workspaceId,
                 });
                 router.push({
-                  pathname: "/dm/[conversationId]",
+                  pathname: "/conversation/[conversationId]" as any,
                   params: { conversationId },
                 });
               }
@@ -143,34 +141,11 @@ export default function SearchTabScreen() {
         key: m._id,
         title: m.authorName,
         subtitle: m.body,
-        context: m.channelName ? `#${m.channelName}` : undefined,
+        context: m.conversationName ? `#${m.conversationName}` : undefined,
         timestamp: m._creationTime,
         onPress: () =>
           router.push({
-            pathname: "/channel/[channelId]",
-            params: { channelId: m.channelId, highlightMessage: m._id },
-          }),
-      })),
-    });
-  }
-  if (directMessages && directMessages.length > 0) {
-    const seen = new Set<string>();
-    const uniqueDMs = directMessages.filter((m) => {
-      if (seen.has(m._id)) return false;
-      seen.add(m._id);
-      return true;
-    });
-    sections.push({
-      title: "Direct Messages",
-      data: uniqueDMs.map((m) => ({
-        key: m._id,
-        title: m.authorName,
-        subtitle: m.body,
-        context: "DM",
-        timestamp: m._creationTime,
-        onPress: () =>
-          router.push({
-            pathname: "/dm/[conversationId]",
+            pathname: "/conversation/[conversationId]" as any,
             params: { conversationId: m.conversationId, highlightMessage: m._id },
           }),
       })),

@@ -27,10 +27,8 @@ export default function ProfileScreen() {
   const { workspaces } = useWorkspaceData();
   const router = useRouter();
 
-  const channels = useQuery(api.channels.list, { workspaceId });
-  const conversations = useQuery(api.directConversations.list, { workspaceId });
-  const setChannelFolder = useMutation(api.channels.setFolder);
-  const setDMFolder = useMutation(api.directConversations.setFolder);
+  const conversations = useQuery(api.conversations.list, { workspaceId });
+  const setConversationFolder = useMutation(api.conversations.setFolder);
 
   const [pushEnabled, setPushEnabled] = useState(true);
   const [dmNotifs, setDmNotifs] = useState(true);
@@ -38,21 +36,16 @@ export default function ProfileScreen() {
   const [showAllMentions, setShowAllMentions] = useState(false);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
 
-  // Collect unique folders from channels and DMs
+  // Collect unique folders from conversations
   const folders = useMemo(() => {
     const set = new Set<string>();
-    if (channels) {
-      for (const ch of channels) {
-        if ((ch as any).folder) set.add((ch as any).folder);
-      }
-    }
     if (conversations) {
       for (const conv of conversations) {
         if ((conv as any).folder) set.add((conv as any).folder);
       }
     }
     return Array.from(set).sort();
-  }, [channels, conversations]);
+  }, [conversations]);
 
   // Fetch messages mentioning the user
   const mentions = useQuery(
@@ -231,14 +224,13 @@ export default function ProfileScreen() {
           </View>
         ) : (
           folders.map((folderName) => {
-            const channelCount = channels?.filter((ch: any) => ch.folder === folderName).length ?? 0;
-            const dmCount = conversations?.filter((c: any) => c.folder === folderName).length ?? 0;
+            const convCount = conversations?.filter((c: any) => c.folder === folderName).length ?? 0;
             return (
               <View key={folderName} style={styles.folderRow}>
                 <Folder size={18} color="#0a7ea4" />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.folderName}>{folderName}</Text>
-                  <Text style={styles.folderCount}>{channelCount + dmCount} conversations</Text>
+                  <Text style={styles.folderCount}>{convCount} conversations</Text>
                 </View>
                 <Pressable
                   hitSlop={8}
@@ -252,20 +244,12 @@ export default function ProfileScreen() {
                           text: "Delete Folder",
                           style: "destructive",
                           onPress: async () => {
-                            // Remove folder from all channels and DMs that have it
-                            if (channels) {
-                              for (const ch of channels) {
-                                if ((ch as any).folder === folderName) {
-                                  await setChannelFolder({ channelId: ch._id as any, folder: undefined });
-                                }
-                              }
-                            }
                             if (conversations) {
-                              for (const conv of conversations) {
-                                if ((conv as any).folder === folderName) {
-                                  await setDMFolder({ conversationId: conv._id as any, folder: undefined });
-                                }
-                              }
+                              await Promise.all(
+                                conversations
+                                  .filter((conv: any) => conv.folder === folderName)
+                                  .map((conv) => setConversationFolder({ conversationId: conv._id as any, folder: undefined })),
+                              );
                             }
                             Alert.alert("Folder deleted");
                           },
@@ -302,8 +286,8 @@ export default function ProfileScreen() {
                 ]}
                 onPress={() =>
                   router.push({
-                    pathname: "/channel/[channelId]",
-                    params: { channelId: m.channelId, highlightMessage: m._id },
+                    pathname: "/conversation/[conversationId]" as any,
+                    params: { conversationId: m.conversationId, highlightMessage: m._id },
                   })
                 }
               >
@@ -312,8 +296,8 @@ export default function ProfileScreen() {
                     <Text style={styles.mentionAuthor} numberOfLines={1}>
                       {m.authorName}
                     </Text>
-                    {m.channelName && (
-                      <Text style={styles.mentionChannel}>#{m.channelName}</Text>
+                    {m.conversationName && (
+                      <Text style={styles.mentionChannel}>#{m.conversationName}</Text>
                     )}
                   </View>
                   <Text style={styles.mentionBody} numberOfLines={2}>

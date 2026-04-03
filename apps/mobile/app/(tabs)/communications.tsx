@@ -21,7 +21,6 @@ import { User, Users, Filter, Plus, Hash, BellOff } from "lucide-react-native";
 
 type CommunicationItem = {
   id: string;
-  type: "channel" | "dm";
   name: string;
   lastMessagePreview?: string;
   lastMessageAuthor?: string;
@@ -31,13 +30,13 @@ type CommunicationItem = {
   folder: string | null;
   timestamp: number;
   route: { pathname: string; params: Record<string, string> };
-  kind?: "1to1" | "group" | "agent_1to1" | "agent_group";
+  kind: "1to1" | "group" | "agent_1to1" | "agent_group";
+  visibility: "public" | "secret" | "secret_can_be_public";
 };
 
 export default function CommunicationsScreen() {
   const { workspaceId } = useWorkspace();
-  const channels = useQuery(api.channels.list, { workspaceId });
-  const conversations = useQuery(api.directConversations.list, { workspaceId });
+  const conversations = useQuery(api.conversations.list, { workspaceId });
   const { user } = useCurrentUser();
   const router = useRouter();
 
@@ -45,41 +44,24 @@ export default function CommunicationsScreen() {
   const [filterUnread, setFilterUnread] = useState(false);
   const [filter1to1, setFilter1to1] = useState(false);
 
-  const loading = channels === undefined || conversations === undefined;
+  const loading = conversations === undefined;
 
   const sections = useMemo(() => {
     if (loading) return [];
 
     const items: CommunicationItem[] = [];
 
-    for (const ch of channels) {
-      if (!ch.isMember || ch.isArchived) continue;
-      items.push({
-        id: ch._id,
-        type: "channel",
-        name: ch.name,
-        lastMessagePreview: undefined,
-        unreadCount: ch.unreadCount ?? 0,
-        isStarred: ch.isStarred ?? false,
-        isMuted: (ch as any).isMuted ?? false,
-        folder: (ch as any).folder ?? null,
-        timestamp: ch._creationTime,
-        route: {
-          pathname: "/channel/[channelId]",
-          params: { channelId: ch._id },
-        },
-      });
-    }
-
     for (const conv of conversations) {
-      const displayName = getDMDisplayName(
-        conv.name,
-        (conv as any).members ?? [],
-        user?._id,
-      );
+      const isPublicChannel = conv.visibility === "public";
+      const displayName = isPublicChannel
+        ? (conv.name ?? "Unnamed")
+        : getDMDisplayName(
+            conv.name,
+            (conv as any).members ?? [],
+            user?._id,
+          ) ?? "Conversation";
       items.push({
         id: conv._id,
-        type: "dm",
         name: displayName,
         lastMessagePreview: (conv as any).lastMessage?.body,
         lastMessageAuthor: (conv as any).lastMessage?.authorName,
@@ -89,10 +71,11 @@ export default function CommunicationsScreen() {
         folder: (conv as any).folder ?? null,
         timestamp: (conv as any).lastMessage?.timestamp ?? conv._creationTime,
         route: {
-          pathname: "/dm/[conversationId]",
+          pathname: "/conversation/[conversationId]",
           params: { conversationId: conv._id },
         },
-        kind: (conv as any).kind,
+        kind: conv.kind,
+        visibility: conv.visibility,
       });
     }
 
@@ -103,7 +86,7 @@ export default function CommunicationsScreen() {
     }
     if (filter1to1) {
       filtered = filtered.filter(
-        (item) => item.type === "dm" && (item.kind === "1to1" || item.kind === "agent_1to1"),
+        (item) => item.kind === "1to1" || item.kind === "agent_1to1",
       );
     }
 
@@ -137,7 +120,7 @@ export default function CommunicationsScreen() {
     result.push({ title: "Recent", data: recent });
 
     return result;
-  }, [channels, conversations, user?._id, loading, sortBy, filterUnread, filter1to1]);
+  }, [conversations, user?._id, loading, sortBy, filterUnread, filter1to1]);
 
   function showFilterOptions() {
     if (Platform.OS === "ios") {
@@ -232,7 +215,7 @@ export default function CommunicationsScreen() {
               <View style={styles.iconWrap}>
                 {item.unreadCount > 0 && <View style={styles.unreadDot} />}
                 <View style={styles.dmIconWrap}>
-                  {item.type === "channel" ? (
+                  {item.visibility === "public" ? (
                     <Hash size={18} color="#aaa" />
                   ) : item.kind === "group" || item.kind === "agent_group" ? (
                     <Users size={18} color="#aaa" />
@@ -258,7 +241,7 @@ export default function CommunicationsScreen() {
                     numberOfLines={1}
                   >
                     {item.isStarred ? "\u2605 " : ""}
-                    {item.type === "channel" ? `# ${item.name}` : item.name}
+                    {item.visibility === "public" ? `# ${item.name}` : item.name}
                   </Text>
                   <Text style={styles.time}>
                     {formatRelativeTime(item.timestamp)}

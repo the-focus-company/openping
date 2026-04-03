@@ -29,7 +29,7 @@ export default function NewConversationScreen() {
   const router = useRouter();
   const users = useQuery(api.users.listAll, { workspaceId });
   const agents = useQuery(api.agents.list, { workspaceId });
-  const createConversation = useMutation(api.directConversations.create);
+  const createConversation = useMutation(api.conversations.create);
 
   // Build agent userId set
   const agentUserIds = new Set<string>();
@@ -62,12 +62,13 @@ export default function NewConversationScreen() {
     const isAgent = agentUserIds.has(userId);
     const conversationId = await createConversation({
       kind: isAgent ? "agent_1to1" : "1to1",
+      visibility: "secret",
       memberIds: [userId],
       ...(isAgent ? { agentMemberIds: [userId] } : {}),
       workspaceId,
     });
     router.replace({
-      pathname: "/dm/[conversationId]",
+      pathname: "/conversation/[conversationId]" as any,
       params: { conversationId },
     });
   }
@@ -80,13 +81,14 @@ export default function NewConversationScreen() {
 
     const conversationId = await createConversation({
       kind: hasAgents ? "agent_group" : "group",
+      visibility: "secret",
       memberIds,
       name: groupName.trim() || undefined,
       ...(hasAgents ? { agentMemberIds: agentMembers } : {}),
       workspaceId,
     });
     router.replace({
-      pathname: "/dm/[conversationId]",
+      pathname: "/conversation/[conversationId]" as any,
       params: { conversationId },
     });
   }

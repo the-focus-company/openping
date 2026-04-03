@@ -19,7 +19,7 @@ export default function SearchScreen() {
   const { workspaceId } = useWorkspace();
   const router = useRouter();
 
-  const createDM = useMutation(api.directConversations.create);
+  const createConversation = useMutation(api.conversations.create);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
@@ -38,10 +38,6 @@ export default function SearchScreen() {
     api.search.searchMessages,
     shouldSearch ? { workspaceId, query: debouncedQuery } : "skip",
   );
-  const directMessages = useQuery(
-    api.search.searchDirectMessages,
-    shouldSearch ? { workspaceId, query: debouncedQuery } : "skip",
-  );
   const agents = useQuery(
     api.agents.list,
     { workspaceId },
@@ -49,7 +45,7 @@ export default function SearchScreen() {
 
   const isLoading =
     shouldSearch &&
-    (people === undefined || messages === undefined || directMessages === undefined);
+    (people === undefined || messages === undefined);
 
   type ResultItem = {
     key: string;
@@ -84,28 +80,17 @@ export default function SearchScreen() {
         context: isAgent ? "AI" : undefined,
         initials: getInitials(p.name),
         onPress: async () => {
-          if (isAgent) {
-            const conversationId = await createDM({
-              kind: "agent_1to1",
-              memberIds: [p._id as Id<"users">],
-              agentMemberIds: [p._id as Id<"users">],
-              workspaceId,
-            });
-            router.push({
-              pathname: "/dm/[conversationId]",
-              params: { conversationId },
-            });
-          } else {
-            const conversationId = await createDM({
-              kind: "1to1",
-              memberIds: [p._id as Id<"users">],
-              workspaceId,
-            });
-            router.push({
-              pathname: "/dm/[conversationId]",
-              params: { conversationId },
-            });
-          }
+          const conversationId = await createConversation({
+            kind: isAgent ? "agent_1to1" : "1to1",
+            visibility: "secret",
+            memberIds: [p._id as Id<"users">],
+            ...(isAgent ? { agentMemberIds: [p._id as Id<"users">] } : {}),
+            workspaceId,
+          });
+          router.push({
+            pathname: "/conversation/[conversationId]" as any,
+            params: { conversationId },
+          });
         },
       };
     });
@@ -129,14 +114,15 @@ export default function SearchScreen() {
             initials: a.name.charAt(0).toUpperCase(),
             onPress: async () => {
               if (a.agentUserId) {
-                const conversationId = await createDM({
+                const conversationId = await createConversation({
                   kind: "agent_1to1",
+                  visibility: "secret",
                   memberIds: [a.agentUserId as Id<"users">],
                   agentMemberIds: [a.agentUserId as Id<"users">],
                   workspaceId,
                 });
                 router.push({
-                  pathname: "/dm/[conversationId]",
+                  pathname: "/conversation/[conversationId]" as any,
                   params: { conversationId },
                 });
               }
@@ -149,7 +135,6 @@ export default function SearchScreen() {
     sections.push({ title: "People", data: peopleItems });
   }
   if (messages && messages.length > 0) {
-    // Deduplicate by message ID
     const seenMsg = new Set<string>();
     const uniqueMessages = messages.filter((m) => {
       if (seenMsg.has(m._id)) return false;
@@ -162,71 +147,15 @@ export default function SearchScreen() {
         key: m._id,
         title: m.authorName,
         subtitle: m.body,
-        context: m.channelName ? `#${m.channelName}` : undefined,
+        context: m.conversationName ? `#${m.conversationName}` : undefined,
         timestamp: m._creationTime,
         onPress: () =>
           router.push({
-            pathname: "/channel/[channelId]",
-            params: { channelId: m.channelId, highlightMessage: m._id },
+            pathname: "/conversation/[conversationId]" as any,
+            params: { conversationId: m.conversationId, highlightMessage: m._id },
           }),
       })),
     });
-  }
-  if (directMessages && directMessages.length > 0) {
-    // Deduplicate by message ID
-    const seenDM = new Set<string>();
-    const uniqueDMs = directMessages.filter((m) => {
-      if (seenDM.has(m._id)) return false;
-      seenDM.add(m._id);
-      return true;
-    });
-
-    // Separate file matches from text matches
-    const fileMatches: ResultItem[] = [];
-    const dmMatches: ResultItem[] = [];
-    const lowerQuery = debouncedQuery.toLowerCase();
-
-    for (const m of uniqueDMs) {
-      const attachments = (m as any).attachments as { filename: string; mimeType: string }[] | undefined;
-      const matchingFiles = attachments?.filter((a) =>
-        a.filename.toLowerCase().includes(lowerQuery),
-      );
-
-      if (matchingFiles && matchingFiles.length > 0) {
-        for (const f of matchingFiles) {
-          fileMatches.push({
-            key: `${m._id}-${f.filename}`,
-            title: f.filename,
-            subtitle: `Shared by ${m.authorName}`,
-            context: f.mimeType.split("/")[0],
-            timestamp: m._creationTime,
-            onPress: () =>
-              router.push({
-                pathname: "/dm/[conversationId]",
-                params: { conversationId: m.conversationId, highlightMessage: m._id },
-              }),
-          });
-        }
-      }
-
-      dmMatches.push({
-        key: m._id,
-        title: m.authorName,
-        subtitle: m.body,
-        context: "DM",
-        timestamp: m._creationTime,
-        onPress: () =>
-          router.push({
-            pathname: "/dm/[conversationId]",
-            params: { conversationId: m.conversationId, highlightMessage: m._id },
-          }),
-      });
-    }
-
-    if (fileMatches.length > 0) {
-      sections.push({ title: "Files", data: fileMatches });
-    }
-    sections.push({ title: "Direct Messages", data: dmMatches });
   }
 
   return (
