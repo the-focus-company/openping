@@ -6,7 +6,7 @@ export default defineConfig({
   base: "/openping/",
   integrations: [
     starlight({
-      title: "PING Docs",
+      title: "OpenPing Docs",
       favicon: "/favicon.ico",
       logo: {
         light: "./src/assets/ping-logo-light.png",
