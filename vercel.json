@@ -2,6 +2,5 @@
   "buildCommand": "npx convex codegen && pnpm turbo run build --filter=@ping/web",
   "outputDirectory": "apps/web/.next",
   "framework": "nextjs",
-  "installCommand": "pnpm install",
-  "ignoreCommand": "if [ -z \"$VERCEL_GIT_COMMIT_REF\" ] || [ \"$VERCEL_GIT_COMMIT_REF\" = \"main\" ] || [ \"$VERCEL_GIT_COMMIT_REF\" = \"preview\" ]; then exit 1; else exit 0; fi"
+  "installCommand": "pnpm install"
 }
