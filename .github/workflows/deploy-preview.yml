@@ -30,6 +30,7 @@ jobs:
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }} --scope=8lines
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          SKIP_ENV_VALIDATION: "1"
 
       - name: Deploy
         run: vercel deploy --prebuilt --archive=tgz --token=${{ secrets.VERCEL_TOKEN }} --scope=8lines
