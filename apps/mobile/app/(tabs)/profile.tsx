@@ -58,7 +58,7 @@ export default function ProfileScreen() {
   // Use search to find messages mentioning the user
   const mentionResults = useQuery(
     api.search.searchMessages,
-    user?.name
+    user?.name && hasWorkspace
       ? { workspaceId, query: `@${user.name}` }
       : "skip",
   );
