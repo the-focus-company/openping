@@ -126,7 +126,7 @@ export function CompanyContextStep({
             Workspace URL
           </label>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{process.env.NEXT_PUBLIC_APP_DOMAIN ?? "localhost:3000"}/app/</span>
+            <span className="text-xs text-muted-foreground">{process.env.NEXT_PUBLIC_VERCEL_ENV === "production" ? "openping.app" : "dev.openping.app"}/app/</span>
             <Input
               value={slug}
               onChange={(e) => {
