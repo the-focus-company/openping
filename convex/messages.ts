@@ -62,14 +62,27 @@ export const send = mutation({
       messageId,
     });
 
-    // Dispatch to agents (@mention or conversation-trigger)
+    // Dispatch to agents (@mention, conversation-trigger, or DM response)
     if (!membership.isAgent) {
-      await ctx.scheduler.runAfter(0, internal.agentRunner.dispatchChannelMention, {
-        channelId: args.conversationId,
-        messageId,
-        body: args.body,
-        authorId: user._id,
-      });
+      const conversation = await ctx.db.get(args.conversationId);
+      const kind = conversation?.kind;
+      if (kind === "agent_1to1" || kind === "agent_group") {
+        // Agent DM — dispatch direct response
+        await ctx.scheduler.runAfter(0, internal.agentRunner.dispatchDMResponse, {
+          conversationId: args.conversationId,
+          messageId,
+          body: args.body,
+          authorId: user._id,
+        });
+      } else {
+        // Regular channel/group — check @mentions and triggers
+        await ctx.scheduler.runAfter(0, internal.agentRunner.dispatchChannelMention, {
+          channelId: args.conversationId,
+          messageId,
+          body: args.body,
+          authorId: user._id,
+        });
+      }
     }
 
     // Update unread counts for all conversation members

@@ -124,7 +124,7 @@ export const respond = internalAction({
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-5.4-nano",
         messages: [
           {
             role: "system",
@@ -254,7 +254,7 @@ export const respondDM = internalAction({
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: "gpt-5.4-nano",
           messages: [
             {
               role: "system",

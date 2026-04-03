@@ -54,7 +54,7 @@ export const initializeDefaultSection = mutation({
     await ctx.db.insert("sidebarSections", {
       userId: user._id,
       workspaceId: args.workspaceId,
-      name: "Channels & DMs",
+      name: "Communication",
       sortOrder: 0,
       isCollapsed: false,
       isDefault: true,
