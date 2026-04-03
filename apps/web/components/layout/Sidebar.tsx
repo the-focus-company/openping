@@ -22,8 +22,6 @@ import {
   PanelLeftClose,
   Check,
   Bot,
-  MessageSquare,
-  Hash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -152,11 +150,11 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
   const bakeOrderMut = useMutation(api.sidebarLayout.bakeCurrentOrder);
 
   // Dialog state
-  const [addChannelOpen, setAddChannelOpen] = useState(false);
-  const [newChannelName, setNewChannelName] = useState("");
-  const [newChannelPrivate, setNewChannelPrivate] = useState(false);
-  const [newDmOpen, setNewDmOpen] = useState(false);
-  const [dmUserSearch, setDmUserSearch] = useState("");
+  const [newConvoOpen, setNewConvoOpen] = useState(false);
+  const [newConvoSearch, setNewConvoSearch] = useState("");
+  const [newConvoSelected, setNewConvoSelected] = useState<string[]>([]);
+  const [newConvoName, setNewConvoName] = useState("");
+  const [newConvoVisibility, setNewConvoVisibility] = useState<"auto" | "public" | "secret" | "secret_can_be_public">("auto");
   const [createSectionOpen, setCreateSectionOpen] = useState(false);
   const [renameSectionId, setRenameSectionId] = useState<string | null>(null);
 
@@ -165,22 +163,47 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
     isAuthenticated && workspaceId ? { workspaceId } : "skip",
   );
 
-  const handleCreateChannel = async () => {
-    const name = newChannelName.trim().toLowerCase().replace(/\s+/g, "-");
-    if (!name || !workspaceId) return;
+  // Derive conversation kind and visibility from selected members
+  const newConvoSelectedUsers = useMemo(
+    () => (allUsers ?? []).filter((u) => newConvoSelected.includes(u._id)),
+    [allUsers, newConvoSelected],
+  );
+  const hasAgent = newConvoSelectedUsers.some((u) => u.isAgent);
+  const isSmallGroup = newConvoSelected.length <= 1; // 1 other person = 2 total (creator + 1)
+  const derivedKind = useMemo(() => {
+    if (hasAgent && isSmallGroup) return "agent_1to1" as const;
+    if (hasAgent && !isSmallGroup) return "agent_group" as const;
+    if (isSmallGroup) return "1to1" as const;
+    return "group" as const;
+  }, [hasAgent, isSmallGroup]);
+  const derivedVisibility = useMemo(() => {
+    if (newConvoVisibility !== "auto") return newConvoVisibility;
+    // 2 people (or 2 + agent) → secret; 3+ → public
+    return isSmallGroup ? "secret" as const : "public" as const;
+  }, [newConvoVisibility, isSmallGroup]);
+
+  const handleCreateConversation = async () => {
+    if (!workspaceId || newConvoSelected.length === 0) return;
     try {
+      const humanIds = newConvoSelectedUsers.filter((u) => !u.isAgent).map((u) => u._id as Id<"users">);
+      const agentIds = newConvoSelectedUsers.filter((u) => u.isAgent).map((u) => u._id as Id<"users">);
+      const name = newConvoName.trim().toLowerCase().replace(/\s+/g, "-") || undefined;
       const conversationId = await createConversation({
         workspaceId,
-        kind: "group" as const,
-        name,
-        visibility: newChannelPrivate ? "secret" as const : "public" as const,
+        kind: derivedKind,
+        name: !isSmallGroup ? name : undefined,
+        visibility: derivedVisibility,
+        memberIds: humanIds.length > 0 ? humanIds : [],
+        agentMemberIds: agentIds.length > 0 ? agentIds : undefined,
       });
-      setNewChannelName("");
-      setNewChannelPrivate(false);
-      setAddChannelOpen(false);
+      setNewConvoOpen(false);
+      setNewConvoSelected([]);
+      setNewConvoSearch("");
+      setNewConvoName("");
+      setNewConvoVisibility("auto");
       router.push(buildPath(`/c/${conversationId}`));
     } catch (err) {
-      console.error("Failed to create channel:", err);
+      console.error("Failed to create conversation:", err);
     }
   };
 
@@ -409,51 +432,16 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
             />
           </div>
 
-          {/* Create button */}
+          {/* Create conversation button */}
           <div className="shrink-0 px-2 pb-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded px-2 h-7 text-xs font-medium text-foreground/50 transition-colors hover:bg-surface-3 hover:text-foreground/70"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Create</span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                side="bottom"
-                className="w-52 bg-surface-2 border-subtle"
-              >
-                <DropdownMenuItem
-                  className="cursor-pointer text-xs"
-                  onClick={() => setNewDmOpen(true)}
-                >
-                  <MessageSquare className="mr-2 h-3 w-3" />
-                  New conversation
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer text-xs"
-                  onClick={() => setAddChannelOpen(true)}
-                >
-                  <Hash className="mr-2 h-3 w-3" />
-                  New channel
-                </DropdownMenuItem>
-                {isAdmin && (
-                  <>
-                    <DropdownMenuSeparator className="bg-foreground/5" />
-                    <DropdownMenuItem
-                      className="cursor-pointer text-xs"
-                      onClick={() => router.push(buildPath("/settings/agents"))}
-                    >
-                      <Bot className="mr-2 h-3 w-3" />
-                      New agent
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <button
+              type="button"
+              onClick={() => setNewConvoOpen(true)}
+              className="flex w-full items-center gap-2 rounded px-2 h-7 text-xs font-medium text-foreground/50 transition-colors hover:bg-surface-3 hover:text-foreground/70"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>New conversation</span>
+            </button>
           </div>
 
           <div className="h-px bg-foreground/5 mx-2" />
@@ -641,28 +629,61 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
         </div>
       </div>
 
-      {/* New DM quick picker */}
-      <Dialog open={newDmOpen} onOpenChange={setNewDmOpen}>
-        <DialogContent className="border-subtle bg-surface-2 sm:max-w-xs">
+      {/* Unified New Conversation Dialog */}
+      <Dialog open={newConvoOpen} onOpenChange={(open) => {
+        setNewConvoOpen(open);
+        if (!open) {
+          setNewConvoSearch("");
+          setNewConvoSelected([]);
+          setNewConvoName("");
+          setNewConvoVisibility("auto");
+        }
+      }}>
+        <DialogContent className="border-subtle bg-surface-2 sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold">
-              New direct message
+              New conversation
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-2 pt-1">
+          <div className="space-y-3 pt-1">
+            {/* Search */}
             <input
-              value={dmUserSearch}
-              onChange={(e) => setDmUserSearch(e.target.value)}
-              placeholder="Search people..."
+              value={newConvoSearch}
+              onChange={(e) => setNewConvoSearch(e.target.value)}
+              placeholder="Add people or agents..."
               autoFocus
               className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-ring focus:outline-none"
             />
-            <div className="max-h-52 space-y-0.5 overflow-y-auto scrollbar-thin">
+
+            {/* Selected chips */}
+            {newConvoSelected.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {newConvoSelectedUsers.map((u) => (
+                  <span
+                    key={u._id}
+                    className="inline-flex items-center gap-1 rounded-full bg-ping-purple/10 px-2 py-0.5 text-2xs text-ping-purple"
+                  >
+                    {u.name}
+                    <button
+                      type="button"
+                      onClick={() => setNewConvoSelected((prev) => prev.filter((id) => id !== u._id))}
+                      className="ml-0.5 text-ping-purple/60 hover:text-ping-purple"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* People list */}
+            <div className="max-h-44 space-y-0.5 overflow-y-auto scrollbar-thin">
               {(allUsers ?? [])
                 .filter(
                   (u) =>
                     u._id !== user?._id &&
-                    u.name.toLowerCase().includes(dmUserSearch.toLowerCase()),
+                    !newConvoSelected.includes(u._id) &&
+                    u.name.toLowerCase().includes(newConvoSearch.toLowerCase()),
                 )
                 .sort((a, b) => {
                   if (a.isAgent && !b.isAgent) return -1;
@@ -672,31 +693,15 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
                 .map((u) => (
                   <button
                     key={u._id}
-                    onClick={async () => {
-                      if (!workspaceId) return;
-                      const id = await createConversation({
-                        workspaceId,
-                        kind: u.isAgent ? "agent_1to1" : "1to1",
-                        visibility: "secret" as const,
-                        memberIds: u.isAgent ? [] : [u._id],
-                        agentMemberIds: u.isAgent ? [u._id] : undefined,
-                      });
-                      setNewDmOpen(false);
-                      router.push(buildPath(`/c/${id}`));
-                    }}
+                    onClick={() => setNewConvoSelected((prev) => [...prev, u._id])}
                     className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-surface-3"
                   >
                     {u.isAgent ? (
                       <div
                         className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                        style={{
-                          backgroundColor: `${u.agentColor ?? "#5E6AD2"}20`,
-                        }}
+                        style={{ backgroundColor: `${u.agentColor ?? "#5E6AD2"}20` }}
                       >
-                        <Bot
-                          className="h-3 w-3"
-                          style={{ color: u.agentColor ?? "#5E6AD2" }}
-                        />
+                        <Bot className="h-3 w-3" style={{ color: u.agentColor ?? "#5E6AD2" }} />
                       </div>
                     ) : u.avatarUrl ? (
                       <div className="h-5 w-5 shrink-0 overflow-hidden rounded-full">
@@ -709,73 +714,66 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
                     )}
                     <span className="flex-1 truncate">{u.name}</span>
                     {u.isAgent ? (
-                      <span className="text-2xs text-ping-purple/60">
-                        Agent
-                      </span>
+                      <span className="text-2xs text-ping-purple/60">Agent</span>
                     ) : (
-                      <span className="text-2xs text-muted-foreground">
-                        {u.email}
-                      </span>
+                      <span className="text-2xs text-muted-foreground">{u.email}</span>
                     )}
                   </button>
                 ))}
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* Add Channel Dialog */}
-      <Dialog open={addChannelOpen} onOpenChange={setAddChannelOpen}>
-        <DialogContent className="border-subtle bg-surface-2 sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-semibold">
-              Create channel
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 pt-1">
-            <div>
-              <label className="mb-1.5 block text-2xs font-medium uppercase tracking-widest text-foreground/40">
-                Channel name
-              </label>
-              <input
-                value={newChannelName}
-                onChange={(e) => setNewChannelName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleCreateChannel()}
-                placeholder="e.g. announcements"
-                className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-ring focus:outline-none"
-                autoFocus
-              />
-            </div>
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked={newChannelPrivate}
-                onChange={(e) => setNewChannelPrivate(e.target.checked)}
-                className="h-3.5 w-3.5 rounded border-subtle bg-surface-3"
-              />
-              <div className="flex items-center gap-1.5">
-                <Lock className="h-3 w-3 text-foreground/50" />
-                <span className="text-xs text-muted-foreground">
-                  Private channel
-                </span>
+            {/* Group name — shown for 3+ total participants */}
+            {!isSmallGroup && (
+              <div>
+                <label className="mb-1.5 block text-2xs font-medium uppercase tracking-widest text-foreground/40">
+                  Name (optional)
+                </label>
+                <input
+                  value={newConvoName}
+                  onChange={(e) => setNewConvoName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreateConversation()}
+                  placeholder="e.g. frontend-team"
+                  className="w-full rounded border border-subtle bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-ring focus:outline-none"
+                />
               </div>
-            </label>
+            )}
+
+            {/* Visibility override */}
+            {newConvoSelected.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Lock className="h-3 w-3 text-foreground/40" />
+                <select
+                  value={newConvoVisibility}
+                  onChange={(e) => setNewConvoVisibility(e.target.value as typeof newConvoVisibility)}
+                  className="flex-1 rounded border border-subtle bg-background px-2 py-1 text-xs text-foreground focus:border-ring focus:outline-none"
+                >
+                  <option value="auto">
+                    Auto ({isSmallGroup ? "private" : "public"})
+                  </option>
+                  <option value="public">Public</option>
+                  <option value="secret">Private</option>
+                  <option value="secret_can_be_public">Private (can be made public)</option>
+                </select>
+              </div>
+            )}
+
+            {/* Create button */}
             <div className="flex justify-end gap-2 pt-1">
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-7 text-xs"
-                onClick={() => setAddChannelOpen(false)}
+                onClick={() => setNewConvoOpen(false)}
               >
                 Cancel
               </Button>
               <Button
                 size="sm"
-                disabled={!newChannelName.trim()}
+                disabled={newConvoSelected.length === 0}
                 className="h-7 bg-ping-purple text-xs text-white hover:bg-ping-purple-hover disabled:opacity-40"
-                onClick={handleCreateChannel}
+                onClick={handleCreateConversation}
               >
-                Create
+                Start conversation
               </Button>
             </div>
           </div>
