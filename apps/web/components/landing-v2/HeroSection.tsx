@@ -1,89 +1,167 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Terminal } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
-import { DOCS_URL } from "./constants";
+import { SPRING, DOCS_URL } from "./constants";
+import { InboxMockup } from "./InboxMockup";
+import { Parallax } from "./primitives";
 
-const spring = { type: "spring" as const, damping: 20, stiffness: 250 };
-
-const headingWords = [
-  ["Stop", "routing", "messages."],
-  ["Start", "making", "decisions."],
+const heroWords = [
+  { text: "Scale", highlight: false },
+  { text: "shared", highlight: false },
+  { text: "expertise", highlight: true },
+  { text: "\n", highlight: false },
+  { text: "without", highlight: false },
+  { text: "scaling", highlight: false },
+  { text: "\n", highlight: false },
+  { text: "coordination", highlight: true },
+  { text: "headcount.", highlight: false },
 ];
 
 export function HeroSection() {
   return (
-    <section className="pt-24 sm:pt-32 pb-20 text-center">
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={spring}
-      >
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-neutral-800/80 px-3.5 py-1.5 text-xs text-neutral-400">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
-          </span>
-          Open source · Self-hostable · MIT
-        </span>
-      </motion.div>
+    <section className="relative overflow-hidden pt-14">
+      {/* Background atmosphere */}
+      <div className="pointer-events-none absolute inset-0">
+        {/* Dot grid */}
+        <div
+          className="absolute inset-0 opacity-[0.025]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle, currentColor 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+        {/* Primary glow */}
+        <div className="absolute -top-40 left-1/2 h-[700px] w-[1000px] -translate-x-1/2 rounded-full bg-ping-purple/[0.06] blur-[140px]" />
+        {/* Warm accent */}
+        <div className="absolute -top-20 right-[10%] h-[400px] w-[500px] rounded-full bg-amber-500/[0.02] blur-[120px]" />
+      </div>
 
-      <h1 className="mt-8 text-[2.75rem] sm:text-[3.75rem] font-bold tracking-tight leading-[1.1]">
-        {headingWords.map((line, lineIdx) => (
-          <span key={lineIdx} className="block">
-            {line.map((word, wordIdx) => {
-              const globalIdx = lineIdx * 3 + wordIdx;
-              return (
-                <motion.span
-                  key={globalIdx}
-                  className="inline-block bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-transparent"
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ ...spring, delay: 0.1 + globalIdx * 0.06 }}
-                >
-                  {word}
-                  {wordIdx < line.length - 1 ? "\u00A0" : ""}
-                </motion.span>
-              );
-            })}
-          </span>
-        ))}
-      </h1>
+      <div className="relative mx-auto max-w-6xl px-6 pb-16 pt-20 sm:pt-28 lg:px-8">
+        <div className="grid items-center gap-12 lg:grid-cols-[1fr,minmax(0,420px)] lg:gap-16">
+          {/* Left: Copy */}
+          <div>
+            {/* ICP signal badge */}
+            <motion.div
+              className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.02] px-4 py-1.5 text-[12px] text-muted-foreground backdrop-blur-sm"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...SPRING, delay: 0.05 }}
+            >
+              <span className="flex h-1.5 w-1.5 rounded-full bg-ping-purple animate-pulse" />
+              For agencies, consultancies &amp; professional services
+            </motion.div>
 
-      <motion.p
-        className="mx-auto mt-6 max-w-xl text-base sm:text-lg text-neutral-400"
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ ...spring, delay: 0.5 }}
-      >
-        Open-source AI workspace that triages conversations, tracks decisions,
-        and keeps your team in context.
-      </motion.p>
+            {/* Headline */}
+            <motion.h1
+              className="max-w-[560px] text-[2.5rem] font-bold leading-[1.08] tracking-tight text-white sm:text-[3.25rem]"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: {},
+                visible: {
+                  transition: { staggerChildren: 0.04, delayChildren: 0.12 },
+                },
+              }}
+            >
+              {heroWords.map((word, i) =>
+                word.text === "\n" ? (
+                  <br key={i} />
+                ) : (
+                  <motion.span
+                    key={i}
+                    className={`inline-block mr-[0.22em] ${
+                      word.highlight
+                        ? "bg-gradient-to-r from-ping-purple to-blue-400 bg-clip-text text-transparent"
+                        : ""
+                    }`}
+                    variants={{
+                      hidden: { opacity: 0, y: 14, filter: "blur(5px)" },
+                      visible: {
+                        opacity: 1,
+                        y: 0,
+                        filter: "blur(0px)",
+                        transition: SPRING,
+                      },
+                    }}
+                  >
+                    {word.text}
+                  </motion.span>
+                )
+              )}
+            </motion.h1>
 
-      <motion.div
-        className="mt-8 flex items-center justify-center gap-4"
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ ...spring, delay: 0.65 }}
-      >
-        <Link
-          href="/sign-in"
-          className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-7 font-medium text-black transition-colors hover:bg-neutral-200 active:scale-[0.98]"
+            {/* Subheading */}
+            <motion.p
+              className="mt-6 max-w-[480px] text-[15px] leading-relaxed text-muted-foreground"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...SPRING, delay: 0.35 }}
+            >
+              OpenPing is a decision-first communication layer that removes the
+              coordination tax around expert work. Context assembled. Decisions
+              traced. Action orchestrated.
+            </motion.p>
+
+            {/* CTAs */}
+            <motion.div
+              className="mt-8 flex flex-wrap items-center gap-3"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...SPRING, delay: 0.42 }}
+            >
+              <Link
+                href="/sign-in"
+                className="group inline-flex h-11 items-center gap-2 rounded-lg bg-ping-purple px-6 text-sm font-medium text-white transition-all hover:bg-ping-purple-hover active:scale-[0.98]"
+              >
+                Start a pilot
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <Link
+                href="#how-it-works"
+                className="inline-flex h-11 items-center rounded-lg border border-white/[0.08] bg-white/[0.02] px-6 text-sm font-medium text-muted-foreground transition-all hover:border-white/[0.14] hover:bg-white/[0.05] hover:text-white"
+              >
+                See how it works
+              </Link>
+            </motion.div>
+
+            {/* Trust signal */}
+            <motion.p
+              className="mt-6 text-[12px] text-muted-foreground/50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.55 }}
+            >
+              Open source &middot; MIT license &middot; Self-hostable &middot;
+              No vendor lock-in
+            </motion.p>
+          </div>
+
+          {/* Right: Animated inbox mockup */}
+          <motion.div
+            className="hidden lg:block"
+            initial={{ opacity: 0, y: 20, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ ...SPRING, delay: 0.3 }}
+          >
+            <Parallax offset={20}>
+              <InboxMockup />
+            </Parallax>
+          </motion.div>
+        </div>
+
+        {/* Mobile mockup */}
+        <motion.div
+          className="mt-12 lg:hidden"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...SPRING, delay: 0.4 }}
         >
-          Get started
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-        <a
-          href={`${DOCS_URL}getting-started/quickstart/`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex h-11 items-center gap-2 rounded-lg border border-white/[0.1] bg-white/[0.03] px-7 font-medium text-neutral-400 transition-colors hover:text-white active:scale-[0.98]"
-        >
-          <Terminal className="h-4 w-4" />
-          Self-host
-        </a>
-      </motion.div>
+          <InboxMockup />
+        </motion.div>
+      </div>
     </section>
   );
 }

@@ -1,150 +1,112 @@
-import { Hash, Inbox, Bot, Users } from "lucide-react";
+"use client";
+
+import { motion, useInView } from "motion/react";
+import { useRef } from "react";
+import { Hash, ChevronRight, Bell, CheckCircle2 } from "lucide-react";
 import { MockupFrame } from "./MockupFrame";
+import { SPRING } from "./constants";
 
-const channels = ["backend", "frontend", "devops"];
-
-const dms = [
-  { name: "Sarah Chen", agent: false },
-  { name: "mrPING", agent: true },
+const channels = [
+  { name: "platform", unread: 3, active: true },
+  { name: "delivery-ops", unread: 1, active: false },
+  { name: "client-acme", unread: 0, active: false },
+  { name: "design", unread: 0, active: false },
 ];
 
-const messages = [
+const actions = [
   {
-    avatar: "S",
-    avatarColor: "bg-emerald-600",
-    name: "Sarah Chen",
-    text: "Pushed the migration script. Ready for review.",
+    icon: Bell,
+    text: "Notified @sarah about deploy approval",
+    time: "Just now",
+    color: "#3B82F6",
   },
   {
-    avatar: "M",
-    avatarColor: "bg-blue-600",
-    name: "mrPING",
-    text: "I linked 2 related PRs and updated the decision trail.",
-  },
-  {
-    avatar: "J",
-    avatarColor: "bg-amber-600",
-    name: "Jake Miller",
-    text: "LGTM, merging after CI passes.",
+    icon: CheckCircle2,
+    text: "Linear ticket PLAT-412 created from decision",
+    time: "1m ago",
+    color: "#22C55E",
   },
 ];
 
 export function WorkspaceMockup() {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-80px" });
+
   return (
-    <MockupFrame maxWidth="max-w-[520px]">
-      <div className="flex min-h-[260px]">
-        {/* Sidebar */}
-        <div className="w-[180px] border-r border-neutral-800 py-3 shrink-0">
-          {/* Deck */}
-          <div className="flex items-center justify-between px-3 py-1.5 mx-2 rounded-md bg-neutral-800/50">
-            <div className="flex items-center gap-2">
-              <Inbox className="w-3.5 h-3.5 text-neutral-400" />
-              <span className="text-[12px] text-white font-medium">
-                My Deck
-              </span>
-            </div>
-            <span className="text-[10px] font-medium text-white bg-blue-600 px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-              3
-            </span>
-          </div>
-
-          {/* Engineering section */}
-          <div className="mt-4 px-3">
-            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">
-              Engineering
-            </span>
-            <div className="mt-1.5 space-y-0.5">
-              {channels.map((name) => (
-                <div
-                  key={name}
-                  className="flex items-center gap-1.5 py-1 px-1 rounded text-[12px] text-neutral-400 hover:text-white"
-                >
-                  <Hash className="w-3 h-3" />
-                  <span>{name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* DMs section */}
-          <div className="mt-4 px-3">
-            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">
-              DMs
-            </span>
-            <div className="mt-1.5 space-y-0.5">
-              {dms.map((dm) => (
-                <div
-                  key={dm.name}
-                  className="flex items-center gap-1.5 py-1 px-1 rounded text-[12px] text-neutral-400"
-                >
-                  <div className="w-4 h-4 rounded-full bg-neutral-700 flex items-center justify-center">
-                    {dm.agent ? (
-                      <Bot className="w-2.5 h-2.5 text-blue-400" />
-                    ) : (
-                      <span className="text-[8px] text-neutral-300">
-                        {dm.name[0]}
-                      </span>
-                    )}
-                  </div>
-                  <span>{dm.name}</span>
-                  {dm.agent && (
-                    <span className="text-[9px] text-blue-400 bg-blue-500/15 px-1 py-0.5 rounded leading-none">
-                      agent
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Main content */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Channel header */}
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-800">
-            <div className="flex items-center gap-1.5">
-              <Hash className="w-3.5 h-3.5 text-neutral-400" />
-              <span className="text-[13px] font-medium text-white">
-                backend
-              </span>
-            </div>
-            <div className="flex items-center gap-1 text-neutral-500">
-              <Users className="w-3 h-3" />
-              <span className="text-[11px]">8</span>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 px-4 py-3 space-y-3">
-            {messages.map((msg) => (
-              <div key={msg.name} className="flex items-start gap-2.5">
-                <div
-                  className={`w-6 h-6 rounded-full ${msg.avatarColor} flex items-center justify-center shrink-0`}
-                >
-                  <span className="text-[10px] font-medium text-white">
-                    {msg.avatar}
+    <div ref={ref}>
+      <MockupFrame title="Workspace">
+        <div className="flex min-h-[220px]">
+          {/* Sidebar */}
+          <div className="w-[140px] shrink-0 border-r border-white/[0.06] bg-white/[0.01] p-2.5">
+            <p className="mb-2 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40">
+              Channels
+            </p>
+            {channels.map((ch, i) => (
+              <motion.div
+                key={ch.name}
+                className={`flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[11px] ${
+                  ch.active
+                    ? "bg-white/[0.06] text-white"
+                    : "text-muted-foreground/60"
+                }`}
+                initial={{ opacity: 0, x: -8 }}
+                animate={isInView ? { opacity: 1, x: 0 } : {}}
+                transition={{ ...SPRING, delay: i * 0.06 + 0.15 }}
+              >
+                <Hash className="h-3 w-3 shrink-0 opacity-40" />
+                <span className="truncate">{ch.name}</span>
+                {ch.unread > 0 && (
+                  <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-ping-purple/20 text-[9px] font-bold text-ping-purple">
+                    {ch.unread}
                   </span>
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[12px] font-medium text-white">
-                    {msg.name}
-                  </span>
-                  <p className="text-[12px] text-neutral-400 leading-relaxed mt-0.5">
-                    {msg.text}
-                  </p>
-                </div>
-              </div>
+                )}
+              </motion.div>
             ))}
           </div>
 
-          {/* Cmd+K hint */}
-          <div className="px-4 py-2 border-t border-neutral-800 flex justify-end">
-            <span className="text-[10px] text-neutral-600 bg-neutral-800/50 px-1.5 py-0.5 rounded border border-neutral-700/50">
-              Cmd+K
-            </span>
+          {/* Main content: orchestrated actions */}
+          <div className="flex-1 p-3">
+            <div className="mb-3 flex items-center gap-1.5">
+              <Hash className="h-3 w-3 text-muted-foreground/40" />
+              <span className="text-[12px] font-medium text-white/70">
+                platform
+              </span>
+              <ChevronRight className="h-3 w-3 text-muted-foreground/30" />
+              <span className="text-[11px] text-muted-foreground/50">
+                Orchestrated actions
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {actions.map((action, i) => (
+                <motion.div
+                  key={action.text}
+                  className="flex items-start gap-2.5 rounded-lg bg-white/[0.02] px-3 py-2.5"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={isInView ? { opacity: 1, y: 0 } : {}}
+                  transition={{ ...SPRING, delay: i * 0.12 + 0.4 }}
+                >
+                  <div
+                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
+                    style={{ backgroundColor: `${action.color}15` }}
+                  >
+                    <action.icon
+                      className="h-3 w-3"
+                      style={{ color: action.color }}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] text-white/70">{action.text}</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground/40">
+                      {action.time}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-    </MockupFrame>
+      </MockupFrame>
+    </div>
   );
 }

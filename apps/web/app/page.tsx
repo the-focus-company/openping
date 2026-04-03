@@ -1,15 +1,26 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useQuery, useMutation, Authenticated, AuthLoading, Unauthenticated } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
+import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { navigateToWorkspace } from "@/lib/workspace-url";
 import { Loader2 } from "lucide-react";
-import { Navigation } from "@/components/landing-v2/Navigation";
-import { HeroSection } from "@/components/landing-v2/HeroSection";
-import { FeaturesShowcase } from "@/components/landing-v2/FeaturesShowcase";
-import { DeveloperSection } from "@/components/landing-v2/DeveloperSection";
-import { Footer } from "@/components/landing-v2/Footer";
+import {
+  Navigation,
+  HeroSection,
+  PainSection,
+  SolutionSection,
+  FeaturesShowcase,
+  ValueProps,
+  ComparisonSection,
+  ICPCallout,
+  PricingSignal,
+  DeveloperSection,
+  FinalCTA,
+  Footer,
+} from "@/components/landing-v2";
+import { Divider } from "@/components/landing-v2/primitives";
 
 function WorkspaceRedirect() {
   const workspaces = useQuery(api.workspaceMembers.listMyWorkspaces);
@@ -94,11 +105,27 @@ function WorkspaceRedirect() {
 
 function LandingPage() {
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen bg-surface-0 text-foreground dark">
       <Navigation />
       <HeroSection />
+      <Divider />
+      <PainSection />
+      <Divider />
+      <SolutionSection />
+      <Divider />
       <FeaturesShowcase />
+      <Divider />
+      <ValueProps />
+      <Divider />
+      <ComparisonSection />
+      <Divider />
+      <ICPCallout />
+      <Divider />
+      <PricingSignal />
+      <Divider />
       <DeveloperSection />
+      <Divider />
+      <FinalCTA />
       <Footer />
     </div>
   );

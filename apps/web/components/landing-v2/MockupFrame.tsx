@@ -1,22 +1,37 @@
-import type { ReactNode } from "react";
+"use client";
 
-export function MockupFrame({
-  children,
-  maxWidth = "max-w-[480px]",
-}: {
+import { type ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+interface MockupFrameProps {
   children: ReactNode;
-  maxWidth?: string;
-}) {
+  className?: string;
+  title?: string;
+}
+
+export function MockupFrame({ children, className, title }: MockupFrameProps) {
   return (
     <div
-      className={`w-full ${maxWidth} rounded-2xl bg-neutral-900 border border-neutral-800 shadow-2xl shadow-black/40 overflow-hidden`}
+      className={cn(
+        "overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0b14] shadow-2xl shadow-black/60",
+        className
+      )}
     >
-      <div className="flex items-center gap-1.5 px-4 py-3 border-b border-neutral-800">
-        <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
-        <div className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]" />
-        <div className="w-2.5 h-2.5 rounded-full bg-[#28C840]" />
+      {/* Window chrome */}
+      <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-2.5">
+        <div className="flex gap-1.5">
+          <div className="h-2.5 w-2.5 rounded-full bg-white/[0.08]" />
+          <div className="h-2.5 w-2.5 rounded-full bg-white/[0.08]" />
+          <div className="h-2.5 w-2.5 rounded-full bg-white/[0.08]" />
+        </div>
+        {title && (
+          <span className="ml-2 text-[11px] text-muted-foreground/50">
+            {title}
+          </span>
+        )}
       </div>
-      {children}
+      {/* Content */}
+      <div className="relative">{children}</div>
     </div>
   );
 }

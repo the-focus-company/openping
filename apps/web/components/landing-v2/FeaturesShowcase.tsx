@@ -1,107 +1,146 @@
 "use client";
 
-import { type ReactNode } from "react";
-import { motion } from "motion/react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { Inbox, GitCommitHorizontal, Zap, Shield } from "lucide-react";
+import { FEATURES, SPRING, type FeatureId } from "./constants";
+import { Section, SectionHeader, GlowCard, Reveal } from "./primitives";
 import { InboxMockup } from "./InboxMockup";
 import { DecisionTrailMockup } from "./DecisionTrailMockup";
 import { WorkspaceMockup } from "./WorkspaceMockup";
 import { GuestRolesMockup } from "./GuestRolesMockup";
+import { cn } from "@/lib/utils";
 
-const fadeUp = {
-  initial: { opacity: 0, y: 24 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: "-80px" },
-  transition: { type: "spring" as const, damping: 20, stiffness: 250 },
+const featureIcons: Record<FeatureId, typeof Inbox> = {
+  inbox: Inbox,
+  decisions: GitCommitHorizontal,
+  workspace: Zap,
+  access: Shield,
 };
 
-function Tag({ children, color }: { children: ReactNode; color: string }) {
-  const colors: Record<string, string> = {
-    indigo: "text-indigo-400 border-indigo-500/25 bg-indigo-500/8",
-    emerald: "text-emerald-400 border-emerald-500/25 bg-emerald-500/8",
-    amber: "text-amber-400 border-amber-500/25 bg-amber-500/8",
-    rose: "text-rose-400 border-rose-500/25 bg-rose-500/8",
-    violet: "text-violet-400 border-violet-500/25 bg-violet-500/8",
-  };
-  return (
-    <span
-      className={`inline-block font-semibold tracking-[0.14em] text-[11px] uppercase border px-3 py-1 rounded-full ${colors[color]}`}
-    >
-      {children}
-    </span>
-  );
-}
+const featureColors: Record<FeatureId, string> = {
+  inbox: "#EF4444",
+  decisions: "#F59E0B",
+  workspace: "#22C55E",
+  access: "#5E6AD2",
+};
 
-interface Feature {
-  tag: string;
-  tagColor: string;
-  heading: string;
-  description: string;
-  mockup: ReactNode;
-  reversed?: boolean;
-}
-
-const features: Feature[] = [
-  {
-    tag: "Inbox",
-    tagColor: "rose",
-    heading: "Every message, triaged.",
-    description:
-      "AI sorts your team\u2019s conversations into an Eisenhower matrix \u2014 DO, DECIDE, DELEGATE, or SKIP. You always know what needs your attention first.",
-    mockup: <InboxMockup />,
-  },
-  {
-    tag: "Decisions",
-    tagColor: "violet",
-    heading: "Trace every decision.",
-    description:
-      "See exactly how decisions were made \u2014 from the first message to the final action. Full context, linked threads, and a clear timeline.",
-    mockup: <DecisionTrailMockup />,
-    reversed: true,
-  },
-  {
-    tag: "Workspace",
-    tagColor: "indigo",
-    heading: "Everything in one place.",
-    description:
-      "Channels, DMs, agents, and a command palette. No tab-switching, no context loss. Your workspace understands your codebase.",
-    mockup: <WorkspaceMockup />,
-  },
-  {
-    tag: "Access",
-    tagColor: "emerald",
-    heading: "Invite anyone safely.",
-    description:
-      "Workspace guests get scoped access \u2014 join conversations without seeing everything. Perfect for contractors, clients, and cross-team collaboration.",
-    mockup: <GuestRolesMockup />,
-    reversed: true,
-  },
-];
+const mockupComponents: Record<FeatureId, React.ComponentType> = {
+  inbox: InboxMockup,
+  decisions: DecisionTrailMockup,
+  workspace: WorkspaceMockup,
+  access: GuestRolesMockup,
+};
 
 export function FeaturesShowcase() {
-  return (
-    <section>
-      {features.map((feature, i) => (
-        <div key={i} className="py-24 md:py-32">
-          <div className="mx-auto max-w-5xl px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-              <motion.div
-                className={feature.reversed ? "lg:order-last" : undefined}
-                {...fadeUp}
-              >
-                <Tag color={feature.tagColor}>{feature.tag}</Tag>
-                <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mt-4">
-                  {feature.heading}
-                </h2>
-                <p className="text-base text-neutral-400 mt-4 leading-relaxed max-w-md">
-                  {feature.description}
-                </p>
-              </motion.div>
+  const [active, setActive] = useState<FeatureId>("inbox");
+  const ActiveMockup = mockupComponents[active];
+  const Icon = featureIcons[active];
+  const color = featureColors[active];
 
-              <motion.div {...fadeUp}>{feature.mockup}</motion.div>
-            </div>
-          </div>
+  return (
+    <Section className="border-t border-white/[0.04]">
+      <SectionHeader
+        eyebrow="Features"
+        title="Every feature reduces coordination drag"
+        description="Not another notification firehose. Every feature is designed to surface what needs a decision and mute what doesn't."
+      />
+
+      <div className="grid gap-8 lg:grid-cols-[340px,1fr] lg:gap-12">
+        {/* Feature tabs */}
+        <Reveal direction="left" className="space-y-2">
+          {FEATURES.map((feature) => {
+            const FIcon = featureIcons[feature.id];
+            const fColor = featureColors[feature.id];
+            const isActive = active === feature.id;
+
+            return (
+              <button
+                key={feature.id}
+                onClick={() => setActive(feature.id)}
+                className={cn(
+                  "group w-full text-left rounded-xl border px-5 py-4 transition-all",
+                  isActive
+                    ? "border-white/[0.1] bg-white/[0.04]"
+                    : "border-transparent bg-transparent hover:bg-white/[0.02]"
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors"
+                    style={{
+                      backgroundColor: isActive ? `${fColor}15` : "rgba(255,255,255,0.04)",
+                    }}
+                  >
+                    <FIcon
+                      className="h-4 w-4"
+                      style={{ color: isActive ? fColor : "rgba(255,255,255,0.3)" }}
+                    />
+                  </div>
+                  <div>
+                    <h3
+                      className={cn(
+                        "text-[14px] font-semibold transition-colors",
+                        isActive ? "text-white" : "text-white/50"
+                      )}
+                    >
+                      {feature.title}
+                    </h3>
+                    <p
+                      className={cn(
+                        "mt-0.5 text-[12px] transition-colors",
+                        isActive
+                          ? "text-muted-foreground"
+                          : "text-muted-foreground/40"
+                      )}
+                    >
+                      {feature.subtitle}
+                    </p>
+                    {isActive && (
+                      <motion.p
+                        className="mt-2 text-[13px] leading-relaxed text-muted-foreground/70"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        transition={SPRING}
+                      >
+                        {feature.description}
+                      </motion.p>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </Reveal>
+
+        {/* Mockup preview */}
+        <div className="relative">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={SPRING}
+            >
+              <ActiveMockup />
+
+              {/* Metric badge */}
+              <motion.div
+                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Icon className="h-3.5 w-3.5" style={{ color }} />
+                <span className="text-[12px] font-medium text-white/60">
+                  {FEATURES.find((f) => f.id === active)?.metric}
+                </span>
+              </motion.div>
+            </motion.div>
+          </AnimatePresence>
         </div>
-      ))}
-    </section>
+      </div>
+    </Section>
   );
 }
