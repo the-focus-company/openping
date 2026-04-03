@@ -53,10 +53,9 @@ interface SidebarSectionProps {
   onRename: (sectionId: string) => void;
   onDelete: (sectionId: string) => void;
   onCreateSection: () => void;
-  onToggleStar: (itemId: string, itemType: "channel" | "dm") => void;
+  onToggleStar: (itemId: string) => void;
   onMoveItemToSection: (
     itemId: string,
-    itemType: "channel" | "dm",
     targetSectionId: string,
   ) => void;
   onChangeSortMode: (sectionId: string, mode: SortMode) => void;

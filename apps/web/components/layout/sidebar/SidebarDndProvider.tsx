@@ -25,7 +25,6 @@ interface SidebarDndProviderProps {
   ) => void;
   onMoveItemToSection: (
     itemId: string,
-    itemType: "channel" | "dm",
     toSectionId: string,
   ) => void;
   children: React.ReactNode;
@@ -73,14 +72,10 @@ export function SidebarDndProvider({
       if (overId.startsWith("section-")) {
         const toSectionId = overId.replace("section-", "");
         if (toSectionId !== fromSection.id) {
-          const item = fromSection.items.find((i) => i.id === active.id);
-          if (item) {
-            onMoveItemToSection(
+          onMoveItemToSection(
               String(active.id),
-              item.type,
               toSectionId,
             );
-          }
         }
         return;
       }
@@ -109,16 +104,10 @@ export function SidebarDndProvider({
         onReorderItems(fromSection.id, reordered);
       } else {
         // Move to different section
-        const item = fromSection.items.find(
-          (i) => i.id === active.id,
-        );
-        if (item) {
-          onMoveItemToSection(
+        onMoveItemToSection(
             String(active.id),
-            item.type,
             toSection.id,
           );
-        }
       }
     },
     [sections, onReorderItems, onMoveItemToSection],

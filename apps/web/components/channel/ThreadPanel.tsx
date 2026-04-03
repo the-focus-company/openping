@@ -11,7 +11,7 @@ import { MessageItem, TypingIndicator, type Message } from "./MessageList";
 import { type ReactionGroup } from "./MessageReactions";
 import { RichTextComposer } from "./RichTextComposer";
 import { FileUpload, uploadAttachments, type PendingAttachment } from "./FileUpload";
-import { useThreadTyping, useThreadDMTyping } from "@/hooks/useThreadTyping";
+import { useThreadTyping } from "@/hooks/useThreadTyping";
 import { useReactions } from "@/hooks/useReactions";
 import { ThreadContentSkeleton } from "@/components/channel/ChannelSkeleton";
 
@@ -172,13 +172,13 @@ function DMThread({
   onStartMeeting?: () => void;
   hasActiveMeeting?: boolean;
 }) {
-  const threadId = parentMessageId as Id<"directMessages">;
+  const threadId = parentMessageId as Id<"messages">;
   const typedConversationId = conversationId as Id<"directConversations">;
-  const data = useQuery(api.threads.listRepliesDM, { threadId });
+  const data = useQuery(api.threads.listRepliesDM, { threadId: parentMessageId as Id<"directMessages"> });
   const sendReply = useMutation(api.threads.sendReplyDM);
   const editMessage = useMutation(api.directMessages.edit);
   const deleteMessage = useMutation(api.directMessages.remove);
-  const { typingUsers, onTyping, onSendClear } = useThreadDMTyping(threadId);
+  const { typingUsers, onTyping, onSendClear } = useThreadTyping(threadId);
   const currentUser = useQuery(api.users.getMe, {});
 
   const [alsoSendToConversation, setAlsoSendToConversation] = useState(false);

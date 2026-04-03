@@ -6,17 +6,17 @@ import type { TypingUser } from "@/components/channel/MessageList";
 
 const THROTTLE_MS = 3000;
 
-/** Typing indicator for channel message threads. */
+/** Typing indicator for message threads (works for both channel and DM threads). */
 export function useThreadTyping(threadMessageId: Id<"messages">) {
   const { isAuthenticated } = useConvexAuth();
   const typingUsers =
     useQuery(
-      api.typing.getTypingUsersThread,
+      api.typing.getTypingUsers,
       isAuthenticated ? { threadMessageId } : "skip",
     ) ?? [];
 
-  const setTyping = useMutation(api.typing.setTypingThread);
-  const clearTyping = useMutation(api.typing.clearTypingThread);
+  const setTyping = useMutation(api.typing.setTyping);
+  const clearTyping = useMutation(api.typing.clearTyping);
   const lastFired = useRef(0);
 
   const onTyping = useCallback(() => {
@@ -30,34 +30,6 @@ export function useThreadTyping(threadMessageId: Id<"messages">) {
     lastFired.current = 0;
     clearTyping({ threadMessageId });
   }, [clearTyping, threadMessageId]);
-
-  return { typingUsers: typingUsers as TypingUser[], onTyping, onSendClear };
-}
-
-/** Typing indicator for DM message threads. */
-export function useThreadDMTyping(threadDmMessageId: Id<"directMessages">) {
-  const { isAuthenticated } = useConvexAuth();
-  const typingUsers =
-    useQuery(
-      api.typing.getTypingUsersThreadDM,
-      isAuthenticated ? { threadDmMessageId } : "skip",
-    ) ?? [];
-
-  const setTyping = useMutation(api.typing.setTypingThreadDM);
-  const clearTyping = useMutation(api.typing.clearTypingThreadDM);
-  const lastFired = useRef(0);
-
-  const onTyping = useCallback(() => {
-    const now = Date.now();
-    if (now - lastFired.current < THROTTLE_MS) return;
-    lastFired.current = now;
-    setTyping({ threadDmMessageId });
-  }, [setTyping, threadDmMessageId]);
-
-  const onSendClear = useCallback(() => {
-    lastFired.current = 0;
-    clearTyping({ threadDmMessageId });
-  }, [clearTyping, threadDmMessageId]);
 
   return { typingUsers: typingUsers as TypingUser[], onTyping, onSendClear };
 }

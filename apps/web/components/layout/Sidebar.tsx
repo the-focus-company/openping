@@ -141,9 +141,8 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
   );
 
   // Mutations
-  const createChannel = useMutation(api.channels.create);
-  const toggleStar = useMutation(api.channels.toggleStar);
-  const toggleStarDm = useMutation(api.directConversations.toggleStar);
+  const createConversationMut = useMutation(api.conversations.create);
+  const toggleStarConversation = useMutation(api.conversations.toggleStar);
   const setSectionSortModeMut = useMutation(api.sidebarLayout.setSectionSortMode);
   const createSectionMut = useMutation(api.sidebarLayout.createSection);
   const renameSectionMut = useMutation(api.sidebarLayout.renameSection);
@@ -165,21 +164,20 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
     api.users.listAll,
     isAuthenticated && workspaceId ? { workspaceId } : "skip",
   );
-  const createConversation = useMutation(api.directConversations.create);
-
   const handleCreateChannel = async () => {
     const name = newChannelName.trim().toLowerCase().replace(/\s+/g, "-");
     if (!name || !workspaceId) return;
     try {
-      const channelId = await createChannel({
+      const conversationId = await createConversationMut({
         workspaceId,
+        kind: "group",
         name,
-        isPrivate: newChannelPrivate,
+        visibility: newChannelPrivate ? "secret" : "public",
       });
       setNewChannelName("");
       setNewChannelPrivate(false);
       setAddChannelOpen(false);
-      router.push(buildPath(`/channel/${channelId}`));
+      router.push(buildPath(`/c/${conversationId}`));
     } catch (err) {
       console.error("Failed to create channel:", err);
     }
@@ -195,8 +193,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
     // When switching to custom mode, bake the current visible order for this section
     if (mode === "custom" && section.sortMode !== "custom") {
       const itemOrder: Array<{
-        channelId?: Id<"channels">;
-        conversationId?: Id<"directConversations">;
+        conversationId: Id<"conversations">;
         sectionId: Id<"sidebarSections">;
         sortOrder: number;
       }> = [];
@@ -206,8 +203,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
         for (let i = 0; i < s.items.length; i++) {
           const item = s.items[i];
           itemOrder.push({
-            channelId: item.type === "channel" ? (item.id as Id<"channels">) : undefined,
-            conversationId: item.type === "dm" ? (item.id as Id<"directConversations">) : undefined,
+            conversationId: item.id as Id<"conversations">,
             sectionId: s.id as Id<"sidebarSections">,
             sortOrder: i,
           });
@@ -253,14 +249,12 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
 
   const handleMoveItemToSection = async (
     itemId: string,
-    itemType: "channel" | "dm",
     targetSectionId: string,
   ) => {
     if (!workspaceId) return;
     await moveItemToSectionMut({
       workspaceId,
-      channelId: itemType === "channel" ? (itemId as Id<"channels">) : undefined,
-      conversationId: itemType === "dm" ? (itemId as Id<"directConversations">) : undefined,
+      conversationId: itemId as Id<"conversations">,
       targetSectionId: targetSectionId as Id<"sidebarSections">,
     });
   };
@@ -277,8 +271,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
 
     // Build new order for this section
     const itemOrder: Array<{
-      channelId?: Id<"channels">;
-      conversationId?: Id<"directConversations">;
+      conversationId: Id<"conversations">;
       sectionId: Id<"sidebarSections">;
       sortOrder: number;
     }> = [];
@@ -291,8 +284,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
           const item = section.items.find((it) => it.id === itemIds[i]);
           if (item) {
             itemOrder.push({
-              channelId: item.type === "channel" ? (item.id as Id<"channels">) : undefined,
-              conversationId: item.type === "dm" ? (item.id as Id<"directConversations">) : undefined,
+              conversationId: item.id as Id<"conversations">,
               sectionId: s.id as Id<"sidebarSections">,
               sortOrder: i,
             });
@@ -303,8 +295,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
         for (let i = 0; i < s.items.length; i++) {
           const item = s.items[i];
           itemOrder.push({
-            channelId: item.type === "channel" ? (item.id as Id<"channels">) : undefined,
-            conversationId: item.type === "dm" ? (item.id as Id<"directConversations">) : undefined,
+            conversationId: item.id as Id<"conversations">,
             sectionId: s.id as Id<"sidebarSections">,
             sortOrder: i,
           });
@@ -317,10 +308,9 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
 
   const handleDndMoveItem = async (
     itemId: string,
-    itemType: "channel" | "dm",
     toSectionId: string,
   ) => {
-    await handleMoveItemToSection(itemId, itemType, toSectionId);
+    await handleMoveItemToSection(itemId, toSectionId);
   };
 
   const userInitial = user?.name?.[0]?.toUpperCase() ?? "U";
@@ -506,12 +496,8 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
                       onRename={(id) => setRenameSectionId(id)}
                       onDelete={handleDeleteSection}
                       onCreateSection={() => setCreateSectionOpen(true)}
-                      onToggleStar={(itemId, itemType) => {
-                        if (itemType === "channel") {
-                          toggleStar({ channelId: itemId as Id<"channels"> });
-                        } else {
-                          toggleStarDm({ conversationId: itemId as Id<"directConversations"> });
-                        }
+                      onToggleStar={(itemId) => {
+                        toggleStarConversation({ conversationId: itemId as Id<"conversations"> });
                       }}
                       onMoveItemToSection={handleMoveItemToSection}
                       onChangeSortMode={handleSectionSortModeChange}
@@ -685,14 +671,15 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
                     key={u._id}
                     onClick={async () => {
                       if (!workspaceId) return;
-                      const id = await createConversation({
+                      const id = await createConversationMut({
                         workspaceId,
                         kind: u.isAgent ? "agent_1to1" : "1to1",
+                        visibility: "secret",
                         memberIds: u.isAgent ? [] : [u._id],
                         agentMemberIds: u.isAgent ? [u._id] : undefined,
                       });
                       setNewDmOpen(false);
-                      router.push(buildPath(`/dm/${id}`));
+                      router.push(buildPath(`/c/${id}`));
                     }}
                     className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-surface-3"
                   >

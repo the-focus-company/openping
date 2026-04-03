@@ -26,33 +26,39 @@ interface SidebarItemProps {
   userId?: string;
   buildPath: (p: string) => string;
   pathname: string;
-  onToggleStar?: (itemId: string, itemType: "channel" | "dm") => void;
+  onToggleStar?: (itemId: string) => void;
   onMoveToSection?: (
     itemId: string,
-    itemType: "channel" | "dm",
     targetSectionId: string,
   ) => void;
   sections: SidebarSectionModel[];
 }
 
-function ItemIcon({
-  item,
-}: {
-  item: UnifiedSidebarItem;
-}) {
-  if (item.type === "channel") {
+/** Returns true if this conversation looks like a traditional "channel" (public/secret group). */
+function isChannelLike(item: UnifiedSidebarItem): boolean {
+  return item.kind === "group" && item.visibility !== "secret";
+}
+
+function ItemIcon({ item }: { item: UnifiedSidebarItem }) {
+  // Channel-like conversations (public groups) get # or lock icon
+  if (isChannelLike(item)) {
     return (
       <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
-        {item.isPrivate ? (
-          <Lock className="h-3 w-3 text-foreground/50" />
-        ) : (
-          <span className="text-2xs font-medium text-foreground/50">#</span>
-        )}
+        <span className="text-2xs font-medium text-foreground/50">#</span>
       </span>
     );
   }
 
-  // DM icons
+  // Secret groups get a lock icon
+  if (item.kind === "group" && item.visibility === "secret") {
+    return (
+      <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+        <Lock className="h-3 w-3 text-foreground/50" />
+      </span>
+    );
+  }
+
+  // Agent conversations
   if (item.kind === "agent_group") {
     return (
       <div className="relative flex h-3.5 w-3.5 shrink-0 items-center justify-center">
@@ -69,10 +75,14 @@ function ItemIcon({
       </div>
     );
   }
-  if (item.kind === "group") {
-    return <Users className="h-3.5 w-3.5 shrink-0 text-foreground/50" />;
-  }
+
+  // 1:1 DM
   return <User className="h-3.5 w-3.5 shrink-0 text-foreground/50" />;
+}
+
+/** Show presence dot for DM-like conversations (1:1, agent). */
+function isDMLike(item: UnifiedSidebarItem): boolean {
+  return item.kind === "1to1" || item.kind === "agent_1to1";
 }
 
 export function SidebarItem({
@@ -87,14 +97,8 @@ export function SidebarItem({
   onMoveToSection,
   sections,
 }: SidebarItemProps) {
-  const href =
-    item.type === "channel"
-      ? buildPath(`/channel/${item.id}`)
-      : buildPath(`/dm/${item.id}`);
-  const isActive =
-    item.type === "channel"
-      ? pathname.endsWith(`/channel/${item.id}`)
-      : pathname.endsWith(`/dm/${item.id}`);
+  const href = buildPath(`/c/${item.id}`);
+  const isActive = pathname.endsWith(`/c/${item.id}`);
 
   const isCustom = sortMode === "custom";
   const {
@@ -115,7 +119,7 @@ export function SidebarItem({
   };
 
   const otherMembersOnline =
-    item.type === "dm" &&
+    isDMLike(item) &&
     item.members?.some(
       (m) => m.userId !== userId && onlineUserIds.has(m.userId),
     );
@@ -149,7 +153,7 @@ export function SidebarItem({
               />
             )}
             <ItemIcon item={item} />
-            {item.type === "dm" && (
+            {isDMLike(item) && (
               <StatusDot
                 variant={otherMembersOnline ? "online" : "offline"}
                 size="xs"
@@ -163,7 +167,7 @@ export function SidebarItem({
             >
               {item.name}
             </span>
-            {!inFavorites && onToggleStar && (item.type === "dm" || (item.type === "channel" && item.isMember)) && (
+            {!inFavorites && onToggleStar && item.isMember && (
               <Star
                 className={cn(
                   "h-3 w-3 shrink-0 cursor-pointer transition-opacity",
@@ -176,18 +180,18 @@ export function SidebarItem({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onToggleStar(item.id, item.type);
+                  onToggleStar(item.id);
                 }}
               />
             )}
-            {item.type === "channel" && item.unreadMentionCount > 0 && (
+            {item.unreadMentionCount > 0 && (
               <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-ping-purple px-1 text-2xs font-medium text-white tabular-nums">
                 {item.unreadMentionCount > 99
                   ? "99+"
                   : item.unreadMentionCount}
               </span>
             )}
-            {item.type === "dm" && item.unreadCount > 0 && (
+            {item.unreadMentionCount === 0 && item.unreadCount > 0 && (
               <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-ping-purple px-1 text-2xs font-medium text-white tabular-nums">
                 {item.unreadCount > 99 ? "99+" : item.unreadCount}
               </span>
@@ -196,10 +200,10 @@ export function SidebarItem({
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48 bg-surface-2 border-subtle">
-        {onToggleStar && (item.type === "dm" || (item.type === "channel" && item.isMember)) && (
+        {onToggleStar && item.isMember && (
           <ContextMenuItem
             className="cursor-pointer text-xs"
-            onClick={() => onToggleStar(item.id, item.type)}
+            onClick={() => onToggleStar(item.id)}
           >
             <Star className="mr-2 h-3 w-3" />
             {item.isStarred ? "Remove from favorites" : "Add to favorites"}
@@ -218,7 +222,7 @@ export function SidebarItem({
                     key={s.id}
                     className="cursor-pointer text-xs"
                     onClick={() =>
-                      onMoveToSection(item.id, item.type, s.id)
+                      onMoveToSection(item.id, s.id)
                     }
                   >
                     {s.name}
