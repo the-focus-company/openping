@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { navigateToWorkspace } from "@/lib/workspace-url";
@@ -233,7 +233,21 @@ function GlowCard({ children, className }: { children: React.ReactNode; classNam
 
 function WorkspaceRedirect() {
   const workspaces = useQuery(api.workspaceMembers.listMyWorkspaces);
+  const ensureUser = useMutation(api.users.ensureUser);
   const redirected = useRef(false);
+  const ensured = useRef(false);
+
+  // If authenticated but no user record found, provision one from JWT claims
+  useEffect(() => {
+    if (ensured.current) return;
+    if (workspaces === null) {
+      ensured.current = true;
+      ensureUser().catch(() => {
+        // Reset so it can retry on next render cycle
+        ensured.current = false;
+      });
+    }
+  }, [workspaces, ensureUser]);
 
   useEffect(() => {
     if (redirected.current) return;

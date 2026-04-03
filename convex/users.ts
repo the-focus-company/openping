@@ -426,3 +426,35 @@ export const createOrUpdate = mutation({
     return await createOrUpdateUserHandler(ctx, args);
   },
 });
+
+/**
+ * Just-in-time user provisioning: if the user is authenticated via JWT but
+ * doesn't have a database record yet (e.g. webhook was delayed or failed),
+ * create one from the JWT identity claims.
+ */
+export const ensureUser = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    // Already exists — nothing to do
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_workos_id", (q) =>
+        q.eq("workosUserId", identity.subject),
+      )
+      .unique();
+    if (existing) return { status: "exists" as const, userId: existing._id };
+
+    // Provision from JWT claims
+    const result = await createOrUpdateUserHandler(ctx, {
+      workosUserId: identity.subject,
+      email: identity.email ?? "",
+      name: identity.name ?? identity.email?.split("@")[0] ?? "User",
+      avatarUrl: identity.pictureUrl ?? undefined,
+    });
+
+    return { status: "created" as const, userId: result.userId };
+  },
+});
