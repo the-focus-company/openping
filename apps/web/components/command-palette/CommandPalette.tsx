@@ -77,7 +77,6 @@ export function CommandPalette({ open, onOpenChange, onToggleSidebar, onStartMee
       ? { workspaceId, query: debouncedSearch.trim() }
       : "skip",
   );
-
   const isSearching = hasSearch && (peopleResults === undefined || messageResults === undefined);
 
   // Agent mention state

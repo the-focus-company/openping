@@ -92,6 +92,8 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
   const router = useRouter();
   const wsCtx = useContext(WorkspaceContext);
   const isAdmin = wsCtx?.role === "admin";
+  const isGuest = wsCtx?.role === "guest";
+
   const workspaceSlug = pathname.match(/^\/app\/([^/]+)/)?.[1];
   const workspacePrefix = workspaceSlug ? `/app/${workspaceSlug}` : "";
   const buildPath = useCallback(
@@ -271,6 +273,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
 
   const handleMoveItemToSection = async (
     itemId: string,
+    _itemType: "channel" | "dm",
     targetSectionId: string,
   ) => {
     if (!workspaceId) return;
@@ -330,9 +333,10 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
 
   const handleDndMoveItem = async (
     itemId: string,
+    itemType: "channel" | "dm",
     toSectionId: string,
   ) => {
-    await handleMoveItemToSection(itemId, toSectionId);
+    await handleMoveItemToSection(itemId, itemType, toSectionId);
   };
 
   const userInitial = user?.name?.[0]?.toUpperCase() ?? "U";

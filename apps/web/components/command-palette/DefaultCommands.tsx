@@ -34,6 +34,7 @@ export function DefaultCommands({
 }: DefaultCommandsProps) {
   const channels = conversations?.filter((c) => c.visibility === "public" && c.name);
   const dmConversations = conversations?.filter((c) => c.visibility !== "public" || !c.name);
+
   return (
     <>
       <CommandEmpty>
