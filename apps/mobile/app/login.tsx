@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   View,
   Text,
+  Image,
   Pressable,
   ActivityIndicator,
   StyleSheet,
@@ -63,7 +64,11 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.logo}>PING</Text>
+        <Image
+          source={require("@/assets/logo-icon-light-on-dark.png")}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <Text style={styles.subtitle}>AI-native workspace communication</Text>
 
         {error && <Text style={styles.error}>{error}</Text>}
@@ -78,6 +83,14 @@ export default function LoginScreen() {
           ) : (
             <Text style={styles.buttonText}>Sign in</Text>
           )}
+        </Pressable>
+
+        <Pressable
+          style={[styles.secondaryButton, isLoading && styles.buttonDisabled]}
+          onPress={handleSignIn}
+          disabled={isLoading}
+        >
+          <Text style={styles.secondaryButtonText}>Create account</Text>
         </Pressable>
       </View>
     </View>
@@ -97,12 +110,10 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 400,
   },
-  logo: {
-    fontSize: 48,
-    fontWeight: "800",
-    color: "#fff",
-    letterSpacing: 8,
-    marginBottom: 8,
+  logoImage: {
+    width: 100,
+    height: 100,
+    marginBottom: 12,
   },
   subtitle: {
     fontSize: 16,
@@ -129,6 +140,21 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
+    fontSize: 17,
+    fontWeight: "600",
+  },
+  secondaryButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+    width: "100%",
+    alignItems: "center",
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  secondaryButtonText: {
+    color: "#ccc",
     fontSize: 17,
     fontWeight: "600",
   },

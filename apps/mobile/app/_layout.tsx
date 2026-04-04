@@ -1,13 +1,19 @@
-import React, { useEffect, useRef } from "react";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import React, { useEffect, useRef, useCallback } from "react";
+import { View, Image, StyleSheet } from "react-native";
 import { ConvexProviderWithAuth, ConvexReactClient, useConvexAuth as useConvexAuthState } from "convex/react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
 import { useConvexAuth } from "@/hooks/useConvexAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { WorkspaceProvider } from "@/components/WorkspaceProvider";
 
+SplashScreen.preventAutoHideAsync();
+
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!);
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const splashLogo = require("@/assets/logo-icon-light-on-dark.png");
 
 function AuthGate() {
   const { isLoading, isAuthenticated } = useConvexAuthState();
@@ -17,6 +23,16 @@ function AuthGate() {
   segmentsRef.current = segments;
 
   useNotifications();
+
+  const onReady = useCallback(async () => {
+    if (!isLoading) {
+      await SplashScreen.hideAsync();
+    }
+  }, [isLoading]);
+
+  useEffect(() => {
+    onReady();
+  }, [onReady]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -30,13 +46,16 @@ function AuthGate() {
     }
   }, [isLoading, isAuthenticated, router]);
 
+  if (isLoading) {
+    return (
+      <View style={styles.splashContainer}>
+        <Image source={splashLogo} style={styles.splashLogo} resizeMode="contain" />
+      </View>
+    );
+  }
+
   return (
     <WorkspaceProvider>
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#0a7ea4" />
-        </View>
-      )}
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: "#111" },
@@ -110,11 +129,14 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+  splashContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#000",
-    zIndex: 10,
+  },
+  splashLogo: {
+    width: 120,
+    height: 120,
   },
 });

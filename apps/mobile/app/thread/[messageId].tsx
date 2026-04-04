@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams, Stack } from "expo-router";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { MessageBubble } from "@/components/MessageBubble";
@@ -21,6 +21,7 @@ import { MessageActionSheet } from "@/components/MessageActionSheet";
 import { CollapsibleAttachments } from "@/components/CollapsibleAttachments";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useReactions } from "@/hooks/useReactions";
+import { uploadFile } from "@/lib/fileUpload";
 
 export default function ThreadScreen() {
   const { messageId, conversationId } = useLocalSearchParams<{
@@ -35,6 +36,7 @@ export default function ThreadScreen() {
   });
   const sendReply = useMutation(api.threads.sendReply);
   const { user } = useCurrentUser();
+  const convex = useConvex();
 
   // Collect all message IDs for reactions (parent + replies)
   const allMessageIds = useMemo(() => {
@@ -54,15 +56,33 @@ export default function ThreadScreen() {
   }>({ visible: false });
 
   const handleSend = useCallback(
-    (body: string) => {
-      if (!body) return;
-      sendReply({
+    async (
+      body: string,
+      pendingFiles?: {
+        uri: string;
+        name: string;
+        mimeType: string;
+        size: number;
+      }[],
+    ) => {
+      if (!body && (!pendingFiles || pendingFiles.length === 0)) return;
+
+      let attachments;
+      if (pendingFiles && pendingFiles.length > 0) {
+        attachments = await Promise.all(
+          pendingFiles.map((file) => uploadFile(convex, file)),
+        );
+      }
+
+      await sendReply({
         conversationId: typedConversationId,
         threadId: typedThreadId,
-        body,
+        body: body || " ",
+        alsoSendToConversation: alsoSendToChannel,
+        ...(attachments ? { attachments } : {}),
       });
     },
-    [sendReply, typedConversationId, typedThreadId],
+    [sendReply, typedConversationId, typedThreadId, convex, alsoSendToChannel],
   );
 
   if (thread === undefined) {

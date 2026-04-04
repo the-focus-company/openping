@@ -7,8 +7,8 @@ export default function TabLayout() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  // Tab bar height: icons (22) + padding (6+6) + safe area
-  const tabBarHeight = 32 + insets.bottom;
+  // Tab bar height: icons (24) + padding (10+8) + safe area
+  const tabBarHeight = 44 + insets.bottom;
   // Search sits 12px above tab bar
   const searchBottom = tabBarHeight + 12;
 
@@ -22,7 +22,7 @@ export default function TabLayout() {
             backgroundColor: "#111",
             borderTopColor: "#333",
             height: tabBarHeight,
-            paddingTop: 6,
+            paddingTop: 10,
           },
           tabBarShowLabel: false,
           tabBarHideOnKeyboard: true,
@@ -36,21 +36,21 @@ export default function TabLayout() {
           name="index"
           options={{
             title: "My Deck",
-            tabBarIcon: ({ color }) => <Home size={22} color={color} />,
+            tabBarIcon: ({ color }) => <Home size={24} color={color} />,
           }}
         />
         <Tabs.Screen
           name="communications"
           options={{
             title: "Conversations",
-            tabBarIcon: ({ color }) => <MessageSquare size={22} color={color} />,
+            tabBarIcon: ({ color }) => <MessageSquare size={24} color={color} />,
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
             title: "Profile",
-            tabBarIcon: ({ color }) => <User size={22} color={color} />,
+            tabBarIcon: ({ color }) => <User size={24} color={color} />,
           }}
         />
         <Tabs.Screen
@@ -93,8 +93,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(34,34,34,0.95)",
     borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
     gap: 8,
   },
   searchInput: {

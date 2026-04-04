@@ -10,10 +10,11 @@ import {
   Alert,
   StyleSheet,
 } from "react-native";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import type { Id } from "@convex/_generated/dataModel";
 import { getDMDisplayName } from "@/lib/dmDisplayName";
 import { useRouter, Stack } from "expo-router";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
@@ -39,6 +40,7 @@ export default function CommunicationsScreen() {
   const conversations = useQuery(api.conversations.list, { workspaceId });
   const { user } = useCurrentUser();
   const router = useRouter();
+  const createSection = useMutation(api.sidebarLayout.createSection);
 
   const [sortBy, setSortBy] = useState<"date" | "alpha">("date");
   const [filterUnread, setFilterUnread] = useState(false);
@@ -150,21 +152,19 @@ export default function CommunicationsScreen() {
     if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ["Cancel", "New 1:1 conversation", "New group conversation", "Create folder"],
+          options: ["Cancel", "New conversation", "New section"],
           cancelButtonIndex: 0,
         },
         (buttonIndex) => {
           if (buttonIndex === 1) {
             router.push("/new-conversation");
           } else if (buttonIndex === 2) {
-            router.push({ pathname: "/new-conversation", params: { mode: "group" } });
-          } else if (buttonIndex === 3) {
             Alert.prompt(
-              "New Folder",
-              "Enter folder name",
-              (folderName) => {
-                if (folderName?.trim()) {
-                  Alert.alert("Folder created", `Move conversations to "${folderName.trim()}" from their info page.`);
+              "New Section",
+              "Enter section name",
+              (sectionName) => {
+                if (sectionName?.trim()) {
+                  createSection({ workspaceId, name: sectionName.trim() });
                 }
               },
             );
