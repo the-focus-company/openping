@@ -10,7 +10,7 @@ import { Plus, X, Check, Send } from "lucide-react";
 
 interface InviteRow {
   email: string;
-  role: "member" | "admin";
+  role: "member" | "admin" | "guest";
   sent: boolean;
   error?: string;
 }
@@ -101,7 +101,7 @@ export function InviteTeamStep({ workspaceId, onNext }: InviteTeamStepProps) {
                 value={row.role}
                 onChange={(e) =>
                   updateRow(index, {
-                    role: e.target.value as "member" | "admin",
+                    role: e.target.value as "member" | "admin" | "guest",
                   })
                 }
                 disabled={row.sent}
@@ -109,6 +109,7 @@ export function InviteTeamStep({ workspaceId, onNext }: InviteTeamStepProps) {
               >
                 <option value="member">Member</option>
                 <option value="admin">Admin</option>
+                <option value="guest">Guest</option>
               </select>
               {row.sent ? (
                 <div className="flex h-9 w-9 items-center justify-center">

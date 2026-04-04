@@ -71,6 +71,19 @@ export default function ChannelPage({ params }: Props) {
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
 
+  const inviteLink = useQuery(
+    api.conversationInvitations.getLink,
+    isAuthenticated ? { conversationId: typedId } : "skip",
+  );
+  const generateInviteLink = useMutation(api.conversationInvitations.generateLink);
+  const revokeInviteLink = useMutation(api.conversationInvitations.revokeLink);
+  const inviteMembers = useMutation(api.conversations.invite);
+  const workspaceMembers = useQuery(
+    api.workspaceMembers.listMembers,
+    isAuthenticated && workspaceId ? { workspaceId } : "skip",
+  );
+  const isGuest = workspaceRole === "guest";
+
   useEffect(() => {
     if (!isAuthenticated || !isMember) return;
     markRead({ channelId: typedChannelId });
@@ -85,6 +98,37 @@ export default function ChannelPage({ params }: Props) {
     navigator.clipboard.writeText(window.location.href);
     toast("Link copied", "success");
   }, [toast]);
+
+  const handleGenerateInviteLink = useCallback(async () => {
+    await generateInviteLink({ conversationId: typedId });
+    toast("Guest link generated", "success");
+  }, [generateInviteLink, typedId, toast]);
+
+  const handleCopyInviteLink = useCallback(async () => {
+    if (!inviteLink) return;
+    const url = `${window.location.origin}/conversation-invite/${inviteLink.token}`;
+    await navigator.clipboard.writeText(url);
+    toast("Link copied", "success");
+  }, [inviteLink, toast]);
+
+  const handleRevokeInviteLink = useCallback(async () => {
+    await revokeInviteLink({ conversationId: typedId });
+    toast("Guest link revoked", "success");
+  }, [revokeInviteLink, typedId, toast]);
+
+  const handleInviteMembers = useCallback(
+    (userIds: string[]) => {
+      inviteMembers({
+        conversationId: typedId,
+        userIds: userIds as Id<"users">[],
+      });
+      toast(
+        userIds.length === 1 ? "Member added" : `${userIds.length} members added`,
+        "success",
+      );
+    },
+    [inviteMembers, typedId, toast],
+  );
 
   const handleLeave = useCallback(async () => {
     await leaveChannel({ channelId: typedChannelId });
@@ -251,6 +295,17 @@ export default function ChannelPage({ params }: Props) {
           onUnarchive={handleUnarchive}
           onStartMeeting={isMember ? handleStartMeeting : undefined}
           hasActiveMeeting={!!activeMeeting}
+          isGuest={isGuest}
+          workspaceMembers={workspaceMembers?.map((wm) => ({
+            _id: wm.userId as string,
+            name: wm.name,
+            avatarUrl: wm.avatarUrl,
+          }))}
+          onInviteMembers={handleInviteMembers}
+          inviteLink={inviteLink ?? null}
+          onGenerateInviteLink={handleGenerateInviteLink}
+          onRevokeInviteLink={handleRevokeInviteLink}
+          onCopyInviteLink={handleCopyInviteLink}
         />
       ) : (
         <ChannelTopBarSkeleton />
