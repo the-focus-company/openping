@@ -22,6 +22,7 @@ import {
   PanelLeftClose,
   Check,
   Bot,
+  Key,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -85,15 +86,14 @@ interface SidebarProps {
   isSettingsRoute?: boolean;
   onOpenShortcuts?: () => void;
   onCollapse?: () => void;
+  role?: "admin" | "member" | "guest" | null;
 }
 
-export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: SidebarProps) {
+export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse, role }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const wsCtx = useContext(WorkspaceContext);
-  const isAdmin = wsCtx?.role === "admin";
-  const isGuest = wsCtx?.role === "guest";
-
+  const isAdmin = role === "admin" || wsCtx?.role === "admin";
   const workspaceSlug = pathname.match(/^\/app\/([^/]+)/)?.[1];
   const workspacePrefix = workspaceSlug ? `/app/${workspaceSlug}` : "";
   const buildPath = useCallback(
@@ -273,7 +273,6 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
 
   const handleMoveItemToSection = async (
     itemId: string,
-    _itemType: "channel" | "dm",
     targetSectionId: string,
   ) => {
     if (!workspaceId) return;
@@ -333,10 +332,9 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
 
   const handleDndMoveItem = async (
     itemId: string,
-    itemType: "channel" | "dm",
     toSectionId: string,
   ) => {
-    await handleMoveItemToSection(itemId, itemType, toSectionId);
+    await handleMoveItemToSection(itemId, toSectionId);
   };
 
   const userInitial = user?.name?.[0]?.toUpperCase() ?? "U";
@@ -419,7 +417,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
           onKeyDown={handleNavKeyDown}
           onFocus={handleNavFocus}
         >
-          <SettingsNav pathname={pathname} buildPath={buildPath} />
+          <SettingsNav pathname={pathname} buildPath={buildPath} role={role} />
         </nav>
       ) : (
         <>
@@ -805,13 +803,14 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse }: Sideba
 interface SettingsNavProps {
   pathname: string;
   buildPath: (p: string) => string;
+  role?: "admin" | "member" | "guest" | null;
 }
 
-function SettingsNav({ pathname, buildPath }: SettingsNavProps) {
+function SettingsNav({ pathname, buildPath, role }: SettingsNavProps) {
   const router = useRouter();
   const wsCtx = useContext(WorkspaceContext);
-  const isAdmin = wsCtx?.role === "admin";
-  const isGuest = wsCtx?.role === "guest";
+  const isAdmin = role === "admin" || wsCtx?.role === "admin";
+  const isGuest = role === "guest" || wsCtx?.role === "guest";
 
   return (
     <>
@@ -881,6 +880,12 @@ function SettingsNav({ pathname, buildPath }: SettingsNavProps) {
           isActive={pathname.endsWith("/settings/analytics")}
         />
       )}
+      <NavItem
+        href={buildPath("/settings/api-keys")}
+        icon={Key}
+        label="API Keys"
+        isActive={pathname.endsWith("/settings/api-keys")}
+      />
 
       {isAdmin && (
         <>

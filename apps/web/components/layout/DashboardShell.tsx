@@ -50,6 +50,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useConvexAuth();
   const workspace = useQuery(api.workspaces.getBySlug, isAuthenticated && workspaceSlug ? { slug: workspaceSlug } : "skip");
   const workspaceId = workspace?._id as Id<"workspaces"> | undefined;
+  const myWorkspaces = useQuery(api.workspaceMembers.listMyWorkspaces, isAuthenticated ? {} : "skip");
+  const myRole = myWorkspaces?.find((w) => w.workspaceId === workspaceId)?.role ?? null;
   const conversations = useQuery(api.conversations.list, isAuthenticated && workspaceId ? { workspaceId } : "skip");
   const inboxUnread = useQuery(api.inboxItems.unreadCount, isAuthenticated ? {} : "skip");
   const markRead = useMutation(api.conversations.markRead);
@@ -96,9 +98,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     const conversationUnread = conversations?.reduce((sum, conv) => sum + (conv.unreadCount ?? 0), 0) ?? 0;
     const inbox = inboxUnread ?? 0;
     const total = conversationUnread + inbox;
-    document.title = total > 0 ? `(${total}) PING` : "PING";
+    document.title = total > 0 ? `(${total}) OpenPing` : "OpenPing";
     return () => {
-      document.title = "PING";
+      document.title = "OpenPing";
     };
   }, [conversations, inboxUnread]);
 
@@ -315,6 +317,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   isSettingsRoute={isSettingsRoute}
                   onOpenShortcuts={openShortcuts}
                   onCollapse={toggleSidebar}
+                  role={myRole}
                 />
                 {/* Right-edge inset shadow for depth */}
                 <div className="pointer-events-none absolute inset-y-0 right-0 w-[1px] bg-border" />
@@ -343,6 +346,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <Sidebar
                 isSettingsRoute={isSettingsRoute}
                 onOpenShortcuts={openShortcuts}
+                role={myRole}
               />
             </aside>
 

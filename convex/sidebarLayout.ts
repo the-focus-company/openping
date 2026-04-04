@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireUser } from "./auth";
 
@@ -54,7 +54,7 @@ export const initializeDefaultSection = mutation({
     await ctx.db.insert("sidebarSections", {
       userId: user._id,
       workspaceId: args.workspaceId,
-      name: "Communication",
+      name: "Conversations",
       sortOrder: 0,
       isCollapsed: false,
       isDefault: true,
@@ -372,5 +372,25 @@ export const bakeCurrentOrder = mutation({
         sortOrder: entry.sortOrder,
       });
     }
+  },
+});
+
+/** One-time migration: rename "Channels & DMs" default sections to "Communication". */
+export const migrateDefaultSectionName = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const sections = await ctx.db
+      .query("sidebarSections")
+      .filter((q) => q.eq(q.field("isDefault"), true))
+      .collect();
+
+    let updated = 0;
+    for (const section of sections) {
+      if (section.name === "Channels & DMs") {
+        await ctx.db.patch(section._id, { name: "Conversations" });
+        updated++;
+      }
+    }
+    console.log(`[migration] Renamed ${updated} default sections to "Communication"`);
   },
 });

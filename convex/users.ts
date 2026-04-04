@@ -438,21 +438,33 @@ export const ensureUser = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-    // Already exists — nothing to do
+    const avatarUrl = identity.pictureUrl ?? (identity as any).picture ?? undefined;
+
+    // Already exists — update profile fields that may have changed
     const existing = await ctx.db
       .query("users")
       .withIndex("by_workos_id", (q) =>
         q.eq("workosUserId", identity.subject),
       )
       .unique();
-    if (existing) return { status: "exists" as const, userId: existing._id };
+    if (existing) {
+      const updates: Record<string, any> = { lastSeenAt: Date.now() };
+      if (avatarUrl && existing.avatarUrl !== avatarUrl) {
+        updates.avatarUrl = avatarUrl;
+      }
+      if (identity.name && existing.name !== identity.name) {
+        updates.name = identity.name;
+      }
+      await ctx.db.patch(existing._id, updates);
+      return { status: "exists" as const, userId: existing._id };
+    }
 
     // Provision from JWT claims
     const result = await createOrUpdateUserHandler(ctx, {
       workosUserId: identity.subject,
       email: identity.email ?? "",
       name: identity.name ?? identity.email?.split("@")[0] ?? "User",
-      avatarUrl: identity.pictureUrl ?? undefined,
+      avatarUrl,
     });
 
     return { status: "created" as const, userId: result.userId };
