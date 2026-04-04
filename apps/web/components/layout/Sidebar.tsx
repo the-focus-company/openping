@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { WorkspaceContext } from "@/components/workspace/WorkspaceProvider";
 import { useSidebarLayout } from "@/hooks/useSidebarLayout";
 import type { SortMode } from "@/hooks/useSidebarLayout";
+import { FeedbackPopover } from "./FeedbackPopover";
 import { MyDeckButton } from "./sidebar/MyDeckButton";
 import { SidebarSection } from "./sidebar/SidebarSection";
 import { SidebarDndProvider } from "./sidebar/SidebarDndProvider";
@@ -613,6 +614,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse, role }: 
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <FeedbackPopover workspaceId={workspaceId} />
           {onCollapse && (
             <button
               type="button"

@@ -788,4 +788,13 @@ export default defineSchema({
   })
     .index("by_session_startMs", ["sessionId", "startMs"])
     .index("by_startMs", ["startMs"]),
+
+  feedback: defineTable({
+    userId: v.id("users"),
+    workspaceId: v.id("workspaces"),
+    type: v.union(v.literal("bug"), v.literal("idea")),
+    message: v.string(),
+    context: v.optional(v.string()),
+  })
+    .index("by_workspace", ["workspaceId"]),
 });
