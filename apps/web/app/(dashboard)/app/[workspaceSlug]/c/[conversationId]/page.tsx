@@ -12,7 +12,7 @@ import { ChannelTopBarSkeleton, ConversationTopBarSkeleton } from "@/components/
 import { AlertBanner } from "@/components/proactive/AlertBanner";
 import { UserProfileDialog } from "@/components/user/UserProfileDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Archive, Link2, Copy, X } from "lucide-react";
+import { Archive } from "lucide-react";
 import { useChannelTyping } from "@/hooks/useTyping";
 import { useThreadPanel } from "@/hooks/useThreadPanel";
 import { useReactions } from "@/hooks/useReactions";
@@ -86,7 +86,6 @@ export default function ConversationPage({ params }: Props) {
   const { buildPath, workspaceId, role: workspaceRole } = useWorkspace();
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-  const [inviteLinkDialogOpen, setInviteLinkDialogOpen] = useState(false);
 
   const inviteLink = useQuery(
     api.conversationInvitations.getLink,
@@ -94,6 +93,11 @@ export default function ConversationPage({ params }: Props) {
   );
   const generateInviteLink = useMutation(api.conversationInvitations.generateLink);
   const revokeInviteLink = useMutation(api.conversationInvitations.revokeLink);
+  const inviteMembers = useMutation(api.conversations.invite);
+  const workspaceMembers = useQuery(
+    api.workspaceMembers.listMembers,
+    isAuthenticated && workspaceId ? { workspaceId } : "skip",
+  );
   const isGuest = workspaceRole === "guest";
 
   // Mark as read on mount and when conversation changes
@@ -112,21 +116,36 @@ export default function ConversationPage({ params }: Props) {
     toast("Link copied", "success");
   }, [toast]);
 
-  const handleShareLink = useCallback(() => {
-    setInviteLinkDialogOpen(true);
-  }, []);
-
   const handleGenerateInviteLink = useCallback(async () => {
-    const result = await generateInviteLink({ conversationId: typedId });
-    const url = `${window.location.origin}/conversation-invite/${result.token}`;
-    await navigator.clipboard.writeText(url);
-    toast("Invite link copied", "success");
+    await generateInviteLink({ conversationId: typedId });
+    toast("Guest link generated", "success");
   }, [generateInviteLink, typedId, toast]);
+
+  const handleCopyInviteLink = useCallback(async () => {
+    if (!inviteLink) return;
+    const url = `${window.location.origin}/conversation-invite/${inviteLink.token}`;
+    await navigator.clipboard.writeText(url);
+    toast("Link copied", "success");
+  }, [inviteLink, toast]);
 
   const handleRevokeInviteLink = useCallback(async () => {
     await revokeInviteLink({ conversationId: typedId });
-    toast("Invite link revoked", "success");
+    toast("Guest link revoked", "success");
   }, [revokeInviteLink, typedId, toast]);
+
+  const handleInviteMembers = useCallback(
+    (userIds: string[]) => {
+      inviteMembers({
+        conversationId: typedId,
+        userIds: userIds as Id<"users">[],
+      });
+      toast(
+        userIds.length === 1 ? "Member added" : `${userIds.length} members added`,
+        "success",
+      );
+    },
+    [inviteMembers, typedId, toast],
+  );
 
   const handleLeave = useCallback(async () => {
     await leaveConversation({ conversationId: typedId });
@@ -321,8 +340,17 @@ export default function ConversationPage({ params }: Props) {
           onArchive={handleArchive}
           onStartMeeting={handleStartMeeting}
           hasActiveMeeting={!!activeMeeting}
-          onShareLink={handleShareLink}
           isGuest={isGuest}
+          workspaceMembers={workspaceMembers?.map((wm) => ({
+            _id: wm.userId as string,
+            name: wm.name,
+            avatarUrl: wm.avatarUrl,
+          }))}
+          onInviteMembers={handleInviteMembers}
+          inviteLink={inviteLink ?? null}
+          onGenerateInviteLink={handleGenerateInviteLink}
+          onRevokeInviteLink={handleRevokeInviteLink}
+          onCopyInviteLink={handleCopyInviteLink}
         />
       ) : (
         <ConversationTopBarSkeleton />
@@ -425,57 +453,6 @@ export default function ConversationPage({ params }: Props) {
               Leave
             </button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Invite link dialog */}
-      <Dialog open={inviteLinkDialogOpen} onOpenChange={setInviteLinkDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Conversation invite link</DialogTitle>
-            <DialogDescription>
-              Anyone with this link can join the conversation as a guest.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            {inviteLink ? (
-              <>
-                <div className="flex items-center gap-2 rounded border border-subtle bg-surface-2 px-3 py-2 min-w-0">
-                  <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <code className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-2xs text-foreground/70 select-all">
-                    {`/conversation-invite/${inviteLink.token}`}
-                  </code>
-                  <button
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(
-                        `${window.location.origin}/conversation-invite/${inviteLink.token}`,
-                      );
-                      toast("Link copied", "success");
-                    }}
-                    className="shrink-0 rounded p-1 text-muted-foreground hover:bg-surface-3 hover:text-foreground"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                <p className="text-2xs text-muted-foreground">
-                  Expires {new Date(inviteLink.expiresAt).toLocaleDateString()}
-                </p>
-                <button
-                  onClick={handleRevokeInviteLink}
-                  className="text-xs text-status-danger hover:underline"
-                >
-                  Revoke link
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={handleGenerateInviteLink}
-                className="w-full rounded-md bg-ping-purple px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-ping-purple/90"
-              >
-                Generate invite link
-              </button>
-            )}
-          </div>
         </DialogContent>
       </Dialog>
 
