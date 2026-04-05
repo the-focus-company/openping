@@ -62,7 +62,9 @@ export const send = mutation({
       throw new Error("An invitation has already been sent to this email");
     }
 
-    const token = crypto.randomUUID();
+    const tokenBytes = new Uint8Array(32);
+    crypto.getRandomValues(tokenBytes);
+    const token = Array.from(tokenBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
     await ctx.db.insert("conversationInvitations", {
       conversationId: args.conversationId,
       workspaceId: conversation.workspaceId,
@@ -114,7 +116,9 @@ export const generateLink = mutation({
       return { token: activeLink.token };
     }
 
-    const token = crypto.randomUUID();
+    const tokenBytes = new Uint8Array(32);
+    crypto.getRandomValues(tokenBytes);
+    const token = Array.from(tokenBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
     await ctx.db.insert("conversationInvitations", {
       conversationId: args.conversationId,
       workspaceId: conversation.workspaceId,

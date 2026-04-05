@@ -16,5 +16,6 @@ crons.interval("cleanup-typing-indicators", { seconds: 30 }, internal.typing.cle
 crons.interval("cleanup-rate-limit-counters", { hours: 1 }, internal.rateLimit.cleanupExpiredWindows);
 crons.interval("cleanup-expired-sessions", { hours: 1 }, internal.sessions.cleanupExpired);
 crons.interval("cleanup-expired-invitations", { hours: 24 }, internal.invitations.cleanupExpired);
+crons.interval("cleanup-orphaned-storage", { hours: 24 }, internal.files.cleanupOrphanedStorage);
 
 export default crons;

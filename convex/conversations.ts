@@ -151,8 +151,11 @@ export const create = mutation({
     }
 
     const name = args.name?.trim();
-    if (name !== undefined && name.length > 80) {
-      throw new Error("Conversation name must be between 1 and 80 characters");
+    if (name !== undefined && name.length > 200) {
+      throw new Error("Conversation name must be 200 characters or fewer");
+    }
+    if (args.description !== undefined && args.description.length > 2000) {
+      throw new Error("Description must be 2000 characters or fewer");
     }
 
     // For 1to1, dedup: check if existing conversation exists

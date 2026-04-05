@@ -207,11 +207,21 @@ async function checkClaimAgainstKnowledge(
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { contradiction: null, confidence: 0 };
 
-  const searchResponse = await fetch(`${graphitiUrl}/search`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query: claim, max_facts: 5 }),
-  });
+  const searchController = new AbortController();
+  const searchTimeoutId = setTimeout(() => searchController.abort(), 10000);
+  let searchResponse: Response;
+  try {
+    searchResponse = await fetch(`${graphitiUrl}/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: claim, max_facts: 5 }),
+      signal: searchController.signal,
+    });
+  } catch {
+    clearTimeout(searchTimeoutId);
+    return { contradiction: null, confidence: 0 };
+  }
+  clearTimeout(searchTimeoutId);
 
   if (!searchResponse.ok) {
     console.error(`[fact-check] Graphiti search failed: ${searchResponse.status}`);

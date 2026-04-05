@@ -307,3 +307,65 @@ export const listForUser = query({
     return workspaces.filter(Boolean) as NonNullable<(typeof workspaces)[number]>[];
   },
 });
+
+export const deleteWorkspace = mutation({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const user = await requireAuth(ctx, args.workspaceId);
+    if (user.role !== "admin") {
+      throw new Error("Only admins can delete workspaces");
+    }
+
+    // Cascade delete in batches
+    // 1. Conversations and their children
+    const conversations = await ctx.db
+      .query("conversations")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .take(200);
+
+    for (const conv of conversations) {
+      const members = await ctx.db
+        .query("conversationMembers")
+        .withIndex("by_conversation", (q) => q.eq("conversationId", conv._id))
+        .take(500);
+      await Promise.all(members.map((m) => ctx.db.delete(m._id)));
+      await ctx.db.delete(conv._id);
+    }
+
+    // 2. Workspace members
+    const wsMembers = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .take(500);
+    await Promise.all(wsMembers.map((m) => ctx.db.delete(m._id)));
+
+    // 3. Invitations
+    const invitations = await ctx.db
+      .query("invitations")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .take(500);
+    await Promise.all(invitations.map((i) => ctx.db.delete(i._id)));
+
+    // 4. Agents
+    const agents = await ctx.db
+      .query("agents")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .take(200);
+    await Promise.all(agents.map((a) => ctx.db.delete(a._id)));
+
+    // 5. Audit logs
+    await ctx.runMutation(internal.auditLog.log, {
+      workspaceId: args.workspaceId,
+      actorId: user._id,
+      action: "workspace.deleted",
+      resourceType: "workspace",
+      resourceId: args.workspaceId as string,
+      timestamp: Date.now(),
+    });
+
+    // 6. Delete workspace itself
+    await ctx.db.delete(args.workspaceId);
+
+    return { success: true };
+  },
+});

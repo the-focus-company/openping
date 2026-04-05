@@ -141,6 +141,25 @@ export const removeMember = mutation({
 
     await ctx.db.delete(targetMembership._id);
 
+    // Cascade cleanup: revoke agent scopes granted by this user
+    const agentScopes = await ctx.db
+      .query("agentConversationScopes")
+      .filter((q) => q.eq(q.field("grantedBy"), args.userId))
+      .take(200);
+    await Promise.all(agentScopes.map((s) => ctx.db.delete(s._id)));
+
+    // Revoke personal agents owned by this user in this workspace
+    const agents = await ctx.db
+      .query("agents")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .take(200);
+    const personalAgents = agents.filter(
+      (a) => a.scope === "private" && a.userId === args.userId,
+    );
+    await Promise.all(
+      personalAgents.map((a) => ctx.db.patch(a._id, { status: "revoked" })),
+    );
+
     await ctx.runMutation(internal.auditLog.log, {
       workspaceId: args.workspaceId,
       actorId: currentUser._id,

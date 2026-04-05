@@ -8,7 +8,40 @@ http.route({
   path: "/webhooks/workos",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const body = await request.json();
+    const rawBody = await request.text();
+
+    // Verify WorkOS webhook signature
+    const secret = process.env.WORKOS_WEBHOOK_SECRET;
+    if (secret) {
+      const sigHeader = request.headers.get("workos-signature");
+      if (!sigHeader) {
+        return new Response(JSON.stringify({ error: "Missing signature" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      // WorkOS signature format: t=<timestamp>, v1=<hash>
+      const parts = Object.fromEntries(
+        sigHeader.split(", ").map((p) => p.split("=", 2) as [string, string]),
+      );
+      const timestamp = parts.t;
+      const sigHash = parts.v1;
+      if (!timestamp || !sigHash) {
+        return new Response(JSON.stringify({ error: "Malformed signature" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const expected = await hmacSha256Hex(secret, `${timestamp}.${rawBody}`);
+      if (!timingSafeEqual(sigHash, expected)) {
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    const body = JSON.parse(rawBody);
     const eventType = body.event;
 
     switch (eventType) {
@@ -49,6 +82,16 @@ http.route({
 // ---------------------------------------------------------------------------
 // Linear issue webhooks
 // ---------------------------------------------------------------------------
+
+/** Constant-time string comparison to prevent timing attacks. */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
 
 /** Compute HMAC-SHA256 hex digest using the Web Crypto API. */
 async function hmacSha256Hex(
@@ -114,7 +157,7 @@ http.route({
 
     const expected = await hmacSha256Hex(secret, rawBody);
 
-    if (signatureHeader !== expected) {
+    if (!timingSafeEqual(signatureHeader, expected)) {
       return new Response(
         JSON.stringify({ error: "Invalid signature" }),
         { status: 401, headers: { "Content-Type": "application/json" } },
@@ -274,7 +317,7 @@ http.route({
       });
     }
     const expected = "sha256=" + await hmacSha256Hex(secret, rawBody);
-    if (sigHeader !== expected) {
+    if (!timingSafeEqual(sigHeader, expected)) {
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -630,6 +673,16 @@ http.route({
 
       if (!code) {
         return jsonResponse({ error: "code is required" }, 400);
+      }
+
+      // Rate limit by code prefix to prevent brute force
+      const rateKey = `mobile-auth:${String(code).slice(0, 16)}`;
+      const rateResult = await ctx.runMutation(internal.rateLimit.checkRateLimit, {
+        key: rateKey,
+        maxPerWindow: 10,
+      });
+      if (!rateResult.allowed) {
+        return jsonResponse({ error: "Too many attempts" }, 429);
       }
 
       const clientId = process.env.WORKOS_CLIENT_ID;

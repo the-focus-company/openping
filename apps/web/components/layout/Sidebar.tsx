@@ -3,6 +3,7 @@
 import { useState, useMemo, useContext, useCallback, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -518,7 +519,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse, role }: 
               <button className="flex h-8 flex-1 min-w-0 items-center gap-2 rounded px-2 transition-colors hover:bg-surface-3">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ping-purple text-2xs font-medium text-white overflow-hidden">
                   {user?.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={userName} className="h-full w-full object-cover" />
+                    <Image src={user.avatarUrl} alt={userName} width={20} height={20} className="h-full w-full object-cover" />
                   ) : (
                     userInitial
                   )}
@@ -705,7 +706,7 @@ export function Sidebar({ isSettingsRoute, onOpenShortcuts, onCollapse, role }: 
                       </div>
                     ) : u.avatarUrl ? (
                       <div className="h-5 w-5 shrink-0 overflow-hidden rounded-full">
-                        <img src={u.avatarUrl} alt={u.name} className="h-full w-full object-cover" />
+                        <Image src={u.avatarUrl} alt={u.name} width={20} height={20} className="h-full w-full object-cover" />
                       </div>
                     ) : (
                       <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-3 text-2xs font-medium">
