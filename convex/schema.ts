@@ -122,6 +122,11 @@ export default defineSchema({
     companyDescription: v.optional(v.string()),
     defaultChannels: v.optional(v.array(v.string())),
     publicInviteEnabled: v.optional(v.boolean()),
+    // Resource quotas (null = unlimited)
+    maxMembers: v.optional(v.number()),
+    maxMessagesPerMonth: v.optional(v.number()),
+    currentMonthMessageCount: v.optional(v.number()),
+    currentMonthStart: v.optional(v.number()),
   })
     .index("by_slug", ["slug"])
     .index("by_workos_org", ["workosOrgId"]),

@@ -78,16 +78,23 @@ export const getByMessages = query({
     );
 
     // Collect all unique user IDs and batch fetch
-    const allUserIds = new Set<string>();
+    const allUserIds: Id<"users">[] = [];
+    const seenIds = new Set<string>();
     for (const reactions of allReactionsByMessage) {
-      for (const r of reactions) allUserIds.add(r.userId as string);
+      for (const r of reactions) {
+        if (!seenIds.has(r.userId as string)) {
+          seenIds.add(r.userId as string);
+          allUserIds.push(r.userId);
+        }
+      }
     }
     const users = await Promise.all(
-      [...allUserIds].map((id) => ctx.db.get(id as any)),
+      allUserIds.map((id) => ctx.db.get(id)),
     );
-    const userMap = new Map(
-      users.filter((u): u is NonNullable<typeof u> => u !== null).map((u) => [u._id as string, u.name]),
-    );
+    const userMap = new Map<string, string>();
+    for (const u of users) {
+      if (u) userMap.set(u._id as string, u.name);
+    }
 
     // Group and build results synchronously
     for (let i = 0; i < args.messageIds.length; i++) {

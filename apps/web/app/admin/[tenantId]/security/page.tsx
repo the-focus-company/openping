@@ -1,6 +1,8 @@
 "use client";
 
 import { use, useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { AlertTriangle, ArrowLeft, Shield, Power, Lock, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { StatusDot } from "@/components/ui/status-dot";
@@ -44,6 +46,10 @@ interface Props {
 }
 
 export default function SecurityPage({ params }: Props) {
+  // Auth gate: only admins can access
+  const adminWorkspaces = useQuery(api.admin.listWorkspaces);
+  if (!adminWorkspaces) return <div className="flex h-screen items-center justify-center text-muted-foreground">Loading...</div>;
+  if (adminWorkspaces.length === 0) return <div className="flex h-screen items-center justify-center text-red-500">Access denied. Admin privileges required.</div>;
   const { tenantId } = use(params);
   const [killSwitchOpen, setKillSwitchOpen] = useState(false);
   const [killed, setKilled] = useState(false);

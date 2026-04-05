@@ -11,6 +11,10 @@ export const submit = mutation({
     message: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    if (args.email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.email)) {
+      throw new Error("Invalid email address");
+    }
+
     const workspace = await ctx.db
       .query("workspaces")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))

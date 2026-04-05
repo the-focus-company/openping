@@ -1,6 +1,8 @@
 "use client";
 
 import { use, useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { ArrowLeft, Eye, EyeOff, Shield, AlertTriangle, Clock, X } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -20,6 +22,10 @@ const MOCK_USERS = [
 ];
 
 export default function ProxyPage({ params }: Props) {
+  // Auth gate: only admins can access
+  const adminWorkspaces = useQuery(api.admin.listWorkspaces);
+  if (!adminWorkspaces) return <div className="flex h-screen items-center justify-center text-muted-foreground">Loading...</div>;
+  if (adminWorkspaces.length === 0) return <div className="flex h-screen items-center justify-center text-red-500">Access denied. Admin privileges required.</div>;
   const { tenantId } = use(params);
   const [step, setStep] = useState<Step>("authorize");
   const [reason, setReason] = useState("");

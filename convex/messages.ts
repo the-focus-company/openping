@@ -46,6 +46,25 @@ export const send = mutation({
     const user = await requireUser(ctx);
     const membership = await requireConversationMember(ctx, args.conversationId, user._id);
 
+    // Check workspace message quota
+    const conv = await ctx.db.get(args.conversationId);
+    if (conv) {
+      const workspace = await ctx.db.get(conv.workspaceId);
+      if (workspace?.maxMessagesPerMonth) {
+        const oneMonth = 30 * 24 * 60 * 60 * 1000;
+        const monthStart = workspace.currentMonthStart ?? 0;
+        if (Date.now() - monthStart > oneMonth) {
+          await ctx.db.patch(workspace._id, { currentMonthMessageCount: 1, currentMonthStart: Date.now() });
+        } else {
+          const count = workspace.currentMonthMessageCount ?? 0;
+          if (count >= workspace.maxMessagesPerMonth) {
+            throw new Error("Workspace message quota exceeded");
+          }
+          await ctx.db.patch(workspace._id, { currentMonthMessageCount: count + 1 });
+        }
+      }
+    }
+
     const messageId = await ctx.db.insert("messages", {
       conversationId: args.conversationId,
       authorId: user._id,
