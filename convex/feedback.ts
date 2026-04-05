@@ -91,7 +91,7 @@ export const createLinearIssue = internalAction({
     });
 
     if (!resp.ok) {
-      console.error("Linear API error:", resp.status, await resp.text());
+      console.error("Linear API error:", resp.status);
     }
   },
 });

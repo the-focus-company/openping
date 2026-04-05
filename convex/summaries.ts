@@ -485,7 +485,7 @@ export const generateChannelSummaries = internalAction({
           summaryMap.set(conversationId, summary);
         }
       } catch (err) {
-        console.error("[summaries] Batch summary failed, falling back to individual calls:", err);
+        console.error("[summaries] Batch summary failed, falling back to individual calls");
         for (const ch of batch) {
           try {
             const summary = await generateConversationSummary(ch.messages, ch.conversationName);

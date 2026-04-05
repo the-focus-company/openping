@@ -5,7 +5,12 @@ import { Plus, Loader2, Shield } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { AgentCard, AgentConfigDialog, type Agent, type AgentSaveData } from "@/components/bot/AgentCard";
+import dynamic from "next/dynamic";
+import { AgentCard, type Agent, type AgentSaveData } from "@/components/bot/AgentCard";
+const AgentConfigDialog = dynamic(
+  () => import("@/components/bot/AgentCard").then((m) => ({ default: m.AgentConfigDialog })),
+  { ssr: false },
+);
 import { AgentTokenDialog } from "@/components/bot/AgentTokenDialog";
 import { useToast } from "@/components/ui/toast-provider";
 import { useWorkspace } from "@/hooks/useWorkspace";

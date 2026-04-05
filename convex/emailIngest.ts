@@ -87,7 +87,7 @@ export const ingestEmailToGraphiti = internalAction({
         });
       }
     } catch (err) {
-      console.error(`[emailIngest] Failed for email ${args.emailId}:`, err);
+      console.error(`[emailIngest] Failed for email ${args.emailId}`);
     }
   },
 });

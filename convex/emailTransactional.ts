@@ -46,7 +46,7 @@ export const sendInvitationEmail = internalAction({
     });
 
     if (error) {
-      console.error("Failed to send invitation email:", error);
+      console.error("Failed to send invitation email");
       throw new Error(`Failed to send invitation email: ${error.message}`);
     }
   },

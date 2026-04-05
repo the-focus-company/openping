@@ -70,7 +70,8 @@ export const readChannelMessages = internalQuery({
     workspaceId: v.id("workspaces"),
     limit: v.number(),
   },
-  handler: async (ctx, { channelId, workspaceId, limit }) => {
+  handler: async (ctx, { channelId, workspaceId, limit: rawLimit }) => {
+    const limit = Math.min(Math.max(rawLimit, 1), 100);
     const conversation = await ctx.db.get(channelId);
     if (!conversation || conversation.workspaceId !== workspaceId) {
       throw new Error("Conversation not found or access denied");

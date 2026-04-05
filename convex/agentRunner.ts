@@ -255,7 +255,7 @@ export const respondInChannel = internalAction({
               .join("\n");
         }
       } catch (err) {
-        console.error("[agentRunner] integration fetch failed:", err);
+        console.error("[agentRunner] integration fetch failed");
       }
 
       const systemPrompt =
@@ -428,7 +428,7 @@ export const respondInDM = internalAction({
               .join("\n");
         }
       } catch (err) {
-        console.error("[agentRunner] DM integration fetch failed:", err);
+        console.error("[agentRunner] DM integration fetch failed");
       }
 
       const systemPrompt =

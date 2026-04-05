@@ -51,7 +51,7 @@ export async function getCivicNexusClient(): Promise<MCPClient> {
       },
     },
     onUncaughtError: (error) => {
-      console.error("[civicNexus] Uncaught MCP error:", error);
+      console.error("[civicNexus] Uncaught MCP error");
       _client = null;
       _toolsCache = null;
     },

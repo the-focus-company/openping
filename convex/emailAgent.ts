@@ -225,7 +225,7 @@ export const classifyEmail = internalAction({
         emailId: email._id,
       });
     } catch (err) {
-      console.error(`[emailAgent] Classification failed for email ${email._id}:`, err);
+      console.error(`[emailAgent] Classification failed for email ${email._id}`);
     }
   },
 });
@@ -245,7 +245,7 @@ export const classifyPendingEmails = internalAction({
           emailId: email._id,
         });
       } catch (err) {
-        console.error(`[emailAgent] Failed to schedule classification for ${email._id}:`, err);
+        console.error(`[emailAgent] Failed to schedule classification for ${email._id}`);
       }
     }
   },
@@ -342,7 +342,7 @@ export const checkReminders = internalAction({
           emailId: email._id,
         });
       } catch (err) {
-        console.error(`[emailAgent] Reminder failed for email ${email._id}:`, err);
+        console.error(`[emailAgent] Reminder failed for email ${email._id}`);
       }
     }
   },

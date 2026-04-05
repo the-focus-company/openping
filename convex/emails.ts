@@ -93,6 +93,7 @@ export const list = query({
 export const search = query({
   args: { query: v.string() },
   handler: async (ctx, args) => {
+    if (args.query.length > 1000) throw new Error("Search query too long");
     const user = await requireUser(ctx);
     const lowerQuery = args.query.toLowerCase();
     const emails = await ctx.db
