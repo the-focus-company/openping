@@ -67,38 +67,47 @@ export const getByMessages = query({
       }>
     > = {};
 
-    await Promise.all(
-      args.messageIds.map(async (messageId) => {
-        const reactions = await ctx.db
+    // Fetch all reactions for all messages in parallel
+    const allReactionsByMessage = await Promise.all(
+      args.messageIds.map((messageId) =>
+        ctx.db
           .query("reactions")
           .withIndex("by_message", (q) => q.eq("messageId", messageId))
-          .take(500);
-
-        const grouped = new Map<string, (typeof reactions)[number][]>();
-        for (const reaction of reactions) {
-          const entry = grouped.get(reaction.emoji);
-          if (entry) {
-            entry.push(reaction);
-          } else {
-            grouped.set(reaction.emoji, [reaction]);
-          }
-        }
-
-        result[messageId] = await Promise.all(
-          Array.from(grouped.entries()).map(async ([emoji, emojiReactions]) => {
-            const users = await Promise.all(
-              emojiReactions.map((r) => ctx.db.get(r.userId)),
-            );
-            return {
-              emoji,
-              count: emojiReactions.length,
-              userIds: emojiReactions.map((r) => r.userId as string),
-              userNames: users.map((u) => u?.name ?? "Unknown"),
-            };
-          }),
-        );
-      }),
+          .take(500),
+      ),
     );
+
+    // Collect all unique user IDs and batch fetch
+    const allUserIds = new Set<string>();
+    for (const reactions of allReactionsByMessage) {
+      for (const r of reactions) allUserIds.add(r.userId as string);
+    }
+    const users = await Promise.all(
+      [...allUserIds].map((id) => ctx.db.get(id as any)),
+    );
+    const userMap = new Map(
+      users.filter((u): u is NonNullable<typeof u> => u !== null).map((u) => [u._id as string, u.name]),
+    );
+
+    // Group and build results synchronously
+    for (let i = 0; i < args.messageIds.length; i++) {
+      const messageId = args.messageIds[i];
+      const reactions = allReactionsByMessage[i];
+
+      const grouped = new Map<string, (typeof reactions)[number][]>();
+      for (const reaction of reactions) {
+        const entry = grouped.get(reaction.emoji);
+        if (entry) entry.push(reaction);
+        else grouped.set(reaction.emoji, [reaction]);
+      }
+
+      result[messageId] = Array.from(grouped.entries()).map(([emoji, emojiReactions]) => ({
+        emoji,
+        count: emojiReactions.length,
+        userIds: emojiReactions.map((r) => r.userId as string),
+        userNames: emojiReactions.map((r) => userMap.get(r.userId as string) ?? "Unknown"),
+      }));
+    }
 
     return result;
   },

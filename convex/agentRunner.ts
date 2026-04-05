@@ -201,15 +201,23 @@ export const respondInChannel = internalAction({
       const graphitiUrl = process.env.GRAPHITI_API_URL ?? "http://localhost:8000";
       let factsContext = "";
       try {
-        const searchResponse = await fetch(`${graphitiUrl}/search`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            group_ids: [args.channelId],
-            query: args.query,
-            max_facts: 10,
-          }),
-        });
+        const searchController = new AbortController();
+        const searchTimeout = setTimeout(() => searchController.abort(), 10000);
+        let searchResponse: Response;
+        try {
+          searchResponse = await fetch(`${graphitiUrl}/search`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              group_ids: [args.channelId],
+              query: args.query,
+              max_facts: 10,
+            }),
+            signal: searchController.signal,
+          });
+        } finally {
+          clearTimeout(searchTimeout);
+        }
         if (searchResponse.ok) {
           const searchData = await searchResponse.json();
           const facts = searchData.facts ?? [];
@@ -270,23 +278,30 @@ export const respondInChannel = internalAction({
       };
       const model = modelMap[agent.model ?? "gpt-5.4-nano"] ?? agent.model ?? "gpt-4o-mini";
 
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature: 0.3,
-          max_tokens: 1000,
-        }),
-      });
+      const llmController = new AbortController();
+      const llmTimeout = setTimeout(() => llmController.abort(), 15000);
+      let response: Response;
+      try {
+        response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.3,
+            max_tokens: 1000,
+          }),
+          signal: llmController.signal,
+        });
+      } finally {
+        clearTimeout(llmTimeout);
+      }
 
       if (!response.ok) {
-        const errBody = await response.text();
-        console.error(`[agentRunner] OpenAI failed: ${response.status} ${errBody}`);
+        console.error(`[agentRunner] OpenAI failed: ${response.status}`);
         return;
       }
 
@@ -436,23 +451,30 @@ export const respondInDM = internalAction({
       };
       const model = modelMap[agent.model ?? "gpt-5.4-nano"] ?? agent.model ?? "gpt-4o-mini";
 
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature: 0.3,
-          max_tokens: 1000,
-        }),
-      });
+      const llmController = new AbortController();
+      const llmTimeout = setTimeout(() => llmController.abort(), 15000);
+      let response: Response;
+      try {
+        response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.3,
+            max_tokens: 1000,
+          }),
+          signal: llmController.signal,
+        });
+      } finally {
+        clearTimeout(llmTimeout);
+      }
 
       if (!response.ok) {
-        const errBody = await response.text();
-        console.error(`[agentRunner] OpenAI failed: ${response.status} ${errBody}`);
+        console.error(`[agentRunner] OpenAI failed: ${response.status}`);
         return;
       }
 

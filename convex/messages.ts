@@ -171,8 +171,15 @@ export const listByConversation = query({
         (msg) => !msg.deletedAt && (!msg.threadId || msg.alsoSentToConversation),
       );
 
+      // Batch fetch authors for all messages
+      const authorIds = [...new Set(filteredPage.map((m) => m.authorId))];
+      const authors = await Promise.all(authorIds.map((id) => ctx.db.get(id)));
+      const authorMap = new Map(
+        authors.filter((a): a is NonNullable<typeof a> => a !== null).map((a) => [a._id, a]),
+      );
+
       const messagesWithAuthors = await Promise.all(
-        filteredPage.map((msg) => enrichMessage(ctx, msg, args.conversationId)),
+        filteredPage.map((msg) => enrichMessage(ctx, msg, args.conversationId, authorMap)),
       );
 
       return { ...results, page: messagesWithAuthors };
@@ -191,8 +198,15 @@ export const listByConversation = query({
       .filter((msg) => !msg.deletedAt && (!msg.threadId || msg.alsoSentToConversation))
       .slice(0, limit);
 
+    // Batch fetch authors
+    const authorIds = [...new Set(messages.map((m) => m.authorId))];
+    const authors = await Promise.all(authorIds.map((id) => ctx.db.get(id)));
+    const authorMap = new Map(
+      authors.filter((a): a is NonNullable<typeof a> => a !== null).map((a) => [a._id, a]),
+    );
+
     return Promise.all(
-      messages.map((msg) => enrichMessage(ctx, msg, args.conversationId)),
+      messages.map((msg) => enrichMessage(ctx, msg, args.conversationId, authorMap)),
     );
   },
 });
@@ -325,8 +339,9 @@ async function enrichMessage(
   ctx: QueryCtx,
   msg: Doc<"messages">,
   conversationId: Id<"conversations">,
+  authorMap?: Map<any, Doc<"users">>,
 ) {
-  const author = await ctx.db.get(msg.authorId);
+  const author = authorMap?.get(msg.authorId) ?? await ctx.db.get(msg.authorId);
 
   // Check if author is an agent in this conversation
   const memberRecord = await ctx.db
