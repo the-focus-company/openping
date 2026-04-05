@@ -8,7 +8,15 @@ const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD ?? "";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Auth check - require valid session
+  const { withAuth } = await import("@workos-inc/authkit-nextjs");
+  try {
+    await withAuth({ ensureSignedIn: true });
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   if (!NEO4J_URI) {
     return NextResponse.json(
       { error: "NEO4J_URI not configured" },
@@ -88,10 +96,9 @@ export async function GET() {
       await session.close();
     }
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Neo4j query failed";
     Sentry.captureException(err);
     return NextResponse.json(
-      { error: message },
+      { error: "Knowledge graph query failed" },
       { status: 500 },
     );
   } finally {

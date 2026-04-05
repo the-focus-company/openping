@@ -3,6 +3,12 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   transpilePackages: ["convex", "@ping/shared"],
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "**" }],
+  },
+  experimental: {
+    optimizePackageImports: ["lucide-react", "motion"],
+  },
   // TODO: Fix existing lint errors, then remove ignoreDuringBuilds
   eslint: {
     ignoreDuringBuilds: true,
@@ -35,7 +41,7 @@ const nextConfig: NextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://us.i.posthog.com; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://us.i.posthog.com; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'",
+              "default-src 'self'; script-src 'self' 'unsafe-inline' https://us.i.posthog.com; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://us.i.posthog.com; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'",
           },
         ],
       },

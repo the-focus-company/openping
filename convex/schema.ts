@@ -226,6 +226,9 @@ export default defineSchema({
     threadLastReplyAt: v.optional(v.number()),
     threadLastReplyAuthorId: v.optional(v.id("users")),
     threadParticipantIds: v.optional(v.array(v.id("users"))),
+    // Soft-delete fields
+    deletedAt: v.optional(v.number()),
+    deletedBy: v.optional(v.id("users")),
   })
     .index("by_conversation", ["conversationId"])
     .index("by_author", ["authorId"])
@@ -797,4 +800,17 @@ export default defineSchema({
     context: v.optional(v.string()),
   })
     .index("by_workspace", ["workspaceId"]),
+
+  auditLogs: defineTable({
+    workspaceId: v.id("workspaces"),
+    actorId: v.id("users"),
+    action: v.string(),
+    resourceType: v.string(),
+    resourceId: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    timestamp: v.number(),
+  })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_workspace_action", ["workspaceId", "action"])
+    .index("by_workspace_timestamp", ["workspaceId", "timestamp"]),
 });

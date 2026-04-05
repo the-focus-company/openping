@@ -51,7 +51,7 @@ export const findWorkspaceByLinearOrgId = internalQuery({
   args: { linearOrgId: v.string() },
   handler: async (ctx, args) => {
     // Scan all workspaces – the table is small (one per tenant).
-    const workspaces = await ctx.db.query("workspaces").collect();
+    const workspaces = await ctx.db.query("workspaces").take(100);
 
     for (const ws of workspaces) {
       if (ws.integrations?.linearOrgId === args.linearOrgId) {
@@ -67,7 +67,7 @@ export const findWorkspaceByLinearOrgId = internalQuery({
 export const findWorkspaceByGithubOrg = internalQuery({
   args: { orgLogin: v.string() },
   handler: async (ctx, args) => {
-    const workspaces = await ctx.db.query("workspaces").collect();
+    const workspaces = await ctx.db.query("workspaces").take(100);
     for (const ws of workspaces) {
       if (ws.integrations?.githubOrgLogin === args.orgLogin) {
         return ws;

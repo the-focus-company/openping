@@ -103,15 +103,20 @@ export const decayPresence = internalMutation({
   args: {},
   handler: async (ctx) => {
     const cutoff = Date.now() - ONLINE_THRESHOLD_MS;
-    const users = await ctx.db.query("users").take(10000);
+    const staleUsers = await ctx.db
+      .query("users")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("presenceStatus"), "online"),
+          q.lt(q.field("lastSeenAt"), cutoff),
+        ),
+      )
+      .take(200);
 
-    for (const user of users) {
-      if (
-        user.presenceStatus === "online" &&
-        (!user.lastSeenAt || user.lastSeenAt < cutoff)
-      ) {
-        await ctx.db.patch(user._id, { presenceStatus: "offline" });
-      }
-    }
+    await Promise.all(
+      staleUsers.map((user) =>
+        ctx.db.patch(user._id, { presenceStatus: "offline" }),
+      ),
+    );
   },
 });

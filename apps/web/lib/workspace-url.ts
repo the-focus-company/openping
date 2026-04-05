@@ -11,6 +11,9 @@
 export function navigateToWorkspace(slug: string, path = "/inbox") {
   if (typeof window === "undefined") return;
 
+  // Validate slug to prevent open redirect
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) return;
+
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
   const rootHost = rootDomain.split(":")[0];
 

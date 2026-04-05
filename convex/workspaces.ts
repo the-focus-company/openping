@@ -15,6 +15,16 @@ export const create = mutation({
       throw new Error("Workspace name must be between 1 and 100 characters");
     }
 
+    // Validate slug format
+    const slug = args.slug;
+    const RESERVED_SLUGS = ["api", "admin", "auth", "app", "sign-in", "sign-out", "callback", "settings", "invite"];
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug) || slug.length > 63 || slug.length < 2) {
+      throw new Error("Slug must be 2-63 lowercase alphanumeric characters or hyphens");
+    }
+    if (RESERVED_SLUGS.includes(slug)) {
+      throw new Error("This slug is reserved");
+    }
+
     const user = await requireUser(ctx);
 
     const existing = await ctx.db

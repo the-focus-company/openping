@@ -27,7 +27,8 @@ app.get("/health", (_req, res) => {
 const GRAPHITI_URL = process.env.GRAPHITI_API_URL ?? "http://localhost:8000";
 const NEO4J_URI = process.env.NEO4J_URI ?? "bolt://localhost:7687";
 const NEO4J_USER = process.env.NEO4J_USER ?? "neo4j";
-const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD ?? "pingdev2024";
+const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD;
+if (!NEO4J_PASSWORD) throw new Error("NEO4J_PASSWORD environment variable is required");
 
 const neo4j = new Neo4jClient(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, logger);
 

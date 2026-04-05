@@ -13,6 +13,8 @@ export const searchMessages = query({
     query: v.string(),
   },
   handler: async (ctx, args) => {
+    if (args.query.trim().length < 1) throw new Error("Search query empty");
+    if (args.query.length > 1000) throw new Error("Search query too long");
     const user = await requireAuth(ctx, args.workspaceId);
 
     // Get conversations in this workspace so we only return relevant results
@@ -38,7 +40,7 @@ export const searchMessages = query({
     const results = await ctx.db
       .query("messages")
       .withSearchIndex("search_body", (q) => q.search("body", args.query))
-      .take(50);
+      .take(200);
 
     const filtered = results.filter((m) => conversationIds.has(m.conversationId!));
 

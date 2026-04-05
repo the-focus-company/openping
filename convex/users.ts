@@ -241,6 +241,7 @@ export const listAll = query({
 export const getByWorkosId = query({
   args: { workosUserId: v.string() },
   handler: async (ctx, args) => {
+    await requireUser(ctx);
     return await ctx.db
       .query("users")
       .withIndex("by_workos_id", (q) =>

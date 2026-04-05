@@ -19,15 +19,17 @@ async function getWorkspaceConversations(ctx: QueryCtx, workspaceId: Id<"workspa
   return ctx.db
     .query("conversations")
     .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
-    .take(500);
+    .take(100);
 }
 
 async function getRecentMessages(ctx: QueryCtx, conversationId: Id<"conversations">) {
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
   return ctx.db
     .query("messages")
     .withIndex("by_conversation", (q) => q.eq("conversationId", conversationId))
     .order("desc")
-    .take(2000);
+    .filter((q) => q.gte(q.field("_creationTime"), thirtyDaysAgo))
+    .take(200);
 }
 
 /**

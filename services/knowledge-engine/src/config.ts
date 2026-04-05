@@ -16,6 +16,10 @@ export function loadConfig(): Config {
     graphitiUrl: process.env.GRAPHITI_URL ?? "http://localhost:8000",
     neo4jUri: process.env.NEO4J_URI ?? "bolt://localhost:7687",
     neo4jUser: process.env.NEO4J_USER ?? "neo4j",
-    neo4jPassword: process.env.NEO4J_PASSWORD ?? "pingdev2024",
+    neo4jPassword: (() => {
+      const p = process.env.NEO4J_PASSWORD;
+      if (!p) throw new Error("NEO4J_PASSWORD environment variable is required");
+      return p;
+    })(),
   };
 }

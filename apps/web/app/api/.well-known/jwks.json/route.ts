@@ -1,7 +1,30 @@
 import { NextResponse } from "next/server";
 
-const PUBLIC_KEY_JWK = JSON.parse(process.env.AUTH_PUBLIC_KEY_JWK ?? "{}");
-
 export async function GET() {
-  return NextResponse.json({ keys: [PUBLIC_KEY_JWK] });
+  const raw = process.env.AUTH_PUBLIC_KEY_JWK;
+  if (!raw) {
+    return NextResponse.json(
+      { error: "JWKS not configured" },
+      { status: 500 },
+    );
+  }
+
+  let jwk: Record<string, unknown>;
+  try {
+    jwk = JSON.parse(raw);
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JWKS configuration" },
+      { status: 500 },
+    );
+  }
+
+  if (!jwk.kty || !jwk.n || !jwk.e) {
+    return NextResponse.json(
+      { error: "Incomplete JWK - missing required fields" },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ keys: [jwk] });
 }

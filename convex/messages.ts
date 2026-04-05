@@ -42,6 +42,7 @@ export const send = mutation({
     threadId: v.optional(v.id("messages")),
   },
   handler: async (ctx, args) => {
+    if (args.body.length > 16384) throw new Error("Message too long");
     const user = await requireUser(ctx);
     const membership = await requireConversationMember(ctx, args.conversationId, user._id);
 
@@ -101,23 +102,23 @@ export const send = mutation({
 
     const bodyLower = args.body.toLowerCase();
 
-    for (const { membership: member, userName } of memberUsers) {
-      if (member.userId === user._id) {
-        // Reset sender's unread
-        await ctx.db.patch(member._id, {
-          lastReadAt: Date.now(),
-          unreadCount: 0,
-          unreadMentionCount: 0,
-        });
-      } else {
-        // Increment unread for others
-        const isMentioned = userName && bodyLower.includes(`@${userName.toLowerCase()}`);
-        await ctx.db.patch(member._id, {
-          unreadCount: (member.unreadCount ?? 0) + 1,
-          ...(isMentioned ? { unreadMentionCount: (member.unreadMentionCount ?? 0) + 1 } : {}),
-        });
-      }
-    }
+    await Promise.all(
+      memberUsers.map(async ({ membership: member, userName }) => {
+        if (member.userId === user._id) {
+          await ctx.db.patch(member._id, {
+            lastReadAt: Date.now(),
+            unreadCount: 0,
+            unreadMentionCount: 0,
+          });
+        } else {
+          const isMentioned = userName && bodyLower.includes(`@${userName.toLowerCase()}`);
+          await ctx.db.patch(member._id, {
+            unreadCount: (member.unreadCount ?? 0) + 1,
+            ...(isMentioned ? { unreadMentionCount: (member.unreadMentionCount ?? 0) + 1 } : {}),
+          });
+        }
+      }),
+    );
 
     // Update thread parent denormalized fields if this is a thread reply
     if (args.threadId) {
@@ -165,9 +166,9 @@ export const listByConversation = query({
         .order("desc")
         .paginate(args.paginationOpts);
 
-      // Filter out thread replies unless also sent to conversation
+      // Filter out deleted and thread-only messages
       const filteredPage = results.page.filter(
-        (msg) => !msg.threadId || msg.alsoSentToConversation,
+        (msg) => !msg.deletedAt && (!msg.threadId || msg.alsoSentToConversation),
       );
 
       const messagesWithAuthors = await Promise.all(
@@ -185,9 +186,9 @@ export const listByConversation = query({
       .order("desc")
       .take(limit * 2);
 
-    // Filter out thread replies unless also sent to conversation
+    // Filter out deleted and thread-only messages
     const messages = allMessages
-      .filter((msg) => !msg.threadId || msg.alsoSentToConversation)
+      .filter((msg) => !msg.deletedAt && (!msg.threadId || msg.alsoSentToConversation))
       .slice(0, limit);
 
     return Promise.all(
@@ -254,25 +255,27 @@ export const remove = mutation({
       .query("reactions")
       .withIndex("by_message", (q) => q.eq("messageId", args.messageId))
       .take(200);
-    for (const reaction of reactions) {
-      await ctx.db.delete(reaction._id);
-    }
+    await Promise.all(reactions.map((r) => ctx.db.delete(r._id)));
 
-    // If this is a thread parent, delete all replies and their reactions
+    // If this is a thread parent, soft-delete all replies and their reactions
     const replies = await ctx.db
       .query("messages")
       .withIndex("by_thread", (q) => q.eq("threadId", args.messageId))
       .take(200);
-    for (const reply of replies) {
+    const replyReactionPromises = replies.map(async (reply) => {
       const replyReactions = await ctx.db
         .query("reactions")
         .withIndex("by_message", (q) => q.eq("messageId", reply._id))
         .take(200);
-      for (const r of replyReactions) {
-        await ctx.db.delete(r._id);
-      }
-      await ctx.db.delete(reply._id);
-    }
+      return replyReactions;
+    });
+    const allReplyReactions = (await Promise.all(replyReactionPromises)).flat();
+    await Promise.all(allReplyReactions.map((r) => ctx.db.delete(r._id)));
+    await Promise.all(
+      replies.map((reply) =>
+        ctx.db.patch(reply._id, { deletedAt: Date.now(), deletedBy: user._id, body: "[deleted]" }),
+      ),
+    );
 
     // If this is a thread reply, update parent's denormalized fields
     if (message.threadId) {
@@ -304,7 +307,12 @@ export const remove = mutation({
       }
     }
 
-    await ctx.db.delete(args.messageId);
+    // Soft-delete: preserve record for compliance
+    await ctx.db.patch(args.messageId, {
+      deletedAt: Date.now(),
+      deletedBy: user._id,
+      body: "[deleted]",
+    });
   },
 });
 

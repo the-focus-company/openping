@@ -280,13 +280,12 @@ export const clearAgentTypingChannel = internalMutation({
 export const cleanupExpired = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const indicators = await ctx.db.query("typingIndicators").take(1000);
     const now = Date.now();
+    const expired = await ctx.db
+      .query("typingIndicators")
+      .filter((q) => q.lt(q.field("expiresAt"), now))
+      .take(500);
 
-    for (const ind of indicators) {
-      if (ind.expiresAt < now) {
-        await ctx.db.delete(ind._id);
-      }
-    }
+    await Promise.all(expired.map((ind) => ctx.db.delete(ind._id)));
   },
 });

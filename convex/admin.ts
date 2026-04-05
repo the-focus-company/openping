@@ -16,7 +16,17 @@ export const listWorkspaces = query({
       throw new Error("Admin access required");
     }
 
-    const workspaces = await ctx.db.query("workspaces").take(500);
+    // Only return workspaces where this user is admin
+    const allMemberships = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .take(100);
+    const adminWorkspaceIds = allMemberships
+      .filter((m) => m.role === "admin")
+      .map((m) => m.workspaceId);
+    const workspaces = (
+      await Promise.all(adminWorkspaceIds.map((id) => ctx.db.get(id)))
+    ).filter((ws): ws is NonNullable<typeof ws> => ws !== null);
 
     const results = await Promise.all(
       workspaces.map(async (ws) => {

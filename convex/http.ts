@@ -651,7 +651,7 @@ http.route({
       if (!tokenResponse.ok) {
         const errorBody = await tokenResponse.text();
         return jsonResponse(
-          { error: "Token exchange failed", details: errorBody },
+          { error: "Token exchange failed" },
           tokenResponse.status,
         );
       }
@@ -677,7 +677,7 @@ http.route({
       });
     } catch (e: any) {
       return jsonResponse(
-        { error: "Internal error", message: e?.message },
+        { error: "Internal error" },
         500,
       );
     }
@@ -720,7 +720,7 @@ http.route({
       if (!tokenResponse.ok) {
         const errorBody = await tokenResponse.text();
         return jsonResponse(
-          { error: "Token refresh failed", details: errorBody },
+          { error: "Token refresh failed" },
           tokenResponse.status,
         );
       }
@@ -732,7 +732,7 @@ http.route({
       });
     } catch (e: any) {
       return jsonResponse(
-        { error: "Internal error", message: e?.message },
+        { error: "Internal error" },
         500,
       );
     }

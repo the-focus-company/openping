@@ -14,9 +14,17 @@ export function usePresenceHeartbeat(intervalMs = 60_000) {
     // Initial heartbeat
     heartbeat();
 
-    const id = setInterval(() => {
-      if (!document.hidden) heartbeat();
-    }, intervalMs);
+    // Self-scheduling with jitter to prevent thundering herd
+    const JITTER_RANGE_MS = 15_000;
+    let timerId: ReturnType<typeof setTimeout>;
+    const scheduleNext = () => {
+      const jitter = Math.random() * JITTER_RANGE_MS * 2 - JITTER_RANGE_MS;
+      timerId = setTimeout(() => {
+        if (!document.hidden) heartbeat();
+        scheduleNext();
+      }, intervalMs + jitter);
+    };
+    scheduleNext();
 
     // Heartbeat on visibility change (tab focus)
     const onVisibilityChange = () => {
@@ -25,7 +33,7 @@ export function usePresenceHeartbeat(intervalMs = 60_000) {
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
-      clearInterval(id);
+      clearTimeout(timerId);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [isAuthenticated, heartbeat, intervalMs]);

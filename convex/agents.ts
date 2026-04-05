@@ -37,6 +37,15 @@ export const get = query({
     const agent = await ctx.db.get(args.agentId);
     if (!agent) return null;
 
+    // Verify user belongs to the agent's workspace
+    const wsMembership = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_user_workspace", (q) =>
+        q.eq("userId", user._id).eq("workspaceId", agent.workspaceId),
+      )
+      .unique();
+    if (!wsMembership) return null;
+
     // Check access: workspace member or private owner
     if (agent.scope === "private" && agent.userId !== user._id) return null;
 
