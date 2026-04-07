@@ -5,7 +5,12 @@ import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { DecisionCard, type InboxItemData, type OrgTracePerson } from "@/components/inbox/DecisionCard";
-import { InboxModal, type ModalItem } from "@/components/inbox/InboxModal";
+import dynamic from "next/dynamic";
+import type { ModalItem } from "@/components/inbox/InboxModal";
+const InboxModal = dynamic(
+  () => import("@/components/inbox/InboxModal").then((m) => ({ default: m.InboxModal })),
+  { ssr: false },
+);
 import { DraftReminderCard } from "@/components/inbox/DraftReminderCard";
 import { type InboxCategory, type PriorityLevel, CATEGORY_ORDER, CATEGORY_TO_PRIORITY } from "@/components/inbox/InboxCard";
 import { CheckCircle2, Loader2, FlaskConical, Sparkles, ChevronDown, Check, Archive } from "lucide-react";

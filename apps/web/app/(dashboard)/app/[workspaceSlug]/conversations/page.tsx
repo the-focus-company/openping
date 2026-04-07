@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 type FilterType = "all" | "public" | "private" | "1to1" | "groups" | "ai";
 type SortType = "date" | "unread";
@@ -361,85 +362,11 @@ export default function ConversationsPage() {
           </p>
         </div>
       ) : (
-        <div>
-          {filteredConversations.map((conv) => {
-            const { displayName, initials } = getConvDisplay(conv, currentUser?._id);
-            const kindConf = KIND_BADGE[conv.kind as ConversationKind];
-
-            return (
-              <div
-                key={conv._id}
-                onClick={() => router.push(buildPath(`/c/${conv._id}`))}
-                className={cn(
-                  "flex cursor-pointer items-center gap-3 border-b border-subtle px-4 py-3 transition-colors hover:bg-surface-2",
-                  conv.unreadCount > 0 && "bg-surface-1",
-                )}
-              >
-                <ConvIcon
-                  kind={conv.kind}
-                  visibility={conv.visibility}
-                  initials={initials}
-                />
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    {conv.isStarred && (
-                      <Star className="h-3 w-3 shrink-0 fill-yellow-400 text-yellow-400" />
-                    )}
-                    <span
-                      className={cn(
-                        "truncate text-xs",
-                        conv.unreadCount > 0
-                          ? "font-semibold text-foreground"
-                          : "font-medium text-foreground",
-                      )}
-                    >
-                      {conv.visibility === "public" ? `# ${displayName}` : displayName}
-                    </span>
-                    {kindConf && conv.visibility !== "public" && (
-                      <span
-                        className={cn(
-                          "inline-flex shrink-0 items-center rounded border px-1 py-px text-2xs font-medium",
-                          kindConf.className,
-                        )}
-                      >
-                        {kindConf.label}
-                      </span>
-                    )}
-                    {conv.visibility === "public" && (
-                      <span className="inline-flex shrink-0 items-center rounded border border-foreground/15 bg-foreground/5 px-1 py-px text-2xs font-medium text-foreground/60">
-                        Public
-                      </span>
-                    )}
-                  </div>
-                  {conv.lastMessage && (
-                    <p className="mt-0.5 truncate text-2xs text-muted-foreground">
-                      <span className="text-foreground/40">
-                        {conv.lastMessage.authorName}:
-                      </span>{" "}
-                      {conv.lastMessage.body}
-                    </p>
-                  )}
-                </div>
-
-                {/* Meta */}
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  {conv.lastMessage && (
-                    <span className="text-2xs text-foreground/50">
-                      {formatTime(conv.lastMessage.timestamp)}
-                    </span>
-                  )}
-                  {conv.unreadCount > 0 && (
-                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-ping-purple px-1 text-2xs font-medium text-white tabular-nums">
-                      {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <VirtualConversationList
+          conversations={filteredConversations}
+          currentUserId={currentUser?._id}
+          onNavigate={(id) => router.push(buildPath(`/c/${id}`))}
+        />
       )}
 
       {/* Archived section */}
@@ -720,6 +647,99 @@ export default function ConversationsPage() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function VirtualConversationList({
+  conversations,
+  currentUserId,
+  onNavigate,
+}: {
+  conversations: any[];
+  currentUserId?: string;
+  onNavigate: (id: string) => void;
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: conversations.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 64,
+    overscan: 10,
+  });
+
+  return (
+    <div ref={parentRef} className="flex-1 overflow-auto">
+      <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const conv = conversations[virtualRow.index];
+          const { displayName, initials } = getConvDisplay(conv, currentUserId);
+          const kindConf = KIND_BADGE[conv.kind as ConversationKind];
+
+          return (
+            <div
+              key={conv._id}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+              onClick={() => onNavigate(conv._id)}
+              className={cn(
+                "flex cursor-pointer items-center gap-3 border-b border-subtle px-4 py-3 transition-colors hover:bg-surface-2",
+                conv.unreadCount > 0 && "bg-surface-1",
+              )}
+            >
+              <ConvIcon kind={conv.kind} visibility={conv.visibility} initials={initials} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  {conv.isStarred && (
+                    <Star className="h-3 w-3 shrink-0 fill-yellow-400 text-yellow-400" />
+                  )}
+                  <span
+                    className={cn(
+                      "truncate text-xs",
+                      conv.unreadCount > 0 ? "font-semibold text-foreground" : "font-medium text-foreground",
+                    )}
+                  >
+                    {conv.visibility === "public" ? `# ${displayName}` : displayName}
+                  </span>
+                  {kindConf && conv.visibility !== "public" && (
+                    <span className={cn("inline-flex shrink-0 items-center rounded border px-1 py-px text-2xs font-medium", kindConf.className)}>
+                      {kindConf.label}
+                    </span>
+                  )}
+                  {conv.visibility === "public" && (
+                    <span className="inline-flex shrink-0 items-center rounded border border-foreground/15 bg-foreground/5 px-1 py-px text-2xs font-medium text-foreground/60">
+                      Public
+                    </span>
+                  )}
+                </div>
+                {conv.lastMessage && (
+                  <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+                    <span className="text-foreground/40">{conv.lastMessage.authorName}:</span>{" "}
+                    {conv.lastMessage.body}
+                  </p>
+                )}
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                {conv.lastMessage && (
+                  <span className="text-2xs text-foreground/50">{formatTime(conv.lastMessage.timestamp)}</span>
+                )}
+                {conv.unreadCount > 0 && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-ping-purple px-1 text-2xs font-medium text-white tabular-nums">
+                    {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

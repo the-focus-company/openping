@@ -11,9 +11,27 @@ export const generateUploadUrl = mutation({
 });
 
 export const getFileUrl = query({
-  args: { storageId: v.string() },
+  args: {
+    storageId: v.string(),
+    conversationId: v.optional(v.id("conversations")),
+  },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
+    const user = await requireUser(ctx);
+
+    // If conversationId provided, verify membership
+    if (args.conversationId) {
+      const conversation = await ctx.db.get(args.conversationId);
+      if (conversation && conversation.visibility !== "public") {
+        const membership = await ctx.db
+          .query("conversationMembers")
+          .withIndex("by_conversation_and_user", (q) =>
+            q.eq("conversationId", args.conversationId!).eq("userId", user._id),
+          )
+          .unique();
+        if (!membership) return null;
+      }
+    }
+
     return await ctx.storage.getUrl(args.storageId);
   },
 });

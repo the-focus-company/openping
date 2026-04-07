@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   Pin,
   Paperclip,
@@ -167,7 +168,7 @@ export function ChannelTopBar({
                       {m.role === "agent" ? (
                         <Bot className="h-2.5 w-2.5" />
                       ) : m.avatarUrl ? (
-                        <img src={m.avatarUrl} alt={m.name} className="h-full w-full object-cover" />
+                        <Image src={m.avatarUrl} alt={m.name} width={20} height={20} className="h-full w-full object-cover" />
                       ) : (
                         getInitials(m.name)
                       )}

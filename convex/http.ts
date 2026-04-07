@@ -504,10 +504,30 @@ async function authenticateAgent(ctx: ApiCtx, request: Request) {
   return result;
 }
 
-function jsonResponse(data: unknown, status = 200) {
+const ALLOWED_ORIGINS = [
+  process.env.APP_URL,
+  "https://openping.app",
+  "http://localhost:3000",
+].filter(Boolean) as string[];
+
+function getCorsHeaders(origin?: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (origin && ALLOWED_ORIGINS.some((o) => origin === o || origin.endsWith(`.${new URL(o).hostname}`))) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
+    headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
+    headers["Access-Control-Max-Age"] = "86400";
+  }
+  return headers;
+}
+
+function jsonResponse(data: unknown, status = 200, request?: Request) {
+  const origin = request?.headers.get("origin");
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: getCorsHeaders(origin),
   });
 }
 
