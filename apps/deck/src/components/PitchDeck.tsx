@@ -499,14 +499,14 @@ function LostRevenue() {
       </FadeUp>
 
       {/* ── Two perspectives ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5 flex-1 content-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5 flex-1">
 
         {/* LEFT: The Individual — lost upside */}
-        <FadeUp delay={0.08}>
+        <FadeUp delay={0.08} className="flex flex-col">
           <p className="text-xs text-amber-500/80 uppercase tracking-[0.14em] font-bold mb-4 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-500/60" />The Individual — Lost Upside
           </p>
-          <div className="grid grid-cols-2 gap-4 mb-5">
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <span className="text-4xl md:text-5xl font-bold text-amber-400 leading-none">&lt;1x</span>
               <p className="text-sm text-neutral-500 mt-2 leading-snug">Reported ROI on AI tools at org level</p>
@@ -518,7 +518,7 @@ function LostRevenue() {
           </div>
           {/* Survey chart */}
           <p className="text-xs text-neutral-600 mb-2 font-medium">Last time had capacity for new initiatives:</p>
-          <div className="flex items-end gap-2 h-24">
+          <div className="flex items-end gap-2 flex-1 min-h-[6rem]">
             {survey.map((s, i) => (
               <motion.div key={i} className="flex-1 flex flex-col items-center justify-end h-full"
                 initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
@@ -538,11 +538,11 @@ function LostRevenue() {
         </FadeUp>
 
         {/* RIGHT: The Organization — growing cost + waterfall */}
-        <FadeUp delay={0.16}>
+        <FadeUp delay={0.16} className="flex flex-col">
           <p className="text-xs text-rose-500/80 uppercase tracking-[0.14em] font-bold mb-4 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-rose-500/60" />The Organization — Growing Cost
           </p>
-          <div className="grid grid-cols-2 gap-4 mb-5">
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <span className="text-4xl md:text-5xl font-bold text-rose-400 leading-none">1 : 4</span>
               <p className="text-sm text-neutral-500 mt-2 leading-snug">Coordination-to-maker ratio at scale</p>
@@ -554,7 +554,7 @@ function LostRevenue() {
           </div>
           {/* Waterfall chart */}
           <p className="text-xs text-neutral-600 mb-2 font-medium">Where team capacity goes:</p>
-          <div className="flex items-start gap-1.5 md:gap-2 h-28">
+          <div className="flex items-start gap-1.5 md:gap-2 flex-1 min-h-[6rem]">
             {waterfall.map((seg, i) => (
               <motion.div key={i} className="flex-1 flex flex-col items-center h-full relative"
                 initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
@@ -641,13 +641,15 @@ function WhatWeDo() {
           From noise to decisions and results.<br /><span className="text-indigo-400">Fully automated.</span>
         </h2>
       </FadeUp>
-      <FadeUp delay={0.1} className="flex-1 flex items-center justify-center min-h-0 w-full">
-        <img
-          src="/what-openping-does.svg"
-          alt="OpenPing: Users, Workspace, and Engine connected in real-time"
-          className="w-full h-full object-contain deck-svg-dark"
-        />
-      </FadeUp>
+      <div className="flex-1 flex items-center justify-center min-h-0 w-full overflow-hidden">
+        <FadeUp delay={0.1} className="w-full h-full flex items-center justify-center">
+          <img
+            src="/what-openping-does.svg"
+            alt="OpenPing: Users, Workspace, and Engine connected in real-time"
+            className="w-full h-full object-contain deck-svg-dark scale-110"
+          />
+        </FadeUp>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-2 w-full">
         {steps.map((step, i) => (
           <FadeUp key={i} delay={0.15 + i * 0.08}>
@@ -771,16 +773,16 @@ function VsStatusQuo() {
             </div>
             <div className="space-y-5">
               {[
-                { dim: "Core unit", val: "Message", icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg> },
-                { dim: "AI role", val: "Reactive feature", icon: <Cog className="w-5 h-5" /> },
-                { dim: "Follow-through", val: "Manual", icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg> },
-                { dim: "Success metric", val: "Summarized", icon: <Search className="w-5 h-5" /> },
+                { dim: "Core unit", val: "Message", icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>, wavy: true },
+                { dim: "AI role", val: "Reactive feature", icon: <Cog className="w-5 h-5" />, wavy: false },
+                { dim: "Follow-through", val: "Manual", icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>, wavy: false },
+                { dim: "Success metric", val: "Summarized", icon: <Search className="w-5 h-5" />, wavy: false },
               ].map((row, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <span className="text-neutral-600 shrink-0">{row.icon}</span>
                   <div>
                     <span className="text-[10px] text-neutral-600 uppercase tracking-wide font-medium block">{row.dim}</span>
-                    <span className="text-xl md:text-2xl font-bold text-neutral-300">{row.val}</span>
+                    <span className={`text-xl md:text-2xl font-bold text-neutral-300 ${row.wavy ? "underline decoration-wavy decoration-neutral-600 underline-offset-4" : ""}`}>{row.val}</span>
                   </div>
                 </div>
               ))}
@@ -795,16 +797,16 @@ function VsStatusQuo() {
             </div>
             <div className="space-y-5 relative">
               {[
-                { dim: "Core unit", val: "Decision", icon: <CheckCircle className="w-5 h-5" /> },
-                { dim: "AI role", val: "Proactive orchestrator", icon: <Brain className="w-5 h-5" /> },
-                { dim: "Follow-through", val: "Autonomous", icon: <Zap className="w-5 h-5" /> },
-                { dim: "Success metric", val: "Decisions closed", icon: <Target className="w-5 h-5" /> },
+                { dim: "Core unit", val: "Decision", icon: <CheckCircle className="w-5 h-5" />, wavy: true },
+                { dim: "AI role", val: "Proactive orchestrator", icon: <Brain className="w-5 h-5" />, wavy: false },
+                { dim: "Follow-through", val: "Autonomous", icon: <Zap className="w-5 h-5" />, wavy: false },
+                { dim: "Success metric", val: "Decisions closed", icon: <Target className="w-5 h-5" />, wavy: false },
               ].map((row, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <span className="text-amber-500/70 shrink-0">{row.icon}</span>
                   <div>
                     <span className="text-[10px] text-neutral-600 uppercase tracking-wide font-medium block">{row.dim}</span>
-                    <span className="text-xl md:text-2xl font-bold text-white">{row.val}</span>
+                    <span className={`text-xl md:text-2xl font-bold text-white ${row.wavy ? "underline decoration-wavy decoration-amber-500/50 underline-offset-4" : ""}`}>{row.val}</span>
                   </div>
                 </div>
               ))}
@@ -832,7 +834,7 @@ function Pricing() {
           We don't sell seats. We capture value at every layer - from free adoption to outcomes customers pay to keep.
         </p>
       </FadeUp>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-5 flex-1 content-start">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-5 flex-1">
         {[
           { tier: "Open Core", label: "Adoption engine",
             icon: <svg className="w-6 h-6 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>,
@@ -918,17 +920,17 @@ function Market() {
         </h2>
       </FadeUp>
 
-      {/* ── Budget framing ── */}
+      {/* ── Budget framing — full width ── */}
       <FadeUp delay={0.08} className="mb-6">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8 max-w-xl">
-          <div className="p-4 rounded-xl border border-neutral-800/60 bg-neutral-950/60 text-center">
-            <p className="text-neutral-600 text-[10px] uppercase tracking-widest mb-1">SaaS seat</p>
-            <p className="text-2xl md:text-3xl font-bold text-neutral-600 line-through decoration-neutral-700">$12/mo</p>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8 w-full">
+          <div className="p-5 md:p-6 rounded-xl border border-neutral-800/60 bg-neutral-950/60 text-center">
+            <p className="text-neutral-600 text-xs uppercase tracking-widest mb-2">SaaS seat</p>
+            <p className="text-3xl md:text-4xl font-bold text-neutral-600 line-through decoration-neutral-700">$12/mo</p>
           </div>
-          <ArrowRight className="w-5 h-5 text-emerald-500 shrink-0" />
-          <div className="p-4 rounded-xl border border-emerald-700/40 bg-emerald-950/15 ring-1 ring-emerald-500/20 text-center">
-            <p className="text-emerald-500 text-[10px] uppercase tracking-widest mb-1">Coordination FTE or lost revenue</p>
-            <p className="text-2xl md:text-3xl font-bold text-emerald-400">$180k+/yr</p>
+          <ArrowRight className="w-6 h-6 text-emerald-500 shrink-0" />
+          <div className="p-5 md:p-6 rounded-xl border border-emerald-700/40 bg-emerald-950/15 ring-1 ring-emerald-500/20 text-center">
+            <p className="text-emerald-500 text-xs uppercase tracking-widest mb-2">Coordination FTE or lost revenue</p>
+            <p className="text-3xl md:text-4xl font-bold text-emerald-400">$180k+/yr</p>
           </div>
         </div>
       </FadeUp>
