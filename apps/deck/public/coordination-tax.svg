@@ -1,0 +1,249 @@
+<svg viewBox="0 0 1000 600" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <style>
+        /* SVG Animations and Styles */
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+
+        @keyframes rotateChaos {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .bottleneck-core {
+            fill: #ff3366;
+            transform-origin: 500px 300px;
+            animation: pulse 1.2s infinite alternate ease-in-out;
+        }
+
+        .bottleneck-glow {
+            fill: rgba(255, 51, 102, 0.15);
+            transform-origin: 500px 300px;
+            animation: pulse 1.2s infinite alternate ease-in-out;
+            animation-delay: 0.3s;
+        }
+
+        .chaos-ring {
+            transform-origin: 500px 300px;
+            animation: rotateChaos 20s linear infinite;
+        }
+
+        .chaos-ring-reverse {
+            transform-origin: 500px 300px;
+            animation: rotateChaos 25s linear infinite reverse;
+        }
+
+        .spaghetti-line {
+            stroke: #ff3366;
+            stroke-width: 1.5;
+            opacity: 0.25;
+            fill: none;
+        }
+
+        .cross-line {
+            stroke: #ff3366;
+            stroke-width: 1;
+            opacity: 0.15;
+            fill: none;
+        }
+
+        .outcome-line {
+            stroke: #555;
+            stroke-width: 2;
+            stroke-dasharray: 6 6;
+            fill: none;
+        }
+
+        .node-bg {
+            fill: #111;
+            stroke: #333;
+            stroke-width: 2;
+        }
+
+        .node-bg-right {
+            fill: #111;
+            stroke: #444;
+            stroke-width: 2;
+            stroke-dasharray: 4 4;
+        }
+
+        text {
+            fill: #e0e0e0;
+        }
+
+        .label-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .label-title-center {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .label-warning {
+            font-size: 12px;
+            fill: #ff3366;
+            font-weight: 500;
+        }
+    </style>
+
+    <!-- Transparent background -->
+
+    <defs>
+        <!-- Glow Filter -->
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="8" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+        <filter id="glow-strong" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="15" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+
+        <!-- Left to Center Paths (High Speed / Chaos) -->
+        <path id="path-s" d="M 200 150 C 400 150, 350 300, 500 300" />
+        <path id="path-j" d="M 200 250 C 400 250, 350 300, 500 300" />
+        <path id="path-e" d="M 200 350 C 400 350, 350 300, 500 300" />
+        <path id="path-m" d="M 200 450 C 400 450, 350 300, 500 300" />
+
+        <!-- Extra Spaghetti Paths -->
+        <path id="path-c1" d="M 200 150 C 350 220, 300 450, 500 300" />
+        <path id="path-c2" d="M 200 450 C 350 380, 300 150, 500 300" />
+        <path id="path-c3" d="M 200 250 C 300 100, 450 150, 500 300" />
+        <path id="path-c4" d="M 200 350 C 300 500, 450 450, 500 300" />
+
+        <!-- Left Cross-Talk Paths -->
+        <path id="cross-1" d="M 200 150 C 240 200, 240 200, 200 250" />
+        <path id="cross-2" d="M 200 250 C 240 300, 240 300, 200 350" />
+        <path id="cross-3" d="M 200 350 C 240 400, 240 400, 200 450" />
+        <path id="cross-4" d="M 200 450 C 150 300, 150 300, 200 150" />
+
+        <!-- Center to Right Paths (Delayed/Slow) -->
+        <path id="out-1" d="M 500 300 C 650 300, 600 150, 800 150" />
+        <path id="out-2" d="M 500 300 C 650 300, 650 300, 800 300" />
+        <path id="out-3" d="M 500 300 C 650 300, 600 450, 800 450" />
+    </defs>
+
+    <!-- Render Paths -->
+    <g id="spaghetti-lines">
+        <use href="#path-s" class="spaghetti-line" />
+        <use href="#path-j" class="spaghetti-line" />
+        <use href="#path-e" class="spaghetti-line" />
+        <use href="#path-m" class="spaghetti-line" />
+        <use href="#path-c1" class="spaghetti-line" />
+        <use href="#path-c2" class="spaghetti-line" />
+        <use href="#path-c3" class="spaghetti-line" />
+        <use href="#path-c4" class="spaghetti-line" />
+        <use href="#cross-1" class="cross-line" />
+        <use href="#cross-2" class="cross-line" />
+        <use href="#cross-3" class="cross-line" />
+        <use href="#cross-4" class="cross-line" />
+    </g>
+
+    <g id="outcome-lines">
+        <use href="#out-1" class="outcome-line" />
+        <use href="#out-2" class="outcome-line" />
+        <use href="#out-3" class="outcome-line" />
+    </g>
+
+    <!-- Animated Data Packets (Fast In) -->
+    <g id="data-in" fill="#ff3366" filter="url(#glow)">
+        <!-- Path S -->
+        <circle r="3"><animateMotion dur="1s" repeatCount="indefinite"><mpath href="#path-s"/></animateMotion></circle>
+        <circle r="2"><animateMotion dur="1.2s" begin="0.4s" repeatCount="indefinite"><mpath href="#path-s"/></animateMotion></circle>
+        <!-- Path J -->
+        <circle r="2.5"><animateMotion dur="1.1s" begin="0.2s" repeatCount="indefinite"><mpath href="#path-j"/></animateMotion></circle>
+        <circle r="3"><animateMotion dur="0.9s" begin="0.7s" repeatCount="indefinite"><mpath href="#path-j"/></animateMotion></circle>
+        <!-- Path E -->
+        <circle r="3"><animateMotion dur="1.3s" begin="0.1s" repeatCount="indefinite"><mpath href="#path-e"/></animateMotion></circle>
+        <circle r="1.5"><animateMotion dur="1s" begin="0.8s" repeatCount="indefinite"><mpath href="#path-e"/></animateMotion></circle>
+        <!-- Path M -->
+        <circle r="2"><animateMotion dur="0.8s" begin="0.3s" repeatCount="indefinite"><mpath href="#path-m"/></animateMotion></circle>
+        <circle r="3"><animateMotion dur="1.4s" begin="0.6s" repeatCount="indefinite"><mpath href="#path-m"/></animateMotion></circle>
+
+        <!-- Chaos Paths -->
+        <circle r="2" opacity="0.6"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#path-c1"/></animateMotion></circle>
+        <circle r="2" opacity="0.6"><animateMotion dur="1.4s" begin="0.5s" repeatCount="indefinite"><mpath href="#path-c2"/></animateMotion></circle>
+        <circle r="2" opacity="0.6"><animateMotion dur="1.6s" begin="0.2s" repeatCount="indefinite"><mpath href="#path-c3"/></animateMotion></circle>
+        <circle r="2" opacity="0.6"><animateMotion dur="1.7s" begin="0.8s" repeatCount="indefinite"><mpath href="#path-c4"/></animateMotion></circle>
+
+        <!-- Cross Talks -->
+        <circle r="1.5" opacity="0.5"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#cross-1"/></animateMotion></circle>
+        <circle r="1.5" opacity="0.5"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#cross-2"/></animateMotion></circle>
+        <circle r="1.5" opacity="0.5"><animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#cross-3"/></animateMotion></circle>
+    </g>
+
+    <!-- Animated Data Packets (Slow Out) -->
+    <g id="data-out" fill="#777">
+        <circle r="2.5"><animateMotion dur="4s" repeatCount="indefinite"><mpath href="#out-1"/></animateMotion></circle>
+        <circle r="2"><animateMotion dur="4.5s" begin="1.5s" repeatCount="indefinite"><mpath href="#out-1"/></animateMotion></circle>
+
+        <circle r="2.5"><animateMotion dur="5s" repeatCount="indefinite"><mpath href="#out-2"/></animateMotion></circle>
+
+        <circle r="2"><animateMotion dur="6s" begin="0.5s" repeatCount="indefinite"><mpath href="#out-3"/></animateMotion></circle>
+        <circle r="2.5"><animateMotion dur="4.8s" begin="2.5s" repeatCount="indefinite"><mpath href="#out-3"/></animateMotion></circle>
+    </g>
+
+    <!-- Center Human Router Zone -->
+    <g id="bottleneck-zone">
+        <!-- Chaos Rings behind node -->
+        <circle cx="500" cy="300" r="75" stroke="#ff3366" stroke-width="0.5" fill="none" stroke-dasharray="2 6" class="chaos-ring" opacity="0.5"/>
+        <circle cx="500" cy="300" r="55" stroke="#ff3366" stroke-width="1" fill="none" stroke-dasharray="10 15" class="chaos-ring-reverse" opacity="0.6"/>
+        <circle cx="500" cy="300" r="95" stroke="#ff3366" stroke-width="0.2" fill="none" class="chaos-ring"/>
+
+        <!-- Core Node -->
+        <circle cx="500" cy="300" r="45" class="bottleneck-glow" filter="url(#glow-strong)" />
+        <circle cx="500" cy="300" r="28" class="bottleneck-core" filter="url(#glow)" />
+
+        <!-- Human Silhouette Icon -->
+        <g fill="#ffffff" opacity="0.95">
+            <!-- Head -->
+            <circle cx="500" cy="293" r="6" />
+            <!-- Body -->
+            <path d="M 488 312 C 488 303, 492 298, 500 298 C 508 298, 512 303, 512 312 Z" />
+        </g>
+
+        <!-- Labels -->
+        <text x="500" y="380" text-anchor="middle" class="label-title-center" fill="#fff">The Human Router</text>
+        <text x="500" y="400" text-anchor="middle" class="label-warning">Cognitive Overload</text>
+    </g>
+
+    <!-- Left Nodes (Sources) -->
+    <g id="nodes-left">
+        <!-- Slack -->
+        <circle cx="200" cy="150" r="16" class="node-bg" />
+        <text x="170" y="154" text-anchor="end" class="label-title">Slack</text>
+
+        <!-- Jira -->
+        <circle cx="200" cy="250" r="16" class="node-bg" />
+        <text x="170" y="254" text-anchor="end" class="label-title">Jira</text>
+
+        <!-- Email -->
+        <circle cx="200" cy="350" r="16" class="node-bg" />
+        <text x="170" y="354" text-anchor="end" class="label-title">Email</text>
+
+        <!-- Meetings -->
+        <circle cx="200" cy="450" r="16" class="node-bg" />
+        <text x="170" y="454" text-anchor="end" class="label-title">Meetings</text>
+    </g>
+
+    <!-- Right Nodes (Outcomes) -->
+    <g id="nodes-right">
+        <!-- Product Launch -->
+        <circle cx="800" cy="150" r="16" class="node-bg-right" />
+        <text x="830" y="145" text-anchor="start" class="label-title">Product Launch</text>
+        <text x="830" y="162" text-anchor="start" class="label-warning">Delayed by 3 weeks</text>
+
+        <!-- Q3 Campaign -->
+        <circle cx="800" cy="300" r="16" class="node-bg-right" />
+        <text x="830" y="295" text-anchor="start" class="label-title">Q3 Campaign</text>
+        <text x="830" y="312" text-anchor="start" class="label-warning">Lost Context</text>
+
+        <!-- Client Delivery -->
+        <circle cx="800" cy="450" r="16" class="node-bg-right" />
+        <text x="830" y="445" text-anchor="start" class="label-title">Client Delivery</text>
+        <text x="830" y="462" text-anchor="start" class="label-warning">Scope Reduced</text>
+    </g>
+</svg>

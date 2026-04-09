@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Radio, Cog, Search, Target, CheckCircle, Sun, Moon, RotateCw, Layers, CalendarClock, ArrowRight, Zap, Brain, Route, Eye, ShieldCheck } from "lucide-react";
+import { Radio, Cog, Search, Target, CheckCircle, Sun, Moon, ArrowRight, Zap, Brain, Route, Eye, ShieldCheck } from "lucide-react";
 
 /* ── Neural Context Graph Background ── */
 const SLIDE_PALETTES: Record<string, { idle: number[]; active: number[]; idleEdge: number[]; activeEdge: number[] }> = {
@@ -430,112 +430,24 @@ function Founders() {
 
 /* ══ SLIDE 2 - THE COORDINATION PROBLEM ══ */
 function CoordProblem() {
-  const nodes = [
-    { label: "Slack", x: 8, y: 20 },
-    { label: "Email", x: 8, y: 50 },
-    { label: "Meetings", x: 8, y: 80 },
-    { label: "Senior Lead", x: 50, y: 50 },
-    { label: "Client A", x: 88, y: 20 },
-    { label: "Client B", x: 88, y: 50 },
-    { label: "Client C", x: 88, y: 80 },
-  ];
   return (
     <S id="s2" idx={2} wide>
-      <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[radial-gradient(circle_at_center,rgba(225,29,72,0.06),transparent_60%)]" />
-      </div>
       <FadeUp>
         <Tag color="rose">The Coordination Problem</Tag>
-        <h2 className="mt-4 text-[2.6rem] md:text-[3.5rem] lg:text-[4.5rem] font-semibold tracking-tight leading-[1.02] text-white mb-3">
-          Senior people spend their days<br /><span className="text-rose-400">moving information</span> instead of using it.
+        <h2 className="mt-4 text-[2.6rem] md:text-[3.5rem] lg:text-[4.5rem] font-semibold tracking-tight leading-[1.02] text-white mb-2">
+          Coordination is a tax on growth.
         </h2>
+        <p className="text-neutral-400 text-lg md:text-xl leading-relaxed max-w-4xl mb-6">
+          Knowledge workers spend more time moving information than executing decisions. Every tool adds a channel. Every channel adds overhead. The bottleneck is always a person.
+        </p>
       </FadeUp>
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 flex-1">
-        <FadeUp delay={0.1} className="flex flex-col gap-4">
-          {[
-            { icon: <RotateCw className="w-5 h-5 text-rose-400" />, title: "Status chasing", body: "Hours every day asking 'where are we on X?' The answer exists - it's just scattered across tools." },
-            { icon: <Layers className="w-5 h-5 text-rose-400" />, title: "Context loss", body: "Every handoff, every project switch - context evaporates. Rebuilding it is the real cost." },
-            { icon: <CalendarClock className="w-5 h-5 text-rose-400" />, title: "Meeting overhead", body: "Meetings become the decision tool of last resort because async channels can't produce decisions." },
-          ].map((item, i) => (
-            <div key={i} className="p-4 rounded-xl border border-neutral-800 bg-neutral-950 flex gap-4 items-start">
-              <div className="p-2 rounded-lg bg-rose-950/20 border border-rose-900/20 shrink-0">{item.icon}</div>
-              <div>
-                <p className="text-base font-semibold text-white mb-1">{item.title}</p>
-                <p className="text-sm text-neutral-500 leading-relaxed">{item.body}</p>
-              </div>
-            </div>
-          ))}
-        </FadeUp>
-        {/* Coordination chaos visualization */}
-        <FadeUp delay={0.2} className="hidden lg:flex items-center justify-center">
-          <div className="relative w-full aspect-[4/3] max-w-lg">
-            <svg viewBox="0 0 100 100" className="w-full h-full">
-              {/* Chaotic lines from sources through senior lead to clients */}
-              {[0,1,2].map(src => [4,5,6].map(dst => (
-                <motion.line key={`${src}-${dst}`}
-                  x1={nodes[src].x + 8} y1={nodes[src].y}
-                  x2={nodes[dst].x - 8} y2={nodes[dst].y}
-                  stroke="rgba(225,29,72,0.15)" strokeWidth="0.3"
-                  strokeDasharray="2 2"
-                  initial={{ pathLength: 0 }}
-                  whileInView={{ pathLength: 1 }}
-                  transition={{ duration: 1.5, delay: 0.3 + src * 0.1 + (dst-4) * 0.05 }}
-                  viewport={{ once: false }}
-                />
-              )))}
-              {/* Lines to center */}
-              {[0,1,2].map(src => (
-                <motion.line key={`to-center-${src}`}
-                  x1={nodes[src].x + 8} y1={nodes[src].y}
-                  x2={nodes[3].x - 6} y2={nodes[3].y}
-                  stroke="rgba(225,29,72,0.4)" strokeWidth="0.5"
-                  initial={{ pathLength: 0 }}
-                  whileInView={{ pathLength: 1 }}
-                  transition={{ duration: 1, delay: 0.5 + src * 0.15 }}
-                  viewport={{ once: false }}
-                />
-              ))}
-              {[4,5,6].map(dst => (
-                <motion.line key={`from-center-${dst}`}
-                  x1={nodes[3].x + 6} y1={nodes[3].y}
-                  x2={nodes[dst].x - 8} y2={nodes[dst].y}
-                  stroke="rgba(225,29,72,0.4)" strokeWidth="0.5"
-                  initial={{ pathLength: 0 }}
-                  whileInView={{ pathLength: 1 }}
-                  transition={{ duration: 1, delay: 0.8 + (dst-4) * 0.15 }}
-                  viewport={{ once: false }}
-                />
-              ))}
-              {/* Nodes */}
-              {nodes.map((n, i) => (
-                <g key={i}>
-                  <motion.circle cx={n.x} cy={n.y} r={i === 3 ? 5 : 3.5}
-                    fill={i === 3 ? "rgba(225,29,72,0.3)" : "rgba(255,255,255,0.08)"}
-                    stroke={i === 3 ? "#e11d48" : "rgba(255,255,255,0.15)"}
-                    strokeWidth="0.5"
-                    initial={{ scale: 0 }} whileInView={{ scale: 1 }}
-                    transition={{ duration: 0.4, delay: 0.2 + i * 0.1 }}
-                    viewport={{ once: false }}
-                  />
-                  <text x={n.x} y={i === 3 ? n.y + 9 : n.y + (i < 3 ? -5 : -5)}
-                    textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="2.8" fontFamily="inherit">
-                    {n.label}
-                  </text>
-                </g>
-              ))}
-              {/* Bottleneck pulse on center */}
-              <motion.circle cx={nodes[3].x} cy={nodes[3].y} r="8"
-                fill="none" stroke="#e11d48" strokeWidth="0.3"
-                animate={{ r: [5, 10, 5], opacity: [0.5, 0, 0.5] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-              />
-            </svg>
-            <div className="absolute bottom-2 left-0 right-0 text-center">
-              <span className="text-xs text-rose-400/60 tracking-wide uppercase">Every question routes through one person</span>
-            </div>
-          </div>
-        </FadeUp>
-      </div>
+      <FadeUp delay={0.15} className="flex-1 flex items-center justify-center">
+        <img
+          src="/coordination-tax.svg"
+          alt="Coordination spaghetti: sources flow through a human bottleneck to delayed outcomes"
+          className="w-full max-w-4xl h-auto"
+        />
+      </FadeUp>
     </S>
   );
 }
