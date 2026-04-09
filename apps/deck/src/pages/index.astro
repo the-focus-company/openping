@@ -123,8 +123,9 @@ import PitchDeck from "../components/PitchDeck";
       html[data-theme="light"] [class*="ring-indigo-600"] { --tw-ring-color: rgba(79,70,229,0.15) !important; }
       html[data-theme="light"] [class*="ring-amber-600"] { --tw-ring-color: rgba(245,158,11,0.15) !important; }
 
-      /* Logo: invert to black in light mode */
+      /* Logo + SVG diagrams: invert in light mode */
       html[data-theme="light"] .deck-logo { filter: invert(1) !important; }
+      html[data-theme="light"] .deck-svg-dark { filter: invert(1) hue-rotate(180deg) !important; }
 
       /* Semi-transparent cards/tables so neural bg peeks through */
       .bg-neutral-950 { background-color: rgba(10,10,10,0.85) !important; }

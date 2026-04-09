@@ -437,15 +437,15 @@ function CoordProblem() {
         <h2 className="mt-4 text-[2.6rem] md:text-[3.5rem] lg:text-[4.5rem] font-semibold tracking-tight leading-[1.02] text-white mb-2">
           Coordination is a tax on growth.
         </h2>
-        <p className="text-neutral-400 text-lg md:text-xl leading-relaxed max-w-4xl mb-6">
+        <p className="text-neutral-400 text-lg md:text-xl leading-relaxed max-w-4xl mb-2">
           Knowledge workers spend more time moving information than executing decisions. Every tool adds a channel. Every channel adds overhead. The bottleneck is always a person.
         </p>
       </FadeUp>
-      <FadeUp delay={0.15} className="flex-1 flex items-center justify-center">
+      <FadeUp delay={0.15} className="flex-1 flex items-center -ml-8 md:-ml-14">
         <img
           src="/coordination-tax.svg"
           alt="Coordination spaghetti: sources flow through a human bottleneck to delayed outcomes"
-          className="w-full max-w-4xl h-auto"
+          className="w-[115%] max-w-none h-auto deck-svg-dark"
         />
       </FadeUp>
     </S>
@@ -604,11 +604,9 @@ function HowWeDeliver() {
 function VsStatusQuo() {
   const dims = [
     { dim: "Core unit", slack: "Message", ping: "Decision" },
-    { dim: "AI role", slack: "Feature (reactive)", ping: "Structural layer (proactive)" },
-    { dim: "Data model", slack: "Messages / threads", ping: "Decisions / commitments" },
-    { dim: "Follow-through", slack: "Manual - falls on PM", ping: "Orchestrated automatically" },
-    { dim: "Context on handoff", slack: "Lost after every handoff", ping: "Captured at source" },
-    { dim: "Success metric", slack: "Messages sent", ping: "Decisions resolved" },
+    { dim: "AI role", slack: "Reactive feature", ping: "Proactive orchestrator" },
+    { dim: "Follow-through", slack: "Manual (falls on you)", ping: "Autonomous" },
+    { dim: "Success metric", slack: "Messages summarized", ping: "Decisions closed" },
   ];
   return (
     <S id="s6" idx={6} wide>
@@ -618,33 +616,46 @@ function VsStatusQuo() {
       <FadeUp>
         <Tag color="amber">Why Not Slack + AI?</Tag>
         <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white mb-4">
-          Slack helps teams communicate.<br /><span className="text-amber-400">OpenPing helps them coordinate outcomes.</span>
+          Slack is a copilot.<br /><span className="text-amber-400">OpenPing is the autopilot.</span>
         </h2>
-        <p className="text-base text-neutral-400 leading-relaxed max-w-4xl mb-6">
-          Today&apos;s &quot;Slack + AI&quot; solutions are wrappers - they summarize threads and answer questions about history. Useful, but they don&apos;t change the structure.{" "}
-          <span className="text-white font-medium">No product owns the decision and follow-through layer.</span> That gap is the control plane OpenPing occupies.
+        <p className="text-base text-neutral-400 leading-relaxed max-w-4xl mb-8">
+          Copilots help individuals go faster. Autopilots close decisions, route context, and follow through without human overhead.{" "}
+          <span className="text-white font-medium">No product owns the coordination control plane.</span> That's the gap.
         </p>
       </FadeUp>
-      <FadeUp delay={0.12} className="flex-1 flex items-stretch">
-        <div className="overflow-x-auto rounded-2xl border border-neutral-800 w-full">
-          <table className="w-full text-sm md:text-base h-full">
-            <thead>
-              <tr className="border-b border-neutral-800">
-                <th className="text-left p-4 text-neutral-700 font-medium uppercase tracking-widest text-xs">Dimension</th>
-                <th className="text-left p-4 text-neutral-600 font-medium">Slack + AI</th>
-                <th className="text-left p-4 text-amber-500 font-medium">OpenPing</th>
-              </tr>
-            </thead>
-            <tbody>
+      <FadeUp delay={0.12} className="flex-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 h-full">
+          {/* Slack column - muted */}
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-6 md:p-8 flex flex-col">
+            <div className="mb-6">
+              <p className="text-xs text-neutral-600 uppercase tracking-widest font-medium mb-2">Copilot</p>
+              <p className="text-2xl md:text-3xl font-bold text-neutral-500">Slack + AI</p>
+            </div>
+            <div className="space-y-4 flex-1">
               {dims.map((row, i) => (
-                <tr key={i} className="border-b border-neutral-900 last:border-b-0">
-                  <td className="p-4 text-neutral-600 text-xs uppercase tracking-wide font-medium">{row.dim}</td>
-                  <td className="p-4 text-neutral-500">{row.slack}</td>
-                  <td className="p-4 text-amber-400 font-medium">{row.ping}</td>
-                </tr>
+                <div key={i} className="flex flex-col">
+                  <span className="text-xs text-neutral-700 uppercase tracking-wide font-medium mb-1">{row.dim}</span>
+                  <span className="text-base text-neutral-500">{row.slack}</span>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
+          {/* OpenPing column - dominant */}
+          <div className="rounded-2xl border border-amber-700/40 bg-amber-950/10 ring-1 ring-amber-500/20 p-6 md:p-8 flex flex-col relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.1),transparent_70%)]" />
+            <div className="mb-6 relative">
+              <p className="text-xs text-amber-500 uppercase tracking-widest font-medium mb-2">Autopilot</p>
+              <p className="text-2xl md:text-3xl font-bold text-amber-400">OpenPing</p>
+            </div>
+            <div className="space-y-4 flex-1 relative">
+              {dims.map((row, i) => (
+                <div key={i} className="flex flex-col">
+                  <span className="text-xs text-neutral-600 uppercase tracking-wide font-medium mb-1">{row.dim}</span>
+                  <span className="text-lg text-white font-semibold">{row.ping}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </FadeUp>
     </S>
