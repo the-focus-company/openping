@@ -1,0 +1,31 @@
+---
+import Manifesto from "../components/Manifesto";
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenPing Manifesto - Decision-first workspace</title>
+    <meta name="description" content="We are not building a better chat app. We are building a better way for teams to decide." />
+    <meta property="og:title" content="OpenPing Manifesto" />
+    <meta property="og:description" content="Decision-first workspace. Let AI do the assembly. Let humans do the deciding." />
+    <meta property="og:image" content="/og.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style is:global>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; font-family: 'Outfit', system-ui, -apple-system, sans-serif; }
+      ::-webkit-scrollbar { display: none; }
+      html[data-theme="dark"] body { background: #000; color: #fff; }
+      html[data-theme="light"] body { background: #fafafa; color: #0a0a0a; }
+    </style>
+  </head>
+  <body>
+    <Manifesto client:only="react" />
+  </body>
+</html>

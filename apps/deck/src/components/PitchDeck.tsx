@@ -749,61 +749,98 @@ function Market() {
       <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10">
         <div className="absolute bottom-0 left-[20%] w-[700px] h-[500px] bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.04),transparent_60%)]" />
       </div>
+
       <FadeUp>
         <Tag color="emerald">Market</Tag>
         <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white mb-2">
-          <span className="text-emerald-400">$6 of services</span> per every <span className="text-emerald-300">$1 of software.</span>
+          We don't compete for the SaaS budget.
         </h2>
-        <p className="text-neutral-500 text-base leading-relaxed mb-6 max-w-4xl">
-          OpenPing competes for the headcount budget that exists solely to coordinate delivery. That budget is 10x larger than any software line - and has no incumbent.
-        </p>
+        <h2 className="text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] mb-6">
+          <span className="text-emerald-400">We compete for the headcount budget.</span>
+        </h2>
       </FadeUp>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 flex-1 content-start">
-        <FadeUp delay={0.1}>
-          <div className="space-y-2">
+
+      {/* ── Budget comparison ── */}
+      <FadeUp delay={0.08} className="mb-6">
+        <div className="flex items-center gap-4 md:gap-8">
+          <div className="flex-1 p-4 rounded-xl border border-neutral-800/60 bg-neutral-950/60 text-center">
+            <p className="text-neutral-600 text-xs uppercase tracking-widest mb-1">SaaS seat</p>
+            <p className="text-2xl md:text-3xl font-bold text-neutral-600 line-through decoration-neutral-700">$12/mo</p>
+          </div>
+          <ArrowRight className="w-6 h-6 text-emerald-500 shrink-0" />
+          <div className="flex-1 p-4 rounded-xl border border-emerald-700/40 bg-emerald-950/15 ring-1 ring-emerald-500/20 text-center">
+            <p className="text-emerald-500 text-xs uppercase tracking-widest mb-1">Coordination FTE</p>
+            <p className="text-2xl md:text-3xl font-bold text-emerald-400">$180k+/yr</p>
+          </div>
+        </div>
+      </FadeUp>
+
+      {/* ── Main content ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-6 flex-1 content-start">
+
+        {/* Left: ICP cards */}
+        <FadeUp delay={0.12}>
+          <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "ICP", bullets: ["Founder, COO, Head of Delivery","50-300 person headcount","Multiple clients sharing experts"] },
-              { label: "Beachhead", bullets: ["~50,000 US agencies & consultancies","Software houses in 50-300 range"] },
-              { label: "ACV", bullets: ["$24k-$150k starting range","Priced against coordination headcount"] },
-              { label: "Verticals", bullets: ["Digital agencies & Consultancies","Software houses & Implementation partners","Managed services"] },
-            ].map((r, i) => (
-              <div key={i} className="flex gap-4 py-2.5 border-b border-neutral-900/50 last:border-b-0">
-                <span className="text-xs text-emerald-500/80 uppercase tracking-widest font-bold w-20 shrink-0 pt-0.5">{r.label}</span>
-                <ul className="space-y-1">
-                  {r.bullets.map((b, j) => (
-                    <li key={j} className="text-sm text-neutral-400 flex items-start gap-2">
-                      <span className="text-emerald-800 shrink-0 mt-[3px]">•</span>
-                      <span className="leading-snug">{b}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+              { label: "ICP", icon: Target, line: "Founder / COO / Head of Delivery", sub: "50-300 people, multi-client" },
+              { label: "Beachhead", icon: Radio, line: "~50k US agencies", sub: "Software houses & consultancies" },
+              { label: "ACV", icon: Zap, line: "$24k - $150k", sub: "vs headcount, not SaaS" },
+              { label: "Verticals", icon: Route, line: "Agencies · SW houses", sub: "Consultancies · Managed svc" },
+            ].map((c, i) => {
+              const Icon = c.icon;
+              return (
+                <motion.div key={i}
+                  initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, delay: 0.08 * i }} viewport={{ once: false, amount: 0.3 }}
+                  className="rounded-xl border border-neutral-800/60 bg-neutral-950/60 p-3.5 flex flex-col gap-1.5 hover:border-emerald-800/40 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Icon className="w-3.5 h-3.5 text-emerald-500/70" />
+                    <span className="text-[0.6rem] text-emerald-500/80 uppercase tracking-[0.16em] font-bold">{c.label}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-white leading-snug">{c.line}</p>
+                  <p className="text-xs text-neutral-500 leading-snug">{c.sub}</p>
+                </motion.div>
+              );
+            })}
           </div>
         </FadeUp>
+
+        {/* Right: TAM + penetration */}
         <FadeUp delay={0.2}>
           <div className="space-y-4">
             {[
-              { label: "Beachhead - US only", sub: "~50k agencies + consultancies, 50-300 people. $24k ACV floor.", value: "$1.2B", pct: 15, color: "bg-emerald-600", textColor: "text-emerald-400" },
-              { label: "5-Year SAM", sub: "All delivery-heavy professional services globally.", value: "$12-15B", pct: 45, color: "bg-emerald-500", textColor: "text-emerald-300" },
-              { label: "Platform TAM", sub: "Coordination headcount budget across all professional services.", value: "$100B+", pct: 100, color: "bg-emerald-400", textColor: "text-emerald-300" },
+              { label: "Beachhead (US)", value: "$1.2B", pct: 12, color: "bg-emerald-600", text: "text-emerald-400" },
+              { label: "5-Year SAM", value: "$12-15B", pct: 40, color: "bg-emerald-500", text: "text-emerald-300" },
+              { label: "Platform TAM", value: "$100B+", pct: 100, color: "bg-emerald-400", text: "text-emerald-300", highlight: true },
             ].map((m, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: i * 0.1 }} viewport={{ once: false, amount: 0.4 }}>
-                <div className="flex justify-between items-baseline mb-1">
-                  <span className="text-base font-semibold text-white">{m.label}</span>
-                  <span className={`text-lg md:text-xl font-bold ${m.textColor}`}>{m.value}</span>
+                transition={{ duration: 0.5, delay: i * 0.12 }} viewport={{ once: false, amount: 0.4 }}>
+                <div className="flex justify-between items-baseline mb-1.5">
+                  <span className={`text-base font-semibold ${m.highlight ? "text-emerald-400" : "text-white"}`}>{m.label}</span>
+                  <span className={`text-xl md:text-2xl font-bold ${m.text}`}>{m.value}</span>
                 </div>
-                <p className="text-sm text-neutral-600 mb-2 leading-snug">{m.sub}</p>
-                <div className="h-5 rounded-full bg-neutral-900 overflow-hidden">
+                <div className="h-4 rounded-full bg-neutral-900 overflow-hidden">
                   <motion.div initial={{ width: 0 }} whileInView={{ width: `${m.pct}%` }}
-                    transition={{ duration: 1, delay: 0.2 + i * 0.15, ease: "easeOut" }} viewport={{ once: false, amount: 0.5 }}
+                    transition={{ duration: 1.2, delay: 0.3 + i * 0.15, ease: [0.22, 1, 0.36, 1] }} viewport={{ once: false, amount: 0.5 }}
                     className={`h-full rounded-full ${m.color} opacity-70`} />
                 </div>
+                {m.highlight && (
+                  <p className="text-xs text-emerald-500/60 mt-1">Coordination headcount budget across all professional services</p>
+                )}
               </motion.div>
             ))}
-            <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950">
-              <p className="text-sm text-neutral-500 leading-relaxed">At <strong className="text-white">1% penetration</strong> of the US beachhead: <strong className="text-white">$12M ARR</strong>. At 5%: $60M. The market is underpenetrated and the buyer is motivated.</p>
+
+            <div className="p-4 rounded-xl border border-emerald-900/30 bg-emerald-950/20">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-2xl md:text-3xl font-bold text-emerald-400">$12M</span>
+                  <p className="text-xs text-neutral-500 mt-0.5">ARR at 1% beachhead</p>
+                </div>
+                <div>
+                  <span className="text-2xl md:text-3xl font-bold text-emerald-300">$60M</span>
+                  <p className="text-xs text-neutral-500 mt-0.5">ARR at 5% penetration</p>
+                </div>
+              </div>
             </div>
           </div>
         </FadeUp>
