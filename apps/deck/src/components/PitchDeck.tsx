@@ -358,7 +358,7 @@ function Founders() {
       logos: [<LogoRemitly key="r" />, <LogoMARS key="m" />, <LogoKPMG key="k" />, <LogoBCG key="b" />],
       highlights: [
         "Lived the problem: coordination collapsed across 5 time zones at Remitly",
-        "Shipped AI-first products from zero (ppmlx, Halpy.me)",
+        "Shipped AI-first products from zero (ppmlx, tview.work)",
         "10+ years leading product & delivery at KPMG, BCG, MARS, Remitly",
       ],
     },
@@ -457,54 +457,164 @@ function CoordProblem() {
   );
 }
 
-/* ══ SLIDE 3 - LOST REVENUE AND HIDDEN COSTS ══ */
+/* ══ SLIDE 3 - THE COORDINATION TAX ══ */
 function LostRevenue() {
-  const stats = [
-    { metric: "$180k+", label: "Cost of 1 coordination FTE", pct: 45, color: "bg-rose-500", textColor: "text-rose-400" },
-    { metric: "1 in 3", label: "Senior hours lost to coordination", pct: 33, color: "bg-amber-500", textColor: "text-amber-400" },
-    { metric: "74% vs 22%", label: "Individual vs org-level AI gains", pct: 74, color: "bg-orange-500", textColor: "text-orange-400" },
-    { metric: "~40%", label: "Revenue capacity gap", pct: 40, color: "bg-red-500", textColor: "text-red-400" },
+  /* Waterfall: 100 → -40 → -20 → -10 → 30 remaining */
+  const waterfall = [
+    { label: "Total capacity", value: 100, top: 0, color: "bg-neutral-600" },
+    { label: "Missing context", value: 40, top: 0, color: "bg-rose-500/60" },
+    { label: "Delayed follow-ups\n& approvals", value: 20, top: 40, color: "bg-rose-400/50" },
+    { label: "Context switching", value: 10, top: 60, color: "bg-orange-500/50" },
+    { label: "Value delivered", value: 30, top: 70, color: "bg-emerald-500/60" },
+  ];
+  /* Survey: when did staff last have time for new initiatives */
+  const survey = [
+    { label: "Last week", pct: 8 },
+    { label: "Last month", pct: 18 },
+    { label: "Last quarter", pct: 45 },
+    { label: "Last year+", pct: 29 },
+  ];
+  /* Timeline */
+  const timeline = [
+    { label: "Searching for context", w: "22%", type: "waste" as const },
+    { label: "Work", w: "10%", type: "work" as const },
+    { label: "Waiting for approval", w: "18%", type: "waste" as const },
+    { label: "Work", w: "8%", type: "work" as const },
+    { label: "Sync meeting", w: "14%", type: "waste" as const },
+    { label: "Work", w: "9%", type: "work" as const },
+    { label: "Status relay", w: "9%", type: "waste" as const },
+    { label: "End Value", w: "10%", type: "end" as const },
   ];
   return (
     <S id="s3" idx={3} wide>
       <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10">
         <div className="absolute bottom-0 left-[-20%] w-[800px] h-[800px] bg-[radial-gradient(ellipse_at_center,rgba(225,29,72,0.05),transparent_60%)]" />
       </div>
-      <FadeUp className="mb-8">
-        <Tag color="rose">Lost Revenue and Hidden Costs</Tag>
+
+      <FadeUp>
+        <Tag color="rose">The Coordination Tax</Tag>
         <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white">
-          The real cost isn&apos;t ops headcount.<br /><span className="text-rose-400">It&apos;s the revenue you can&apos;t reach.</span>
+          The real cost isn&apos;t ops headcount.<br /><span className="text-rose-400">It&apos;s the revenue that can&apos;t be reached.</span>
         </h2>
       </FadeUp>
-      <div className="flex-1 flex flex-col justify-center gap-6 max-w-4xl">
-        {stats.map((s, i) => (
-          <motion.div key={i} initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: i * 0.12 }} viewport={{ once: false, amount: 0.3 }}>
-            <div className="flex items-baseline justify-between mb-2">
-              <div className="flex items-baseline gap-4">
-                <span className={`text-3xl md:text-4xl font-bold ${s.textColor}`}>{s.metric}</span>
-                <span className="text-base text-neutral-400">{s.label}</span>
-              </div>
-            </div>
-            <div className="h-3 rounded-full bg-neutral-900 overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                whileInView={{ width: `${s.pct}%` }}
-                transition={{ duration: 1.2, delay: 0.3 + i * 0.15, ease: [0.22, 1, 0.36, 1] }}
-                viewport={{ once: false, amount: 0.3 }}
-                className={`h-full rounded-full ${s.color} opacity-70`}
-              />
-            </div>
-          </motion.div>
-        ))}
-      </div>
-      <FadeUp delay={0.5}>
-        <div className="p-4 md:p-5 rounded-xl border border-rose-900/30 bg-rose-950/10 mt-6">
-          <p className="text-base text-neutral-400 leading-relaxed">
-            We saw this at our companies, at our clients, and heard the same from colleagues running agencies, consultancies, and software houses.{" "}
-            AI makes individuals faster - but it can&apos;t close decisions, follow through on commitments, or route the right question to the right person.{" "}
-            <span className="text-white font-medium">Senior people absorb the gap. Growth stalls.</span>
+
+      {/* ── Two perspectives ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5 flex-1 content-start">
+
+        {/* LEFT: The Individual — lost upside */}
+        <FadeUp delay={0.08}>
+          <p className="text-xs text-amber-500/80 uppercase tracking-[0.14em] font-bold mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500/60" />The Individual — Lost Upside
           </p>
+          <div className="grid grid-cols-2 gap-4 mb-5">
+            <div>
+              <span className="text-4xl md:text-5xl font-bold text-amber-400 leading-none">&lt;1x</span>
+              <p className="text-sm text-neutral-500 mt-2 leading-snug">Reported ROI on AI tools at org level</p>
+            </div>
+            <div>
+              <span className="text-4xl md:text-5xl font-bold text-rose-400 leading-none">33%</span>
+              <p className="text-sm text-neutral-500 mt-2 leading-snug">Revenue lost to missing delivery capacity</p>
+            </div>
+          </div>
+          {/* Survey chart */}
+          <p className="text-xs text-neutral-600 mb-2 font-medium">Last time had capacity for new initiatives:</p>
+          <div className="flex items-end gap-2 h-24">
+            {survey.map((s, i) => (
+              <motion.div key={i} className="flex-1 flex flex-col items-center justify-end h-full"
+                initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.15 + i * 0.08 }} viewport={{ once: false, amount: 0.3 }}>
+                <span className="text-xs font-bold text-neutral-400 mb-1">{s.pct}%</span>
+                <motion.div
+                  initial={{ scaleY: 0 }}
+                  whileInView={{ scaleY: 1 }}
+                  transition={{ duration: 0.7, delay: 0.25 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                  viewport={{ once: false, amount: 0.3 }}
+                  style={{ height: `${s.pct * 1.8}%`, originY: 1 }}
+                  className={`w-full rounded-md ${i <= 1 ? "bg-amber-500/40" : "bg-rose-500/50"}`} />
+                <span className="text-[9px] text-neutral-600 mt-1.5 text-center leading-tight">{s.label}</span>
+              </motion.div>
+            ))}
+          </div>
+        </FadeUp>
+
+        {/* RIGHT: The Organization — growing cost + waterfall */}
+        <FadeUp delay={0.16}>
+          <p className="text-xs text-rose-500/80 uppercase tracking-[0.14em] font-bold mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-rose-500/60" />The Organization — Growing Cost
+          </p>
+          <div className="grid grid-cols-2 gap-4 mb-5">
+            <div>
+              <span className="text-4xl md:text-5xl font-bold text-rose-400 leading-none">1 : 4</span>
+              <p className="text-sm text-neutral-500 mt-2 leading-snug">Coordination-to-maker ratio at scale</p>
+            </div>
+            <div>
+              <span className="text-4xl md:text-5xl font-bold text-rose-400 leading-none">25%</span>
+              <p className="text-sm text-neutral-500 mt-2 leading-snug">Increased rotation from coordination burnout</p>
+            </div>
+          </div>
+          {/* Waterfall chart */}
+          <p className="text-xs text-neutral-600 mb-2 font-medium">Where team capacity goes:</p>
+          <div className="flex items-start gap-1.5 md:gap-2 h-28">
+            {waterfall.map((seg, i) => (
+              <motion.div key={i} className="flex-1 flex flex-col items-center h-full relative"
+                initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.15 + i * 0.08 }} viewport={{ once: false, amount: 0.3 }}>
+                <div className="w-full h-full relative">
+                  <motion.div
+                    initial={{ scaleY: 0 }}
+                    whileInView={{ scaleY: 1 }}
+                    transition={{ duration: 0.7, delay: 0.25 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                    viewport={{ once: false, amount: 0.3 }}
+                    style={{ height: `${seg.value}%`, top: `${seg.top}%`, originY: 0 }}
+                    className={`w-full absolute rounded-md ${seg.color} flex items-center justify-center overflow-hidden`}>
+                    {i > 0 && i < 4 && (
+                      <div className="absolute inset-0 opacity-20" style={{
+                        backgroundImage: "repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(255,255,255,0.15) 3px, rgba(255,255,255,0.15) 5px)"
+                      }} />
+                    )}
+                    <span className={`text-xs font-bold relative z-10 ${i === 0 ? "text-neutral-300" : i < 4 ? "text-white/70" : "text-emerald-200"}`}>
+                      {i === 0 ? "100%" : i < 4 ? `−${seg.value}%` : "30%"}
+                    </span>
+                  </motion.div>
+                </div>
+                <span className="text-[8px] md:text-[9px] text-neutral-600 mt-1.5 text-center whitespace-pre-line leading-tight font-medium">{seg.label}</span>
+              </motion.div>
+            ))}
+          </div>
+        </FadeUp>
+      </div>
+
+      {/* ── Project Lifecycle Timeline ── */}
+      <FadeUp delay={0.3}>
+        <div className="mt-3 p-3 md:p-4 rounded-xl border border-neutral-800/60 bg-neutral-950/60">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-neutral-600 uppercase tracking-[0.14em] font-bold">Typical project lifecycle</span>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 text-[10px] text-rose-400/60"><span className="w-2 h-2 rounded-sm bg-rose-500/40" /> Coordination</span>
+              <span className="flex items-center gap-1.5 text-[10px] text-emerald-400/60"><span className="w-2 h-2 rounded-sm bg-emerald-500/40" /> Work</span>
+              <span className="flex items-center gap-1.5 text-[10px] text-amber-400/60"><span className="w-2 h-2 rounded-sm bg-amber-500/40" /> End Value</span>
+            </div>
+          </div>
+          <div className="flex h-8 md:h-9 rounded-lg overflow-hidden gap-px w-full">
+            {timeline.map((block, i) => (
+              <motion.div key={i}
+                initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }}
+                transition={{ duration: 0.5, delay: 0.35 + i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+                viewport={{ once: false, amount: 0.3 }}
+                style={{ width: block.w, originX: 0, flexShrink: 0 }}
+                className={`flex items-center justify-center relative overflow-hidden ${block.type === "waste" ? "bg-rose-500/25" : block.type === "end" ? "bg-amber-500/30" : "bg-emerald-500/25"}`}
+                title={block.label}>
+                {block.type === "waste" && (
+                  <div className="absolute inset-0 opacity-30" style={{
+                    backgroundImage: "repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(255,255,255,0.1) 3px, rgba(255,255,255,0.1) 5px)"
+                  }} />
+                )}
+                <span className={`text-[8px] md:text-[10px] font-medium relative z-10 whitespace-nowrap px-0.5 ${block.type === "waste" ? "text-rose-300/70" : block.type === "end" ? "text-amber-300/80 font-semibold" : "text-emerald-300/70"}`}>
+                  {block.label}
+                </span>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </FadeUp>
     </S>
@@ -531,32 +641,30 @@ function WhatWeDo() {
           From noise to decisions and results.<br /><span className="text-indigo-400">Fully automated.</span>
         </h2>
       </FadeUp>
-      <FadeUp delay={0.1} className="-my-2 md:-my-4">
+      <FadeUp delay={0.1} className="flex-1 flex items-center justify-center min-h-0 w-full">
         <img
           src="/what-openping-does.svg"
           alt="OpenPing: Users, Workspace, and Engine connected in real-time"
-          className="w-full max-w-2xl h-auto deck-svg-dark"
+          className="w-full h-full object-contain deck-svg-dark"
         />
       </FadeUp>
-      <div className="flex-1 flex items-end">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-2 w-full">
-          {steps.map((step, i) => (
-            <FadeUp key={i} delay={0.15 + i * 0.08}>
-              <div className={`rounded-2xl border ${step.border} ${step.bg} p-5 md:p-4 h-full flex flex-col items-center md:items-center text-center relative`}>
-                {i < steps.length - 1 && (
-                  <div className="hidden md:block absolute right-[-12px] top-1/2 -translate-y-1/2 z-10">
-                    <ArrowRight className="w-4 h-4 text-neutral-700" />
-                  </div>
-                )}
-                <div className={`p-3 rounded-xl bg-neutral-900 border border-neutral-800 mb-3 ${step.color}`}>
-                  {step.icon}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-2 w-full">
+        {steps.map((step, i) => (
+          <FadeUp key={i} delay={0.15 + i * 0.08}>
+            <div className={`rounded-2xl border ${step.border} ${step.bg} pt-7 pb-3 px-3 h-full flex flex-col items-center text-center relative`}>
+              {i < steps.length - 1 && (
+                <div className="hidden md:block absolute right-[-12px] top-1/2 -translate-y-1/2 z-10">
+                  <ArrowRight className="w-4 h-4 text-neutral-700" />
                 </div>
-                <p className={`text-lg font-bold mb-2 ${step.color}`}>{step.title}</p>
-                <p className="text-sm text-neutral-500 leading-relaxed">{step.desc}</p>
+              )}
+              <div className={`absolute -top-4 p-2.5 rounded-xl bg-neutral-900 border border-neutral-800 ${step.color}`}>
+                {step.icon}
               </div>
-            </FadeUp>
-          ))}
-        </div>
+              <p className={`text-base font-bold mb-1 ${step.color}`}>{step.title}</p>
+              <p className="text-xs text-neutral-500 leading-snug">{step.desc}</p>
+            </div>
+          </FadeUp>
+        ))}
       </div>
     </S>
   );
@@ -583,23 +691,23 @@ function HowWeDeliver() {
       <FadeUp delay={0.1} className="mb-4">
         <div className="rounded-2xl border border-indigo-600/30 bg-indigo-950/15 ring-1 ring-indigo-500/20 p-6 md:p-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.1),transparent_70%)]" />
-          <div className="flex items-center gap-2 mb-4">
-            <ShieldCheck className="w-5 h-5 text-indigo-400" />
-            <span className="text-xs text-indigo-400 uppercase tracking-[0.16em] font-bold">Unforkable Data Moat</span>
+          <div className="flex items-center gap-2.5 mb-5">
+            <ShieldCheck className="w-6 h-6 text-indigo-400" />
+            <span className="text-sm text-indigo-400 uppercase tracking-[0.14em] font-bold">Unforkable Data Moat</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-2">Proprietary Decision Graph</h3>
-              <ul className="text-sm text-neutral-400 leading-relaxed space-y-1.5">
-                <li className="flex gap-2 items-start"><span className="text-indigo-500 shrink-0 mt-0.5">&bull;</span>Every decision, commitment, and outcome mapped in a temporal graph unique to each org</li>
-                <li className="flex gap-2 items-start"><span className="text-indigo-500 shrink-0 mt-0.5">&bull;</span>More data = better predictions. Competitors start from zero</li>
+              <h3 className="text-xl font-semibold text-white mb-3">Proprietary Decision Graph</h3>
+              <ul className="text-base text-neutral-400 leading-relaxed space-y-2">
+                <li className="flex gap-2.5 items-start"><span className="text-indigo-500 shrink-0 mt-1">&bull;</span>Every decision, commitment, and outcome mapped in a temporal graph unique to each org</li>
+                <li className="flex gap-2.5 items-start"><span className="text-indigo-500 shrink-0 mt-1">&bull;</span>More data = better predictions. Competitors start from zero</li>
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white mb-2">Proactive Signal Layer</h3>
-              <ul className="text-sm text-neutral-400 leading-relaxed space-y-1.5">
-                <li className="flex gap-2 items-start"><span className="text-indigo-500 shrink-0 mt-0.5">&bull;</span>Captures intent, blockers, and commitments before they&apos;re formally stated</li>
-                <li className="flex gap-2 items-start"><span className="text-indigo-500 shrink-0 mt-0.5">&bull;</span>Per-org classifiers fine-tune continuously. This data doesn&apos;t exist anywhere else</li>
+              <h3 className="text-xl font-semibold text-white mb-3">Proactive Signal Layer</h3>
+              <ul className="text-base text-neutral-400 leading-relaxed space-y-2">
+                <li className="flex gap-2.5 items-start"><span className="text-indigo-500 shrink-0 mt-1">&bull;</span>Captures intent, blockers, and commitments before they&apos;re formally stated</li>
+                <li className="flex gap-2.5 items-start"><span className="text-indigo-500 shrink-0 mt-1">&bull;</span>Per-org classifiers fine-tune continuously. This data doesn&apos;t exist anywhere else</li>
               </ul>
             </div>
           </div>
@@ -607,7 +715,7 @@ function HowWeDeliver() {
       </FadeUp>
 
       {/* ── Execution layers ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 flex-1 content-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 content-start">
         {[
           { title: "Closed-Loop Learning", points: ["Every human decision feeds training data", "System improves with usage", "Outcomes validate predictions automatically"], badge: "RESEARCH" },
           { title: "Real-Time Context Engine", points: ["All inputs embedded under 80ms", "Hybrid retrieval, per-org namespace", "Streaming incremental - no batch reprocessing"], badge: "BUILT" },
@@ -615,15 +723,15 @@ function HowWeDeliver() {
           { title: "Offline-First Mobile", points: ["Native app with on-device inference via ppmlx", "Personal temporal context graphs", "CRDT sync for intermittent connectivity"], badge: "BUILDING" },
         ].map((e, i) => (
           <FadeUp key={i} delay={0.15 + i * 0.06}>
-            <div className="rounded-xl border border-neutral-800/60 bg-neutral-950/60 p-5 h-full flex flex-col">
+            <div className="rounded-xl border border-neutral-800/60 bg-neutral-950/60 p-5 md:p-6 h-full flex flex-col">
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-sm font-semibold text-white">{e.title}</h3>
-                <span className={`text-[8px] font-bold tracking-widest border border-current rounded-full px-1.5 py-0.5 shrink-0 ${e.badge === "BUILT" ? "text-emerald-500 opacity-60" : e.badge === "RESEARCH" ? "text-violet-500 opacity-60" : "text-amber-500 opacity-60"}`}>{e.badge}</span>
+                <h3 className="text-base font-semibold text-white">{e.title}</h3>
+                <span className={`text-[9px] font-bold tracking-widest border border-current rounded-full px-2 py-0.5 shrink-0 ${e.badge === "BUILT" ? "text-emerald-500 opacity-60" : e.badge === "RESEARCH" ? "text-violet-500 opacity-60" : "text-amber-500 opacity-60"}`}>{e.badge}</span>
               </div>
-              <ul className="text-xs text-neutral-500 leading-relaxed space-y-1.5">
+              <ul className="text-sm text-neutral-500 leading-relaxed space-y-2">
                 {e.points.map((p, j) => (
-                  <li key={j} className="flex gap-2 items-start">
-                    <span className="text-indigo-500/60 shrink-0 mt-px">&bull;</span>
+                  <li key={j} className="flex gap-2.5 items-start">
+                    <span className="text-indigo-500/60 shrink-0 mt-0.5">&bull;</span>
                     <span>{p}</span>
                   </li>
                 ))}
@@ -638,12 +746,6 @@ function HowWeDeliver() {
 
 /* ══ SLIDE 6 - VS SLACK + AI ══ */
 function VsStatusQuo() {
-  const dims = [
-    { dim: "Core unit", slack: "Message", ping: "Decision" },
-    { dim: "AI role", slack: "Reactive feature", ping: "Proactive orchestrator" },
-    { dim: "Follow-through", slack: "Manual (falls on you)", ping: "Autonomous" },
-    { dim: "Success metric", slack: "Messages summarized", ping: "Decisions closed" },
-  ];
   return (
     <S id="s6" idx={6} wide>
       <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10">
@@ -654,40 +756,56 @@ function VsStatusQuo() {
         <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white mb-4">
           Slack is a copilot.<br /><span className="text-amber-400">OpenPing is the autopilot.</span>
         </h2>
-        <p className="text-base text-neutral-400 leading-relaxed max-w-4xl mb-8">
+        <p className="text-base text-neutral-400 leading-relaxed max-w-4xl mb-6">
           Copilots help individuals go faster. Autopilots close decisions, route context, and follow through without human overhead.{" "}
-          <span className="text-white font-medium">No product owns the coordination control plane.</span> That's the gap.
+          <span className="text-white font-medium">No product owns the coordination control plane.</span> That&apos;s the gap.
         </p>
       </FadeUp>
-      <FadeUp delay={0.12} className="flex-1">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 h-full">
-          {/* Slack column - muted */}
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-6 md:p-8 flex flex-col">
-            <div className="mb-6">
-              <p className="text-xs text-neutral-600 uppercase tracking-widest font-medium mb-2">Copilot</p>
-              <p className="text-2xl md:text-3xl font-bold text-neutral-500">Slack + AI</p>
+      <FadeUp delay={0.12} className="flex-1 flex items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 w-full">
+          {/* Slack column */}
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5 md:p-7 flex flex-col justify-between">
+            <div className="mb-5">
+              <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium mb-2">Copilot</p>
+              <p className="text-2xl md:text-3xl font-bold text-neutral-400">Slack + AI</p>
             </div>
-            <div className="space-y-4 flex-1">
-              {dims.map((row, i) => (
-                <div key={i} className="flex flex-col">
-                  <span className="text-xs text-neutral-700 uppercase tracking-wide font-medium mb-1">{row.dim}</span>
-                  <span className="text-base text-neutral-500">{row.slack}</span>
+            <div className="space-y-5">
+              {[
+                { dim: "Core unit", val: "Message", icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg> },
+                { dim: "AI role", val: "Reactive feature", icon: <Cog className="w-5 h-5" /> },
+                { dim: "Follow-through", val: "Manual", icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg> },
+                { dim: "Success metric", val: "Summarized", icon: <Search className="w-5 h-5" /> },
+              ].map((row, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="text-neutral-600 shrink-0">{row.icon}</span>
+                  <div>
+                    <span className="text-[10px] text-neutral-600 uppercase tracking-wide font-medium block">{row.dim}</span>
+                    <span className="text-xl md:text-2xl font-bold text-neutral-300">{row.val}</span>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
-          {/* OpenPing column - dominant */}
-          <div className="rounded-2xl border border-amber-700/40 bg-amber-950/10 ring-1 ring-amber-500/20 p-6 md:p-8 flex flex-col relative overflow-hidden">
+          {/* OpenPing column */}
+          <div className="rounded-2xl border border-amber-700/40 bg-amber-950/10 ring-1 ring-amber-500/20 p-5 md:p-7 flex flex-col justify-between relative overflow-hidden">
             <div className="absolute top-0 right-0 w-40 h-40 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.1),transparent_70%)]" />
-            <div className="mb-6 relative">
+            <div className="mb-5 relative">
               <p className="text-xs text-amber-500 uppercase tracking-widest font-medium mb-2">Autopilot</p>
               <p className="text-2xl md:text-3xl font-bold text-amber-400">OpenPing</p>
             </div>
-            <div className="space-y-4 flex-1 relative">
-              {dims.map((row, i) => (
-                <div key={i} className="flex flex-col">
-                  <span className="text-xs text-neutral-600 uppercase tracking-wide font-medium mb-1">{row.dim}</span>
-                  <span className="text-lg text-white font-semibold">{row.ping}</span>
+            <div className="space-y-5 relative">
+              {[
+                { dim: "Core unit", val: "Decision", icon: <CheckCircle className="w-5 h-5" /> },
+                { dim: "AI role", val: "Proactive orchestrator", icon: <Brain className="w-5 h-5" /> },
+                { dim: "Follow-through", val: "Autonomous", icon: <Zap className="w-5 h-5" /> },
+                { dim: "Success metric", val: "Decisions closed", icon: <Target className="w-5 h-5" /> },
+              ].map((row, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="text-amber-500/70 shrink-0">{row.icon}</span>
+                  <div>
+                    <span className="text-[10px] text-neutral-600 uppercase tracking-wide font-medium block">{row.dim}</span>
+                    <span className="text-xl md:text-2xl font-bold text-white">{row.val}</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -719,29 +837,31 @@ function Pricing() {
           { tier: "Open Core", label: "Adoption engine",
             icon: <svg className="w-6 h-6 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>,
             features: [
-              "Open-source workspace interface - free forever",
+              "Open-source workspace interface",
               "Community-driven adoption, zero CAC",
-              "Users own their data, no lock-in fear",
-              "Conversion trigger: teams hit coordination limits",
+              "Users own their data",
             ],
+            trigger: "Conversion trigger: teams hit coordination limits",
             accent: "border-neutral-700", highlight: false },
           { tier: "Success-Based", label: "Revenue engine",
             icon: <Zap className="w-6 h-6 text-amber-400" />,
             features: [
-              "Priced on outcomes, not seats",
-              "Coordination control suite - decisions tracked to resolution",
-              "Customers pay because it works, not because they're locked in",
-              "Compared against headcount ($180k+), not software ($12/seat)",
+              "Priced on outcomes",
+              "Decisions tracked to resolution",
+              "Pay because it works, not because of a lock-in",
+              "Compared against headcount, not software",
             ],
+            trigger: null,
             accent: "border-amber-700/60", highlight: true },
           { tier: "Proprietary Data", label: "Moat engine",
             icon: <ShieldCheck className="w-6 h-6 text-emerald-400" />,
             features: [
-              "Every conversation builds the org knowledge graph",
-              "Classifiers improve with usage - proprietary training data",
-              "ppmlx on-device inference cuts cost 4-6x vs API",
+              "Every conversation builds the org context graph",
+              "Classifiers improve with usage",
               "Data compounds into an unforkable moat",
+              "Differential Privacy deep model training",
             ],
+            trigger: null,
             accent: "border-emerald-700/60", highlight: false },
         ].map((t, i) => (
           <FadeUp key={i} delay={i * 0.08}>
@@ -758,6 +878,11 @@ function Pricing() {
                   <li key={j} className="text-sm text-neutral-500 flex gap-2 items-start"><span className="text-emerald-600 shrink-0 mt-0.5">+</span><span className="leading-snug">{f}</span></li>
                 ))}
               </ul>
+              {t.trigger && (
+                <div className="mt-4 pt-3 border-t border-neutral-800/60">
+                  <p className="text-xs text-amber-500/70 font-medium leading-snug">{t.trigger}</p>
+                </div>
+              )}
             </div>
           </FadeUp>
         ))}
@@ -766,11 +891,11 @@ function Pricing() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950">
             <p className="text-base font-semibold text-white mb-1.5">Services are the new software</p>
-            <p className="text-sm text-neutral-500 leading-relaxed">AI lets us deliver outcomes directly - not tools for professionals to use. PING replaces coordination labor, not just coordination software.</p>
+            <p className="text-sm text-neutral-500 leading-relaxed">AI lets us deliver outcomes directly — not tools for professionals to use. OpenPing replaces coordination labor, not just coordination software.</p>
           </div>
           <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950">
             <p className="text-base font-semibold text-white mb-1.5">Path to software margins</p>
-            <p className="text-sm text-neutral-500 leading-relaxed">Start with high-touch onboarding (services revenue). As the model learns each org, automation increases and margins converge to 70%+ software margins at scale.</p>
+            <p className="text-sm text-neutral-500 leading-relaxed">Start with high-touch onboarding (services revenue). As the model learns each org, automation increases and margins converge to 70%+ at scale.</p>
           </div>
         </div>
       </FadeUp>
@@ -789,98 +914,117 @@ function Market() {
       <FadeUp>
         <Tag color="emerald">Market</Tag>
         <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white mb-2">
-          We don't compete for the SaaS budget.
-        </h2>
-        <h2 className="text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] mb-6">
-          <span className="text-emerald-400">We compete for the headcount budget.</span>
+          Not a SaaS seat. <span className="text-emerald-400">A coordination FTE — or lost revenue.</span>
         </h2>
       </FadeUp>
 
-      {/* ── Budget comparison ── */}
-      <FadeUp delay={0.08} className="mb-8">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6 md:gap-10 max-w-2xl">
-          <div className="p-5 rounded-xl border border-neutral-800/60 bg-neutral-950/60 text-center">
-            <p className="text-neutral-600 text-xs uppercase tracking-widest mb-2">SaaS seat</p>
-            <p className="text-3xl md:text-4xl font-bold text-neutral-600 line-through decoration-neutral-700">$12/mo</p>
+      {/* ── Budget framing ── */}
+      <FadeUp delay={0.08} className="mb-6">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8 max-w-xl">
+          <div className="p-4 rounded-xl border border-neutral-800/60 bg-neutral-950/60 text-center">
+            <p className="text-neutral-600 text-[10px] uppercase tracking-widest mb-1">SaaS seat</p>
+            <p className="text-2xl md:text-3xl font-bold text-neutral-600 line-through decoration-neutral-700">$12/mo</p>
           </div>
-          <ArrowRight className="w-6 h-6 text-emerald-500 shrink-0" />
-          <div className="p-5 rounded-xl border border-emerald-700/40 bg-emerald-950/15 ring-1 ring-emerald-500/20 text-center">
-            <p className="text-emerald-500 text-xs uppercase tracking-widest mb-2">Coordination FTE</p>
-            <p className="text-3xl md:text-4xl font-bold text-emerald-400">$180k+/yr</p>
+          <ArrowRight className="w-5 h-5 text-emerald-500 shrink-0" />
+          <div className="p-4 rounded-xl border border-emerald-700/40 bg-emerald-950/15 ring-1 ring-emerald-500/20 text-center">
+            <p className="text-emerald-500 text-[10px] uppercase tracking-widest mb-1">Coordination FTE or lost revenue</p>
+            <p className="text-2xl md:text-3xl font-bold text-emerald-400">$180k+/yr</p>
           </div>
         </div>
       </FadeUp>
 
-      {/* ── Main content ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 content-start">
-
-        {/* Left: ICP cards */}
+      {/* ── US vs EU markets ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 flex-1 content-start">
+        {/* US Market */}
         <FadeUp delay={0.12}>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { label: "ICP", icon: Target, line: "Founder / COO / Head of Delivery", sub: "50-300 people, multi-client" },
-              { label: "Beachhead", icon: Radio, line: "~50k US agencies", sub: "Software houses & consultancies" },
-              { label: "ACV", icon: Zap, line: "$24k - $150k", sub: "vs headcount, not SaaS" },
-              { label: "Verticals", icon: Route, line: "Agencies · SW houses", sub: "Consultancies · Managed svc" },
-            ].map((c, i) => {
-              const Icon = c.icon;
-              return (
-                <motion.div key={i}
-                  initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.45, delay: 0.08 * i }} viewport={{ once: false, amount: 0.3 }}
-                  className="rounded-xl border border-neutral-800/60 bg-neutral-950/60 p-4 md:p-5 flex flex-col gap-2 hover:border-emerald-800/40 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <Icon className="w-4 h-4 text-emerald-500/70" />
-                    <span className="text-[0.65rem] text-emerald-500/80 uppercase tracking-[0.14em] font-bold">{c.label}</span>
+          <div className="rounded-2xl border border-emerald-800/30 bg-emerald-950/10 p-5 h-full flex flex-col">
+            <p className="text-xs text-emerald-500/80 uppercase tracking-[0.14em] font-bold mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500/60" />United States
+            </p>
+            <div className="space-y-4 flex-1">
+              {[
+                { label: "Beachhead", value: "$1.2B", sub: "~50k agencies, SW houses, consultancies" },
+                { label: "5-Year SAM", value: "$12-15B", sub: "Expanding to all professional services" },
+                { label: "Platform TAM", value: "$100B+", sub: "Full coordination headcount budget" },
+              ].map((m, i) => (
+                <motion.div key={i} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.15 + i * 0.08 }} viewport={{ once: false, amount: 0.3 }}>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm font-medium text-neutral-400">{m.label}</span>
+                    <span className="text-xl md:text-2xl font-bold text-emerald-400">{m.value}</span>
                   </div>
-                  <p className="text-base font-semibold text-white leading-snug">{c.line}</p>
-                  <p className="text-sm text-neutral-500 leading-snug">{c.sub}</p>
+                  <p className="text-xs text-neutral-600 mt-0.5">{m.sub}</p>
                 </motion.div>
-              );
-            })}
-          </div>
-        </FadeUp>
-
-        {/* Right: TAM + penetration */}
-        <FadeUp delay={0.2}>
-          <div className="space-y-5">
-            {[
-              { label: "Beachhead (US)", value: "$1.2B", pct: 12, color: "bg-emerald-600", text: "text-emerald-400" },
-              { label: "5-Year SAM", value: "$12-15B", pct: 40, color: "bg-emerald-500", text: "text-emerald-300" },
-              { label: "Platform TAM", value: "$100B+", pct: 100, color: "bg-emerald-400", text: "text-emerald-300", highlight: true },
-            ].map((m, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: i * 0.12 }} viewport={{ once: false, amount: 0.4 }}>
-                <div className="flex justify-between items-baseline mb-2">
-                  <span className={`text-lg font-semibold ${m.highlight ? "text-emerald-400" : "text-white"}`}>{m.label}</span>
-                  <span className={`text-2xl md:text-3xl font-bold ${m.text}`}>{m.value}</span>
-                </div>
-                <div className="h-4 rounded-full bg-neutral-900 overflow-hidden">
-                  <motion.div initial={{ width: 0 }} whileInView={{ width: `${m.pct}%` }}
-                    transition={{ duration: 1.2, delay: 0.3 + i * 0.15, ease: [0.22, 1, 0.36, 1] }} viewport={{ once: false, amount: 0.5 }}
-                    className={`h-full rounded-full ${m.color} opacity-70`} />
-                </div>
-                {m.highlight && (
-                  <p className="text-xs text-emerald-500/60 mt-1.5">Coordination headcount budget across all professional services</p>
-                )}
-              </motion.div>
-            ))}
-
-            <div className="p-5 rounded-xl border border-emerald-900/30 bg-emerald-950/20">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <span className="text-3xl md:text-4xl font-bold text-emerald-400">$12M</span>
-                  <p className="text-sm text-neutral-500 mt-1">ARR at 1% beachhead</p>
-                </div>
-                <div>
-                  <span className="text-3xl md:text-4xl font-bold text-emerald-300">$60M</span>
-                  <p className="text-sm text-neutral-500 mt-1">ARR at 5% penetration</p>
-                </div>
+              ))}
+            </div>
+            <div className="mt-4 pt-3 border-t border-emerald-800/20 grid grid-cols-2 gap-3">
+              <div>
+                <span className="text-2xl font-bold text-emerald-400">$12M</span>
+                <p className="text-xs text-neutral-600">ARR at 1% beachhead</p>
+              </div>
+              <div>
+                <span className="text-2xl font-bold text-emerald-300">$60M</span>
+                <p className="text-xs text-neutral-600">ARR at 5% penetration</p>
               </div>
             </div>
           </div>
         </FadeUp>
+
+        {/* EU Market */}
+        <FadeUp delay={0.2}>
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5 h-full flex flex-col">
+            <p className="text-xs text-sky-500/80 uppercase tracking-[0.14em] font-bold mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-sky-500/60" />European Union
+            </p>
+            <div className="space-y-4 flex-1">
+              {[
+                { label: "Beachhead", value: "$0.8B", sub: "~35k agencies across DE, NL, Nordics, UK, PL" },
+                { label: "5-Year SAM", value: "$8-10B", sub: "Professional services, compliance-driven orgs" },
+                { label: "Platform TAM", value: "$70B+", sub: "EU coordination + data sovereignty premium" },
+              ].map((m, i) => (
+                <motion.div key={i} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.2 + i * 0.08 }} viewport={{ once: false, amount: 0.3 }}>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm font-medium text-neutral-400">{m.label}</span>
+                    <span className="text-xl md:text-2xl font-bold text-sky-400">{m.value}</span>
+                  </div>
+                  <p className="text-xs text-neutral-600 mt-0.5">{m.sub}</p>
+                </motion.div>
+              ))}
+            </div>
+            <div className="mt-4 pt-3 border-t border-neutral-800/60">
+              <p className="text-xs text-neutral-500 leading-relaxed">Self-hosted open-source model removes data sovereignty objections. GDPR-first architecture is a competitive advantage vs US-only vendors.</p>
+            </div>
+          </div>
+        </FadeUp>
       </div>
+
+      {/* ── ICP strip at bottom ── */}
+      <FadeUp delay={0.3}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
+          {[
+            { label: "ICP", icon: Target, line: "Founder / COO / Head of Delivery", sub: "50-300 people" },
+            { label: "Beachhead", icon: Radio, line: "~85k agencies globally", sub: "US + EU combined" },
+            { label: "ACV", icon: Zap, line: "$24k - $150k", sub: "vs headcount, not SaaS" },
+            { label: "Verticals", icon: Route, line: "Agencies · SW houses", sub: "Consultancies · Managed svc" },
+          ].map((c, i) => {
+            const Icon = c.icon;
+            return (
+              <motion.div key={i}
+                initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: 0.35 + 0.06 * i }} viewport={{ once: false, amount: 0.3 }}
+                className="rounded-lg border border-neutral-800/60 bg-neutral-950/60 p-3 flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
+                  <Icon className="w-3 h-3 text-emerald-500/70" />
+                  <span className="text-[9px] text-emerald-500/80 uppercase tracking-[0.12em] font-bold">{c.label}</span>
+                </div>
+                <p className="text-sm font-semibold text-white leading-snug">{c.line}</p>
+                <p className="text-xs text-neutral-600">{c.sub}</p>
+              </motion.div>
+            );
+          })}
+        </div>
+      </FadeUp>
     </S>
   );
 }
