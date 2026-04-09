@@ -352,24 +352,28 @@ function Founders() {
       initials: "RW",
       name: "Rafal Wyderka",
       role: "CEO / Product",
+      bio: "Product leader obsessed with removing coordination overhead from expert work.",
       photo: "/photos/rafal.jpg",
       color: "from-indigo-500 to-violet-500",
       logos: [<LogoRemitly key="r" />, <LogoMARS key="m" />, <LogoKPMG key="k" />, <LogoBCG key="b" />],
       highlights: [
         "Lived the problem: coordination collapsed across 5 time zones at Remitly",
         "Shipped AI-first products from zero (ppmlx, Halpy.me)",
+        "10+ years leading product & delivery at KPMG, BCG, MARS, Remitly",
       ],
     },
     {
       initials: "KA",
       name: "Konrad Alfaro",
       role: "CTO / Engineering",
+      bio: "Infrastructure engineer who builds systems that scale to millions of users.",
       photo: "/photos/konrad.jpg",
       color: "from-emerald-500 to-sky-500",
       logos: [<LogoPrintify key="p" />, <Logo8lines key="8" />],
       highlights: [
         "Scaled infra at Printify (millions of merchants)",
         "Founded 8lines: AI-driven agency shipping real systems",
+        "Deep expertise in distributed systems, real-time data, and ML pipelines",
       ],
     },
   ];
@@ -384,7 +388,7 @@ function Founders() {
           We lived the problem.<br /><span className="text-indigo-400">Now we're building the models to fix it.</span>
         </h2>
       </FadeUp>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 max-w-4xl mx-auto mb-6 flex-1 content-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 max-w-4xl mx-auto mt-6 mb-6 flex-1 content-start">
         {founders.map((f, i) => (
           <FadeUp key={i} delay={i * 0.1}>
             <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5 md:p-7 h-full flex flex-col">
@@ -401,6 +405,7 @@ function Founders() {
                   <p className="text-sm text-neutral-500">{f.role}</p>
                 </div>
               </div>
+              <p className="text-sm text-neutral-400 mb-4 leading-relaxed">{f.bio}</p>
               <div className="flex items-center gap-4 mb-4 pb-4 border-b border-neutral-800/60 flex-wrap">
                 {f.logos}
               </div>
@@ -441,7 +446,7 @@ function CoordProblem() {
           Knowledge workers spend more time moving information than executing decisions. Every tool adds a channel. Every channel adds overhead. The bottleneck is always a person.
         </p>
       </FadeUp>
-      <FadeUp delay={0.15} className="flex-1 flex items-center -ml-8 md:-ml-14">
+      <FadeUp delay={0.15} className="flex-1 flex items-center -ml-8 md:-ml-14 -my-10 md:-my-16">
         <img
           src="/coordination-tax.svg"
           alt="Coordination spaghetti: sources flow through a human bottleneck to delayed outcomes"
@@ -509,27 +514,34 @@ function LostRevenue() {
 /* ══ SLIDE 4 - WHAT OPENPING DOES ══ */
 function WhatWeDo() {
   const steps = [
-    { icon: <Radio className="w-6 h-6" />, title: "Listens", desc: "Connects to all communication - Slack, Teams, email, docs, tickets. Reads everything in real-time.", color: "text-indigo-400", border: "border-indigo-800/40", bg: "bg-indigo-950/15" },
-    { icon: <Brain className="w-6 h-6" />, title: "Understands", desc: "Extracts decisions, commitments, blockers. Classifies signals with actor and confidence.", color: "text-violet-400", border: "border-violet-800/40", bg: "bg-violet-950/15" },
-    { icon: <Route className="w-6 h-6" />, title: "Routes", desc: "Missing context? One precise question to the right person. No thread pollution, no group pings.", color: "text-purple-400", border: "border-purple-800/40", bg: "bg-purple-950/15" },
-    { icon: <Eye className="w-6 h-6" />, title: "Surfaces", desc: "Delivery leads see only what needs human judgment. Everything else is handled.", color: "text-indigo-400", border: "border-indigo-800/40", bg: "bg-indigo-950/15" },
-    { icon: <CheckCircle className="w-6 h-6" />, title: "Closes", desc: "Commitments tracked to resolution. Slips surfaced before the client notices.", color: "text-emerald-400", border: "border-emerald-800/40", bg: "bg-emerald-950/15" },
+    { icon: <Radio className="w-6 h-6" />, title: "Listens", desc: "Connects to all communication - in real-time.", color: "text-indigo-400", border: "border-indigo-800/40", bg: "bg-indigo-950/15" },
+    { icon: <Brain className="w-6 h-6" />, title: "Understands", desc: "Classifies signals with actor and confidence.", color: "text-violet-400", border: "border-violet-800/40", bg: "bg-violet-950/15" },
+    { icon: <Route className="w-6 h-6" />, title: "Routes", desc: "No thread pollution, no group pings.", color: "text-purple-400", border: "border-purple-800/40", bg: "bg-purple-950/15" },
+    { icon: <Eye className="w-6 h-6" />, title: "Surfaces", desc: "Escalates only what needs human judgment.", color: "text-indigo-400", border: "border-indigo-800/40", bg: "bg-indigo-950/15" },
+    { icon: <CheckCircle className="w-6 h-6" />, title: "Acts", desc: "Acts autonomously.", color: "text-emerald-400", border: "border-emerald-800/40", bg: "bg-emerald-950/15" },
   ];
   return (
     <S id="s4" idx={4} wide>
       <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10">
         <div className="absolute top-[20%] right-[-10%] w-[700px] h-[700px] bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.05),transparent_60%)]" />
       </div>
-      <FadeUp className="mb-8">
+      <FadeUp>
         <Tag color="indigo">What OpenPing Does</Tag>
         <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white">
-          From noise to decisions.<br /><span className="text-indigo-400">Five steps, fully automated.</span>
+          From noise to decisions and results.<br /><span className="text-indigo-400">Fully automated.</span>
         </h2>
       </FadeUp>
-      <div className="flex-1 flex flex-col justify-center">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-2">
+      <FadeUp delay={0.1} className="-my-2 md:-my-4">
+        <img
+          src="/what-openping-does.svg"
+          alt="OpenPing: Users, Workspace, and Engine connected in real-time"
+          className="w-full max-w-2xl h-auto deck-svg-dark"
+        />
+      </FadeUp>
+      <div className="flex-1 flex items-end">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-2 w-full">
           {steps.map((step, i) => (
-            <FadeUp key={i} delay={i * 0.08}>
+            <FadeUp key={i} delay={0.15 + i * 0.08}>
               <div className={`rounded-2xl border ${step.border} ${step.bg} p-5 md:p-4 h-full flex flex-col items-center md:items-center text-center relative`}>
                 {i < steps.length - 1 && (
                   <div className="hidden md:block absolute right-[-12px] top-1/2 -translate-y-1/2 z-10">
@@ -552,43 +564,67 @@ function WhatWeDo() {
 
 /* ══ SLIDE 5 - HOW WE DELIVER ══ */
 function HowWeDeliver() {
-  const engines = [
-    { title: "Temporal Decision Graph", badge: "BUILT", badgeColor: "text-emerald-400", accent: "border-emerald-700/50 bg-emerald-950/10",
-      points: ["Directed temporal hypergraph of decision units", "Causal, dependency, precedence edges over time", "Replay and attribution built-in"] },
-    { title: "Decision Control System", badge: "BUILT", badgeColor: "text-emerald-400", accent: "border-emerald-700/50 bg-emerald-950/10",
-      points: ["Four primitives: Reply, Rewind, Improve, Train", "Patch any decision, re-evaluate downstream", "Outcomes feed labeled training data"] },
-    { title: "On-the-Fly Embedding Pipeline", badge: "BUILT", badgeColor: "text-emerald-400", accent: "border-emerald-700/50 bg-emerald-950/10",
-      points: ["All inputs embedded continuously, under 80ms p95", "Hybrid dense/sparse retrieval, per-org namespace", "Streaming incremental - no batch reprocessing"] },
-    { title: "Open Data Model", badge: "BUILT", badgeColor: "text-emerald-400", accent: "border-emerald-700/50 bg-emerald-950/10",
-      points: ["Open schema, no storage-layer lock-in", "Full export, external query, third-party integration", "Air-gapped deployments supported"] },
-    { title: "Offline-First Mobile App", badge: "IN PROGRESS", badgeColor: "text-amber-400", accent: "border-amber-700/50 bg-amber-950/10",
-      points: ["Native mobile with full offline support via ppmlx", "Personal temporal context graphs built on-device", "CRDT sync - works with intermittent connectivity"] },
-    { title: "Pre-Formalization Signal Layer", badge: "IN PROGRESS", badgeColor: "text-amber-400", accent: "border-amber-700/50 bg-amber-950/10",
-      points: ["Captures signals before formalization occurs", "Distinguishes commitment, intent, blocker, complaint", "Per-org classifier fine-tuning"] },
-  ];
   return (
     <S id="s5" idx={5} wide>
       <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10">
         <div className="absolute bottom-[-10%] left-[10%] w-[600px] h-[600px] bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.06),transparent_60%)]" />
       </div>
-      <FadeUp className="mb-6">
-        <Tag color="indigo">How We Deliver</Tag>
-        <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white">
-          Purpose-built infrastructure<br /><span className="text-indigo-400">for coordination intelligence.</span>
+      <FadeUp>
+        <Tag color="indigo">The Moat</Tag>
+        <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white mb-2">
+          Every decision makes the system<br /><span className="text-indigo-400">harder to replace.</span>
         </h2>
+        <p className="text-neutral-400 text-base leading-relaxed max-w-5xl mb-6">
+          Open-source interface gets adoption. Proprietary intelligence layers get built with every customer&apos;s data. The moat compounds&nbsp;&mdash;&nbsp;it can&apos;t be forked.
+        </p>
       </FadeUp>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 flex-1 content-start">
-        {engines.map((e, i) => (
-          <FadeUp key={i} delay={i * 0.05}>
-            <div className={`rounded-2xl border p-4 md:p-5 h-full ${e.accent}`}>
+
+      {/* ── Foundation layer (moat) ── */}
+      <FadeUp delay={0.1} className="mb-4">
+        <div className="rounded-2xl border border-indigo-600/30 bg-indigo-950/15 ring-1 ring-indigo-500/20 p-6 md:p-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.1),transparent_70%)]" />
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldCheck className="w-5 h-5 text-indigo-400" />
+            <span className="text-xs text-indigo-400 uppercase tracking-[0.16em] font-bold">Unforkable Data Moat</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Proprietary Decision Graph</h3>
+              <ul className="text-sm text-neutral-400 leading-relaxed space-y-1.5">
+                <li className="flex gap-2 items-start"><span className="text-indigo-500 shrink-0 mt-0.5">&bull;</span>Every decision, commitment, and outcome mapped in a temporal graph unique to each org</li>
+                <li className="flex gap-2 items-start"><span className="text-indigo-500 shrink-0 mt-0.5">&bull;</span>More data = better predictions. Competitors start from zero</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Proactive Signal Layer</h3>
+              <ul className="text-sm text-neutral-400 leading-relaxed space-y-1.5">
+                <li className="flex gap-2 items-start"><span className="text-indigo-500 shrink-0 mt-0.5">&bull;</span>Captures intent, blockers, and commitments before they&apos;re formally stated</li>
+                <li className="flex gap-2 items-start"><span className="text-indigo-500 shrink-0 mt-0.5">&bull;</span>Per-org classifiers fine-tune continuously. This data doesn&apos;t exist anywhere else</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </FadeUp>
+
+      {/* ── Execution layers ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 flex-1 content-start">
+        {[
+          { title: "Closed-Loop Learning", points: ["Every human decision feeds training data", "System improves with usage", "Outcomes validate predictions automatically"], badge: "RESEARCH" },
+          { title: "Real-Time Context Engine", points: ["All inputs embedded under 80ms", "Hybrid retrieval, per-org namespace", "Streaming incremental - no batch reprocessing"], badge: "BUILT" },
+          { title: "Open Data Model", points: ["Open schema, full export, no lock-in", "Customers own data - trust drives adoption", "Air-gapped deployments supported"], badge: "BUILT" },
+          { title: "Offline-First Mobile", points: ["Native app with on-device inference via ppmlx", "Personal temporal context graphs", "CRDT sync for intermittent connectivity"], badge: "BUILDING" },
+        ].map((e, i) => (
+          <FadeUp key={i} delay={0.15 + i * 0.06}>
+            <div className="rounded-xl border border-neutral-800/60 bg-neutral-950/60 p-5 h-full flex flex-col">
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-sm font-semibold text-white pr-2">{e.title}</h3>
-                <span className={`text-[9px] font-bold tracking-widest border border-current rounded-full px-2 py-0.5 shrink-0 opacity-60 ${e.badgeColor}`}>{e.badge}</span>
+                <h3 className="text-sm font-semibold text-white">{e.title}</h3>
+                <span className={`text-[8px] font-bold tracking-widest border border-current rounded-full px-1.5 py-0.5 shrink-0 ${e.badge === "BUILT" ? "text-emerald-500 opacity-60" : e.badge === "RESEARCH" ? "text-violet-500 opacity-60" : "text-amber-500 opacity-60"}`}>{e.badge}</span>
               </div>
-              <ul className="space-y-1.5">
+              <ul className="text-xs text-neutral-500 leading-relaxed space-y-1.5">
                 {e.points.map((p, j) => (
-                  <li key={j} className="text-sm text-neutral-500 flex gap-2 leading-relaxed">
-                    <span className="text-neutral-700 shrink-0 mt-0.5">-</span>{p}
+                  <li key={j} className="flex gap-2 items-start">
+                    <span className="text-indigo-500/60 shrink-0 mt-px">&bull;</span>
+                    <span>{p}</span>
                   </li>
                 ))}
               </ul>
@@ -761,26 +797,26 @@ function Market() {
       </FadeUp>
 
       {/* ── Budget comparison ── */}
-      <FadeUp delay={0.08} className="mb-6">
-        <div className="flex items-center gap-4 md:gap-8">
-          <div className="flex-1 p-4 rounded-xl border border-neutral-800/60 bg-neutral-950/60 text-center">
-            <p className="text-neutral-600 text-xs uppercase tracking-widest mb-1">SaaS seat</p>
-            <p className="text-2xl md:text-3xl font-bold text-neutral-600 line-through decoration-neutral-700">$12/mo</p>
+      <FadeUp delay={0.08} className="mb-8">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6 md:gap-10 max-w-2xl">
+          <div className="p-5 rounded-xl border border-neutral-800/60 bg-neutral-950/60 text-center">
+            <p className="text-neutral-600 text-xs uppercase tracking-widest mb-2">SaaS seat</p>
+            <p className="text-3xl md:text-4xl font-bold text-neutral-600 line-through decoration-neutral-700">$12/mo</p>
           </div>
           <ArrowRight className="w-6 h-6 text-emerald-500 shrink-0" />
-          <div className="flex-1 p-4 rounded-xl border border-emerald-700/40 bg-emerald-950/15 ring-1 ring-emerald-500/20 text-center">
-            <p className="text-emerald-500 text-xs uppercase tracking-widest mb-1">Coordination FTE</p>
-            <p className="text-2xl md:text-3xl font-bold text-emerald-400">$180k+/yr</p>
+          <div className="p-5 rounded-xl border border-emerald-700/40 bg-emerald-950/15 ring-1 ring-emerald-500/20 text-center">
+            <p className="text-emerald-500 text-xs uppercase tracking-widest mb-2">Coordination FTE</p>
+            <p className="text-3xl md:text-4xl font-bold text-emerald-400">$180k+/yr</p>
           </div>
         </div>
       </FadeUp>
 
       {/* ── Main content ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-6 flex-1 content-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 content-start">
 
         {/* Left: ICP cards */}
         <FadeUp delay={0.12}>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             {[
               { label: "ICP", icon: Target, line: "Founder / COO / Head of Delivery", sub: "50-300 people, multi-client" },
               { label: "Beachhead", icon: Radio, line: "~50k US agencies", sub: "Software houses & consultancies" },
@@ -792,13 +828,13 @@ function Market() {
                 <motion.div key={i}
                   initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: 0.08 * i }} viewport={{ once: false, amount: 0.3 }}
-                  className="rounded-xl border border-neutral-800/60 bg-neutral-950/60 p-3.5 flex flex-col gap-1.5 hover:border-emerald-800/40 transition-colors">
+                  className="rounded-xl border border-neutral-800/60 bg-neutral-950/60 p-4 md:p-5 flex flex-col gap-2 hover:border-emerald-800/40 transition-colors">
                   <div className="flex items-center gap-2">
-                    <Icon className="w-3.5 h-3.5 text-emerald-500/70" />
-                    <span className="text-[0.6rem] text-emerald-500/80 uppercase tracking-[0.16em] font-bold">{c.label}</span>
+                    <Icon className="w-4 h-4 text-emerald-500/70" />
+                    <span className="text-[0.65rem] text-emerald-500/80 uppercase tracking-[0.14em] font-bold">{c.label}</span>
                   </div>
-                  <p className="text-sm font-semibold text-white leading-snug">{c.line}</p>
-                  <p className="text-xs text-neutral-500 leading-snug">{c.sub}</p>
+                  <p className="text-base font-semibold text-white leading-snug">{c.line}</p>
+                  <p className="text-sm text-neutral-500 leading-snug">{c.sub}</p>
                 </motion.div>
               );
             })}
@@ -807,7 +843,7 @@ function Market() {
 
         {/* Right: TAM + penetration */}
         <FadeUp delay={0.2}>
-          <div className="space-y-4">
+          <div className="space-y-5">
             {[
               { label: "Beachhead (US)", value: "$1.2B", pct: 12, color: "bg-emerald-600", text: "text-emerald-400" },
               { label: "5-Year SAM", value: "$12-15B", pct: 40, color: "bg-emerald-500", text: "text-emerald-300" },
@@ -815,9 +851,9 @@ function Market() {
             ].map((m, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: i * 0.12 }} viewport={{ once: false, amount: 0.4 }}>
-                <div className="flex justify-between items-baseline mb-1.5">
-                  <span className={`text-base font-semibold ${m.highlight ? "text-emerald-400" : "text-white"}`}>{m.label}</span>
-                  <span className={`text-xl md:text-2xl font-bold ${m.text}`}>{m.value}</span>
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className={`text-lg font-semibold ${m.highlight ? "text-emerald-400" : "text-white"}`}>{m.label}</span>
+                  <span className={`text-2xl md:text-3xl font-bold ${m.text}`}>{m.value}</span>
                 </div>
                 <div className="h-4 rounded-full bg-neutral-900 overflow-hidden">
                   <motion.div initial={{ width: 0 }} whileInView={{ width: `${m.pct}%` }}
@@ -825,20 +861,20 @@ function Market() {
                     className={`h-full rounded-full ${m.color} opacity-70`} />
                 </div>
                 {m.highlight && (
-                  <p className="text-xs text-emerald-500/60 mt-1">Coordination headcount budget across all professional services</p>
+                  <p className="text-xs text-emerald-500/60 mt-1.5">Coordination headcount budget across all professional services</p>
                 )}
               </motion.div>
             ))}
 
-            <div className="p-4 rounded-xl border border-emerald-900/30 bg-emerald-950/20">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-5 rounded-xl border border-emerald-900/30 bg-emerald-950/20">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <span className="text-2xl md:text-3xl font-bold text-emerald-400">$12M</span>
-                  <p className="text-xs text-neutral-500 mt-0.5">ARR at 1% beachhead</p>
+                  <span className="text-3xl md:text-4xl font-bold text-emerald-400">$12M</span>
+                  <p className="text-sm text-neutral-500 mt-1">ARR at 1% beachhead</p>
                 </div>
                 <div>
-                  <span className="text-2xl md:text-3xl font-bold text-emerald-300">$60M</span>
-                  <p className="text-xs text-neutral-500 mt-0.5">ARR at 5% penetration</p>
+                  <span className="text-3xl md:text-4xl font-bold text-emerald-300">$60M</span>
+                  <p className="text-sm text-neutral-500 mt-1">ARR at 5% penetration</p>
                 </div>
               </div>
             </div>

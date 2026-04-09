@@ -1,0 +1,242 @@
+<svg viewBox="0 0 1000 600" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: transparent;">
+    <style>
+        /* Import Outfit font */
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&amp;display=swap');
+
+        /* SVG Animations and Styles */
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+
+        /* Fainter ping animation to reduce opacity significantly */
+        @keyframes pingFloat {
+            0% { opacity: 0.05; transform: translate(0, 10px); }
+            15% { opacity: 0.15; transform: translate(0, 4px); }
+            35% { opacity: 0.25; transform: translate(0, 0px); }
+            55% { opacity: 0.35; transform: translate(0, -3px); }
+            100% { opacity: 0.45; transform: translate(0, -5px); }
+        }
+
+        /* Core Node Animations */
+        .node-core {
+            animation: pulse 1.2s infinite alternate ease-in-out;
+        }
+        .node-glow {
+            animation: pulse 1.2s infinite alternate ease-in-out;
+            animation-delay: 0.3s;
+        }
+
+        /* Origins for specific nodes */
+        .org-u { transform-origin: 500px 160px; }
+        .org-w { transform-origin: 250px 420px; }
+        .org-e { transform-origin: 750px 420px; }
+
+        /* Node Colors */
+        .fill-u { fill: #6366f1; }
+        .fill-u-glow { fill: rgba(99, 102, 241, 0.15); }
+        .fill-w { fill: #818cf8; }
+        .fill-w-glow { fill: rgba(129, 140, 248, 0.15); }
+        .fill-e { fill: #a78bfa; }
+        .fill-e-glow { fill: rgba(167, 139, 250, 0.15); }
+
+        /* Stream Lines */
+        .stream-line {
+            stroke-width: 1.5;
+            opacity: 0.4;
+            fill: none;
+            stroke-dasharray: 4 4;
+        }
+        .stream-u { stroke: #6366f1; }
+        .stream-w { stroke: #818cf8; }
+        .stream-e { stroke: #a78bfa; }
+
+        /* Ping Cloud Styles - Super close to Engine */
+        .ping {
+            font-size: 11px;
+            fill: #6366f1;
+            opacity: 0;
+            animation-name: pingFloat;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+            letter-spacing: 0.2px;
+            font-weight: 400;
+        }
+        .ping.alert { fill: #A78BFA; font-weight: 500; }
+        .ping.small { font-size: 9px; fill: #4338ca; }
+
+        /* Label Styles */
+        .label-title-center {
+            font-size: 16px;
+            font-weight: 700;
+            fill: #fff;
+        }
+
+        /* Path label with default clean fonts and no stroke */
+        .path-label {
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+    </style>
+
+    <defs>
+        <!-- Glow Filters -->
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="8" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+        <filter id="glow-strong" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="15" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+
+        <!-- Singular Connecting Paths for Animations -->
+        <path id="uw" d="M 500 160 Q 300 240 250 420" />
+        <path id="wu" d="M 250 420 Q 450 340 500 160" />
+
+        <path id="ue" d="M 500 160 Q 700 240 750 420" />
+        <path id="eu" d="M 750 420 Q 550 340 500 160" />
+
+        <path id="we" d="M 250 420 Q 500 370 750 420" />
+        <path id="ew" d="M 750 420 Q 500 470 250 420" />
+
+        <!-- Reversed Text Paths so labels always read upright (Left to Right) -->
+        <path id="text-uw" d="M 250 420 Q 300 240 500 160" />
+        <path id="text-eu" d="M 500 160 Q 550 340 750 420" />
+        <path id="text-ew" d="M 250 420 Q 500 470 750 420" />
+    </defs>
+
+    <!-- Platform Outline -->
+    <rect x="150" y="360" width="700" height="140" rx="40" fill="rgba(99, 102, 241, 0.03)" stroke="rgba(99, 102, 241, 0.2)" stroke-width="1" stroke-dasharray="6 6" />
+    <text x="500" y="480" text-anchor="middle" fill="rgba(99, 102, 241, 0.5)" font-size="14" font-weight="700" letter-spacing="4">OPENPING PLATFORM</text>
+
+    <!-- Draw Stream Lines -->
+    <g id="spaghetti-streams">
+        <use href="#uw" class="stream-line stream-u" />
+        <use href="#wu" class="stream-line stream-w" />
+
+        <use href="#ue" class="stream-line stream-u" />
+        <use href="#eu" class="stream-line stream-e" />
+
+        <use href="#we" class="stream-line stream-w" />
+        <use href="#ew" class="stream-line stream-e" />
+    </g>
+
+    <!-- PATH LABELS (On the paths directly, matching colors, upright rendering) -->
+    <g id="path-labels">
+        <!-- U <-> W -->
+        <text class="path-label" fill="#6366f1" dy="-5"><textPath href="#text-uw" startOffset="50%" text-anchor="middle">direct messages</textPath></text>
+        <text class="path-label" fill="#818cf8" dy="-5"><textPath href="#wu" startOffset="50%" text-anchor="middle">group chats</textPath></text>
+
+        <!-- U <-> E -->
+        <text class="path-label" fill="#6366f1" dy="-5"><textPath href="#ue" startOffset="50%" text-anchor="middle">delegate jobs</textPath></text>
+        <text class="path-label" fill="#a78bfa" dy="-5"><textPath href="#text-eu" startOffset="50%" text-anchor="middle">ask for decisions</textPath></text>
+
+        <!-- W <-> E -->
+        <text class="path-label" fill="#818cf8" dy="-5"><textPath href="#we" startOffset="50%" text-anchor="middle">temporal context</textPath></text>
+        <text class="path-label" fill="#a78bfa" dy="-5"><textPath href="#text-ew" startOffset="50%" text-anchor="middle">autonomous actions</textPath></text>
+    </g>
+
+    <!-- Animated Data Packets -->
+
+    <!-- Origin: Users (Green Particles - SLOWED DOWN) -->
+    <g fill="#6366f1" filter="url(#glow)">
+        <circle r="3"><animateMotion dur="3s" repeatCount="indefinite"><mpath href="#uw"/></animateMotion></circle>
+        <circle r="2" opacity="0.7"><animateMotion dur="3s" begin="1s" repeatCount="indefinite"><mpath href="#uw"/></animateMotion></circle>
+        <circle r="2.5" opacity="0.9"><animateMotion dur="3s" begin="1.2s" repeatCount="indefinite"><mpath href="#uw"/></animateMotion></circle>
+
+        <circle r="3"><animateMotion dur="3s" repeatCount="indefinite"><mpath href="#ue"/></animateMotion></circle>
+        <circle r="2" opacity="0.7"><animateMotion dur="6s" begin="1s" repeatCount="indefinite"><mpath href="#ue"/></animateMotion></circle>
+        <circle r="2.5" opacity="0.9"><animateMotion dur="6s" begin="4s" repeatCount="indefinite"><mpath href="#ue"/></animateMotion></circle>
+    </g>
+
+    <!-- Origin: Workspace (Blue Particles - SLOWED DOWN relative to Users, standard elsewhere) -->
+    <g fill="#818cf8" filter="url(#glow)">
+        <!-- To Users -->
+        <circle r="2" opacity="0.7"><animateMotion dur="3s" begin="1s" repeatCount="indefinite"><mpath href="#wu"/></animateMotion></circle>
+        <circle r="2.5" opacity="0.9"><animateMotion dur="3s" begin="1.2s" repeatCount="indefinite"><mpath href="#wu"/></animateMotion></circle>
+
+        <!-- To Engine (Kept fairly fast) -->
+        <circle r="3"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#we"/></animateMotion></circle>
+        <circle r="2" opacity="0.7"><animateMotion dur="0.3s" begin="0.5s" repeatCount="indefinite"><mpath href="#we"/></animateMotion></circle>
+        <circle r="2.1" opacity="0.7"><animateMotion dur="0.3s" begin="0.4s" repeatCount="indefinite"><mpath href="#we"/></animateMotion></circle>
+        <circle r="2.5" opacity="0.9"><animateMotion dur="0.5s" begin="1.0s" repeatCount="indefinite"><mpath href="#we"/></animateMotion></circle>
+    </g>
+
+    <!-- Origin: Engine (Purple Particles - SLOWED DOWN relative to Users, standard elsewhere) -->
+    <g fill="#a78bfa" filter="url(#glow)">
+        <!-- To Users -->
+        <circle r="2" opacity="0.7"><animateMotion dur="6s" begin="1s" repeatCount="indefinite"><mpath href="#eu"/></animateMotion></circle>
+        <circle r="2.5" opacity="0.9"><animateMotion dur="6s" begin="4s" repeatCount="indefinite"><mpath href="#eu"/></animateMotion></circle>
+
+        <!-- To Workspace (Kept fairly fast) -->
+        <circle r="3"><animateMotion dur="3s" repeatCount="indefinite"><mpath href="#ew"/></animateMotion></circle>
+        <circle r="2" opacity="0.7"><animateMotion dur="1s" begin="0.5s" repeatCount="indefinite"><mpath href="#ew"/></animateMotion></circle>
+        <circle r="2.5" opacity="0.9"><animateMotion dur="2s" begin="1.0s" repeatCount="indefinite"><mpath href="#ew"/></animateMotion></circle>
+    </g>
+
+    <!-- CHAOTIC INFORMATION CLOUDS (Clustered tightly around Engine: 750, 420) -->
+    <g id="ping-clouds">
+        <text x="750" y="360" text-anchor="middle" class="ping" style="animation-delay: 1.3s; animation-duration: 2.8s;">Quick sync?</text>
+        <text x="780" y="375" text-anchor="start" class="ping small" style="animation-delay: 0.4s; animation-duration: 2.5s;">Status check</text>
+        <text x="795" y="400" text-anchor="start" class="ping alert" style="animation-delay: 0.1s; animation-duration: 2.2s;">Jira ping</text>
+        <text x="800" y="435" text-anchor="start" class="ping" style="animation-delay: 1.0s; animation-duration: 2.8s;">Client slack ping</text>
+        <text x="785" y="465" text-anchor="start" class="ping small" style="animation-delay: 1.8s; animation-duration: 3.0s;">Where are we on X?</text>
+
+        <text x="750" y="485" text-anchor="middle" class="ping" style="animation-delay: 0.3s; animation-duration: 2.3s;">GitHub ping</text>
+        <text x="715" y="465" text-anchor="end" class="ping" style="animation-delay: 0.2s; animation-duration: 2.4s;">Thread reply</text>
+        <text x="700" y="435" text-anchor="end" class="ping" style="animation-delay: 0.5s; animation-duration: 2.5s;">Trello ping</text>
+        <text x="705" y="400" text-anchor="end" class="ping small" style="animation-delay: 1.5s; animation-duration: 3.1s;">AdSense ping</text>
+        <text x="720" y="375" text-anchor="end" class="ping alert" style="animation-delay: 1.1s; animation-duration: 2.2s;">@mention</text>
+
+        <!-- Secondary tight cluster layer -->
+        <text x="730" y="390" text-anchor="end" class="ping alert" style="animation-delay: 0.6s; animation-duration: 2.3s;">Approval needed</text>
+        <text x="770" y="415" text-anchor="start" class="ping" style="animation-delay: 0.9s; animation-duration: 2.7s;">Decline</text>
+        <text x="725" y="425" text-anchor="end" class="ping" style="animation-delay: 0.7s; animation-duration: 2.7s;">Direct message</text>
+        <text x="740" y="445" text-anchor="end" class="ping small" style="animation-delay: 0.8s; animation-duration: 2.9s;">Change in priority</text>
+        <text x="765" y="450" text-anchor="start" class="ping alert" style="animation-delay: 0.9s; animation-duration: 2.6s;">Quick question</text>
+        <text x="750" y="420" text-anchor="middle" class="ping small" style="animation-delay: 1.7s; animation-duration: 3.2s;">Meeting rescheduled</text>
+    </g>
+
+    <!-- NODES -->
+
+    <!-- Users Node -->
+    <g id="node-users">
+        <!-- Glow and Core -->
+        <circle cx="500" cy="160" r="45" class="node-glow org-u fill-u-glow" filter="url(#glow-strong)" />
+        <circle cx="500" cy="160" r="28" class="node-core org-u fill-u" filter="url(#glow)" />
+
+        <!-- White User Icon -->
+        <g transform="translate(485.6, 145.6) scale(1.2)" fill="#ffffff" opacity="0.95">
+            <path d="M11 7C11 9.20914 9.20914 11 7 11C4.79086 11 3 9.20914 3 7C3 4.79086 4.79086 3 7 3C9.20914 3 11 4.79086 11 7ZM4.97715 7C4.97715 8.11719 5.88281 9.02284 7 9.02284C8.11719 9.02284 9.02284 8.11719 9.02284 7C9.02284 5.88281 8.11719 4.97716 7 4.97716C5.88281 4.97716 4.97715 5.88281 4.97715 7Z"></path>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M2.37162 14.2378C3.54371 13.3886 5.09751 13 7 13C8.90249 13 10.4563 13.3886 11.6284 14.2378C12.8188 15.1004 13.4914 16.3477 13.795 17.8079C14.1811 19.6647 12.5708 21 11 21H3C1.42922 21 -0.181121 19.6647 0.204962 17.8079C0.508602 16.3477 1.18119 15.1004 2.37162 14.2378ZM3.54511 15.8574C2.84896 16.3618 2.39073 17.1203 2.16308 18.2151C2.12425 18.4018 2.17618 18.5729 2.31828 18.7223C2.47041 18.8824 2.71717 19 3 19H11C11.2828 19 11.5296 18.8824 11.6817 18.7223C11.8238 18.5729 11.8757 18.4018 11.8369 18.2151C11.6093 17.1203 11.151 16.3618 10.4549 15.8574C9.74039 15.3397 8.65185 15 7 15C5.34815 15 4.25961 15.3397 3.54511 15.8574Z"></path>
+            <path d="M21 7C21 9.20914 19.2091 11 17 11C14.7909 11 13 9.20914 13 7C13 4.79086 14.7909 3 17 3C19.2091 3 21 4.79086 21 7ZM14.9772 7C14.9772 8.11719 15.8828 9.02284 17 9.02284C18.1172 9.02284 19.0228 8.11719 19.0228 7C19.0228 5.88281 18.1172 4.97716 17 4.97716C15.8828 4.97716 14.9772 5.88281 14.9772 7Z"></path>
+            <path d="M14.5361 13.2689C13.9347 13.4165 13.7248 14.1168 14.0647 14.6344L14.1075 14.6995C14.3593 15.0829 14.839 15.239 15.2891 15.1501C15.7787 15.0534 16.3451 15 17 15C18.6519 15 19.7404 15.3397 20.4549 15.8574C21.1511 16.3618 21.6093 17.1203 21.8369 18.2151C21.8758 18.4018 21.8238 18.5729 21.6817 18.7223C21.5296 18.8824 21.2828 19 21 19H16C15.4478 19 15 19.4477 15 20C15 20.5523 15.4478 21 16 21H21C22.5708 21 24.1811 19.6647 23.7951 17.8079C23.4914 16.3477 22.8188 15.1004 21.6284 14.2378C20.4563 13.3886 18.9025 13 17 13C16.0994 13 15.2769 13.0871 14.5361 13.2689Z"></path>
+        </g>
+        <text x="500" y="110" text-anchor="middle" class="label-title-center">Users</text>
+    </g>
+
+    <!-- Workspace Node -->
+    <g id="node-workspace">
+        <circle cx="250" cy="420" r="45" class="node-glow org-w fill-w-glow" filter="url(#glow-strong)" />
+        <circle cx="250" cy="420" r="28" class="node-core org-w fill-w" filter="url(#glow)" />
+
+        <g transform="translate(235.6, 405.6) scale(1.2)" fill="#ffffff" opacity="0.95">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 3C7.85113 3 4 5.73396 4 10C4 11.5704 4.38842 12.7289 5.08252 13.6554C5.79003 14.5998 6.87746 15.3863 8.41627 16.0908L9.2326 16.4645L8.94868 17.3162C8.54129 18.5384 7.84997 19.6611 7.15156 20.5844C9.56467 19.8263 12.7167 18.6537 14.9453 17.1679C17.1551 15.6948 18.3969 14.5353 19.0991 13.455C19.7758 12.4139 20 11.371 20 10C20 5.73396 16.1489 3 12 3ZM2 10C2 4.26604 7.14887 1 12 1C16.8511 1 22 4.26604 22 10C22 11.629 21.7242 13.0861 20.7759 14.545C19.8531 15.9647 18.3449 17.3052 16.0547 18.8321C13.0781 20.8164 8.76589 22.2232 6.29772 22.9281C5.48665 23.1597 4.84055 22.6838 4.56243 22.1881C4.28848 21.6998 4.22087 20.9454 4.74413 20.3614C5.44439 19.5798 6.21203 18.5732 6.72616 17.4871C5.40034 16.7841 4.29326 15.9376 3.48189 14.8545C2.48785 13.5277 2 11.9296 2 10Z"></path>
+        </g>
+        <text x="250" y="475" text-anchor="middle" class="label-title-center">Workspace</text>
+    </g>
+
+    <!-- Engine Node -->
+    <g id="node-engine">
+        <circle cx="750" cy="420" r="45" class="node-glow org-e fill-e-glow" filter="url(#glow-strong)" />
+        <circle cx="750" cy="420" r="28" class="node-core org-e fill-e" filter="url(#glow)" />
+
+        <g transform="translate(735.6, 405.6) scale(1.2)" fill="#ffffff" opacity="0.95">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M11.7086 1.53214C10.9786 1.05676 10.078 0.917375 9.27255 1.04467C8.46803 1.17183 7.62325 1.5904 7.12591 2.39445C6.9332 2.70601 6.81024 3.04646 6.7559 3.40767C5.97312 3.35525 5.18086 3.59264 4.58547 4.08919C3.98255 4.59201 3.59741 5.34432 3.59741 6.25684C3.59741 6.55614 3.63851 6.86315 3.72008 7.17654C3.42298 7.23942 3.13697 7.34918 2.86932 7.50027C1.98542 7.99927 1.36438 8.90663 1.11913 9.88841C0.869371 10.8882 0.989124 12.0467 1.70052 13.0391C2.0609 13.5419 2.54903 13.9691 3.1623 14.305C3.01053 14.5081 2.88229 14.7271 2.77811 14.9565C2.35249 15.8935 2.32044 17.0038 2.64559 17.98C2.97535 18.9701 3.69756 19.8871 4.83624 20.3254C5.57833 20.6111 6.42615 20.6665 7.35551 20.4749C7.39798 20.9494 7.52745 21.3806 7.74983 21.7577C8.22598 22.5651 9.0236 22.9458 9.80541 22.9947C10.5523 23.0414 11.3758 22.778 12 22.2458C12.6242 22.778 13.4477 23.0414 14.1946 22.9947C14.9764 22.9458 15.774 22.5651 16.2502 21.7577C16.4725 21.3806 16.602 20.9494 16.6445 20.4749C17.5738 20.6665 18.4217 20.6111 19.1638 20.3254C20.3024 19.8871 21.0246 18.9701 21.3544 17.98C21.6796 17.0038 21.6475 15.8935 21.2219 14.9565C21.1177 14.7271 20.9895 14.5081 20.8377 14.305C21.451 13.9691 21.9391 13.5419 22.2995 13.0391C23.0109 12.0467 23.1306 10.8882 22.8809 9.88841C22.6356 8.90663 22.0146 7.99927 21.1307 7.50027C20.863 7.34918 20.577 7.23942 20.2799 7.17654C20.3615 6.86315 20.4026 6.55614 20.4026 6.25684C20.4026 5.34432 20.0175 4.59201 19.4145 4.08919C18.8191 3.59264 18.0269 3.35525 17.2441 3.40767C17.1898 3.04646 17.0668 2.70601 16.8741 2.39445C16.3767 1.5904 15.532 1.17183 14.7274 1.04467C13.922 0.917375 13.0214 1.05676 12.2914 1.53214C11.9861 1.73097 12.0139 1.73097 11.7086 1.53214ZM13.0033 20.0518L13.0033 17.5288C13.0045 17.0494 13.1133 16.3457 13.3939 15.7998C13.6573 15.2872 13.9946 15.0268 14.5082 15.0268C15.0623 15.0268 15.5115 14.5773 15.5115 14.0227C15.5115 13.4682 15.0623 13.0186 14.5082 13.0186C13.9202 13.0186 13.4216 13.16 13.0033 13.3894V12.5084C13.0045 12.029 13.1133 11.3254 13.3939 10.7794C13.6573 10.2668 13.9946 10.0064 14.5082 10.0064C15.0623 10.0064 15.5115 9.55688 15.5115 9.00234C15.5115 8.4478 15.0623 7.99826 14.5082 7.99826C13.9202 7.99826 13.4216 8.13957 13.0033 8.36902L13.0033 3.97532C13.005 3.57853 13.1671 3.35779 13.3859 3.21528C13.6436 3.04746 14.0284 2.96723 14.4144 3.02824C14.8013 3.08939 15.0539 3.26704 15.1679 3.45142C15.2603 3.60078 15.3726 3.9329 15.091 4.59054C14.9015 5.03294 15.0524 5.54766 15.4507 5.8175C15.849 6.08734 16.3825 6.03639 16.7226 5.69604C17.0903 5.32811 17.7563 5.32032 18.1299 5.63189C18.2795 5.75662 18.396 5.94564 18.396 6.25684C18.396 6.59422 18.2548 7.14633 17.705 7.91672C17.4235 8.31116 17.4637 8.85055 17.8006 9.19878C18.1375 9.54701 18.6749 9.60465 19.0779 9.33577C19.5101 9.04741 19.8566 9.08664 20.1448 9.24934C20.4837 9.44063 20.8032 9.85112 20.9342 10.3755C21.0607 10.8818 20.9923 11.4176 20.669 11.8686C20.3466 12.3184 19.6765 12.8121 18.3565 13.0323C17.8683 13.1137 17.5124 13.5392 17.5182 14.0344C17.5239 14.5296 17.8896 14.9467 18.3795 15.0167C18.8812 15.0884 19.207 15.3732 19.3952 15.7874C19.5966 16.231 19.6273 16.8151 19.4508 17.345C19.2789 17.861 18.9351 18.2619 18.4434 18.4511C17.9498 18.6411 17.1399 18.6809 15.9267 18.129C15.5761 17.9695 15.1653 18.025 14.8694 18.2716C14.5735 18.5183 14.4448 18.9127 14.5382 19.2866C14.6621 19.7827 14.8668 20.9406 14.0694 20.9905C13.5184 21.0249 13.0062 20.6055 13.0033 20.0518ZM10.9967 3.97532C10.995 3.57853 10.8329 3.35779 10.6141 3.21528C10.3564 3.04746 9.97157 2.96723 9.58558 3.02824C9.19869 3.08939 8.94611 3.26704 8.83207 3.45142C8.73968 3.60078 8.62739 3.9329 8.90901 4.59054C9.09846 5.03294 8.94757 5.54766 8.54931 5.8175C8.15105 6.08734 7.61747 6.03639 7.27739 5.69604C6.90975 5.32811 6.24365 5.32032 5.87006 5.63189C5.72051 5.75662 5.604 5.94564 5.604 6.25684C5.604 6.59422 5.74515 7.14633 6.29501 7.91672C6.57653 8.31116 6.53629 8.85055 6.19937 9.19878C5.86246 9.54701 5.32505 9.60465 4.92206 9.33577C4.48987 9.04741 4.1434 9.08664 3.8552 9.24934C3.51634 9.44063 3.19679 9.85112 3.06581 10.3755C2.93933 10.8818 3.0077 11.4176 3.33095 11.8686C3.65342 12.3184 4.32349 12.8121 5.64353 13.0323C6.13166 13.1137 6.48757 13.5392 6.48182 14.0344C6.47607 14.5296 6.11037 14.9467 5.62048 15.0167C5.1188 15.0884 4.793 15.3732 4.60484 15.7874C4.40339 16.231 4.37273 16.8151 4.54922 17.345C4.7211 17.861 5.06489 18.2619 5.55656 18.4511C6.05021 18.6411 6.86015 18.6809 8.0733 18.129C8.42388 17.9695 8.83474 18.025 9.13063 18.2716C9.42652 18.5183 9.5552 18.9127 9.4618 19.2866C9.33788 19.7827 9.13324 20.9406 9.93058 20.9905C10.4816 21.0249 10.9938 20.6055 10.9967 20.0518L10.9967 20.0472V17.5292C10.9955 17.0498 10.8868 16.3459 10.6061 15.7998C10.3427 15.2872 10.0054 15.0268 9.49176 15.0268C8.93765 15.0268 8.48846 14.5773 8.48846 14.0227C8.48846 13.4682 8.93765 13.0186 9.49176 13.0186C10.0798 13.0186 10.5784 13.16 10.9967 13.3894V12.5088C10.9955 12.0294 10.8868 11.3255 10.6061 10.7794C10.3427 10.2668 10.0054 10.0064 9.49176 10.0064C8.93765 10.0064 8.48846 9.55688 8.48846 9.00234C8.48846 8.4478 8.93765 7.99826 9.49176 7.99826C10.0798 7.99826 10.5784 8.13957 10.9967 8.36902L10.9967 3.97532Z"></path>
+        </g>
+        <text x="750" y="475" text-anchor="middle" class="label-title-center">Engine</text>
+    </g>
+
+</svg>
