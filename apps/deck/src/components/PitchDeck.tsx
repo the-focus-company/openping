@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Radio, Cog, Search, Target, CheckCircle, Sun, Moon, ArrowRight, Zap, Brain, Route, Eye, ShieldCheck } from "lucide-react";
+import { content as C } from "../content";
 
 /* ── Neural Context Graph Background ── */
 const SLIDE_PALETTES: Record<string, { idle: number[]; active: number[]; idleEdge: number[]; activeEdge: number[] }> = {
@@ -256,7 +257,7 @@ function FadeUp({ children, delay = 0, className = "" }: { children: React.React
   );
 }
 
-const NAV = ["Cover","Founders","Problem","Cost","Solution","How","vs. Slack","Business Model","Market","GTM","Connect"];
+const NAV = C.nav;
 
 function ThemeToggle({ theme, toggle }: { theme: string; toggle: () => void }) {
   return (
@@ -300,7 +301,7 @@ function Cover() {
               initial={{ clipPath: "inset(0 100% 0 0)" }}
               animate={{ clipPath: "inset(0 0% 0 0)" }}
               transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}>
-              Service firms don&apos;t
+              {C.cover.headlineWhite}
             </motion.span>
             <br />
             <motion.span
@@ -308,13 +309,13 @@ function Cover() {
               initial={{ clipPath: "inset(0 100% 0 0)" }}
               animate={{ clipPath: "inset(0 0% 0 0)" }}
               transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.55 }}>
-              scale decisions.
+              {C.cover.headlineAccent}
             </motion.span>
           </motion.h1>
         </FadeUp>
         <FadeUp delay={0.9}>
           <p className="text-neutral-400 text-lg md:text-2xl max-w-2xl mx-auto leading-relaxed">
-            OpenPing removes coordination overhead so delivery teams handle more clients, close decisions faster, and grow without adding operations headcount.
+            {C.cover.subtitle}
           </p>
         </FadeUp>
         <motion.div animate={{ y: [0, 6, 0] }} transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
@@ -347,36 +348,14 @@ function Logo8lines() { return <CompanyLogo src="/logos/8lines.png" alt="8lines"
 
 /* ══ SLIDE 1 - FOUNDERS ══ */
 function Founders() {
-  const founders = [
-    {
-      initials: "RW",
-      name: "Rafal Wyderka",
-      role: "CEO / Product",
-      bio: "Product leader obsessed with removing coordination overhead from expert work.",
-      photo: "/photos/rafal.jpg",
-      color: "from-indigo-500 to-violet-500",
-      logos: [<LogoRemitly key="r" />, <LogoMARS key="m" />, <LogoKPMG key="k" />, <LogoBCG key="b" />],
-      highlights: [
-        "Lived the problem: coordination collapsed across 5 time zones at Remitly",
-        "Shipped AI-first products from zero (ppmlx, tview.work)",
-        "10+ years leading product & delivery at KPMG, BCG, MARS, Remitly",
-      ],
-    },
-    {
-      initials: "KA",
-      name: "Konrad Alfaro",
-      role: "CTO / Engineering",
-      bio: "Infrastructure engineer who builds systems that scale to millions of users.",
-      photo: "/photos/konrad.jpg",
-      color: "from-emerald-500 to-sky-500",
-      logos: [<LogoPrintify key="p" />, <Logo8lines key="8" />],
-      highlights: [
-        "Scaled infra at Printify (millions of merchants)",
-        "Founded 8lines: AI-driven agency shipping real systems",
-        "Deep expertise in distributed systems, real-time data, and ML pipelines",
-      ],
-    },
-  ];
+  const logoMap: Record<string, React.ReactNode> = {
+    remitly: <LogoRemitly key="r" />, mars: <LogoMARS key="m" />, kpmg: <LogoKPMG key="k" />,
+    printify: <LogoPrintify key="p" />, "8lines": <Logo8lines key="8" />,
+  };
+  const founders = C.founders.people.map((p) => ({
+    ...p,
+    logos: p.logoKeys.map((k) => logoMap[k]),
+  }));
   return (
     <S id="s1" idx={1} wide>
       <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10">
@@ -385,7 +364,7 @@ function Founders() {
       <FadeUp className="mb-8 text-center">
         <Tag color="indigo">Founders</Tag>
         <h2 className="mt-4 text-[2.4rem] md:text-[3.5rem] lg:text-[4.5rem] font-semibold tracking-tight leading-[1.02] text-white">
-          We lived the problem.<br /><span className="text-indigo-400">Now we're building the models to fix it.</span>
+          {C.founders.heading}<br /><span className="text-indigo-400">{C.founders.headingAccent}</span>
         </h2>
       </FadeUp>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 max-w-4xl mx-auto mt-6 mb-6 flex-1 content-start">
@@ -423,9 +402,8 @@ function Founders() {
       <FadeUp delay={0.25}>
         <div className="max-w-3xl mx-auto p-4 rounded-xl border border-indigo-900/30 bg-indigo-950/10 text-center">
           <p className="text-base text-neutral-400 leading-relaxed">
-            Serial entrepreneurs. Both from Lodz, Poland.{" "}
-            We don&apos;t just use AI tools - we build entire products with AI as a co-creator.{" "}
-            <span className="text-indigo-300">OpenPing is built the way software will be built: small team, AI-native from day one, shipping 10x faster than legacy approaches.</span>
+            {C.founders.footer}{" "}
+            <span className="text-indigo-300">{C.founders.footerAccent}</span>
           </p>
         </div>
       </FadeUp>
@@ -438,12 +416,12 @@ function CoordProblem() {
   return (
     <S id="s2" idx={2} wide>
       <FadeUp>
-        <Tag color="rose">The Coordination Problem</Tag>
+        <Tag color="rose">{C.coordProblem.tag}</Tag>
         <h2 className="mt-4 text-[2.6rem] md:text-[3.5rem] lg:text-[4.5rem] font-semibold tracking-tight leading-[1.02] text-white mb-2">
-          Coordination is a tax on growth.
+          {C.coordProblem.heading}
         </h2>
         <p className="text-neutral-400 text-lg md:text-xl leading-relaxed max-w-4xl mb-2">
-          Knowledge workers spend more time moving information than executing decisions. Every tool adds a channel. Every channel adds overhead. The bottleneck is always a person.
+          {C.coordProblem.body}
         </p>
       </FadeUp>
       <FadeUp delay={0.15} className="flex-1 flex items-center -ml-8 md:-ml-14 -my-10 md:-my-16">
@@ -459,32 +437,10 @@ function CoordProblem() {
 
 /* ══ SLIDE 3 - THE COORDINATION TAX ══ */
 function LostRevenue() {
-  /* Waterfall: 100 → -40 → -20 → -10 → 30 remaining */
-  const waterfall = [
-    { label: "Total capacity", value: 100, top: 0, color: "bg-neutral-600" },
-    { label: "Missing context", value: 40, top: 0, color: "bg-rose-500/60" },
-    { label: "Delayed follow-ups\n& approvals", value: 20, top: 40, color: "bg-rose-400/50" },
-    { label: "Context switching", value: 10, top: 60, color: "bg-orange-500/50" },
-    { label: "Value delivered", value: 30, top: 70, color: "bg-emerald-500/60" },
-  ];
-  /* Survey: when did staff last have time for new initiatives */
-  const survey = [
-    { label: "Last week", pct: 8 },
-    { label: "Last month", pct: 18 },
-    { label: "Last quarter", pct: 45 },
-    { label: "Last year+", pct: 29 },
-  ];
-  /* Timeline */
-  const timeline = [
-    { label: "Searching for context", w: "22%", type: "waste" as const },
-    { label: "Work", w: "10%", type: "work" as const },
-    { label: "Waiting for approval", w: "18%", type: "waste" as const },
-    { label: "Work", w: "8%", type: "work" as const },
-    { label: "Sync meeting", w: "14%", type: "waste" as const },
-    { label: "Work", w: "9%", type: "work" as const },
-    { label: "Status relay", w: "9%", type: "waste" as const },
-    { label: "End Value", w: "10%", type: "end" as const },
-  ];
+  const waterfallColors = ["bg-neutral-600", "bg-rose-500/60", "bg-rose-400/50", "bg-orange-500/50", "bg-emerald-500/60"];
+  const waterfall = C.coordinationTax.organization.waterfall.map((w, i) => ({ ...w, color: waterfallColors[i] }));
+  const survey = C.coordinationTax.individual.survey;
+  const timeline = C.coordinationTax.timeline;
   return (
     <S id="s3" idx={3} wide>
       <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10">
@@ -492,32 +448,32 @@ function LostRevenue() {
       </div>
 
       <FadeUp>
-        <Tag color="rose">The Coordination Tax</Tag>
-        <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white">
-          The real cost isn&apos;t ops headcount.<br /><span className="text-rose-400">It&apos;s the revenue that can&apos;t be reached.</span>
+        <Tag color="rose">{C.coordinationTax.tag}</Tag>
+        <h2 className="mt-4 text-[2.4rem] md:text-[3.5rem] lg:text-[4.5rem] font-semibold tracking-tight leading-[1.02] text-white">
+          {C.coordinationTax.heading}<br /><span className="text-rose-400">{C.coordinationTax.headingAccent}</span>
         </h2>
       </FadeUp>
 
       {/* ── Two perspectives ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5 flex-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 flex-1 pt-4 pb-4">
 
         {/* LEFT: The Individual — lost upside */}
         <FadeUp delay={0.08} className="flex flex-col">
-          <p className="text-xs text-amber-500/80 uppercase tracking-[0.14em] font-bold mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500/60" />The Individual — Lost Upside
+          <p className="text-sm text-amber-500/80 uppercase tracking-[0.14em] font-bold mb-5 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />{C.coordinationTax.individual.label}
           </p>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <span className="text-4xl md:text-5xl font-bold text-amber-400 leading-none">&lt;1x</span>
-              <p className="text-sm text-neutral-500 mt-2 leading-snug">Reported ROI on AI tools at org level</p>
+              <span className="text-4xl md:text-5xl font-bold text-amber-400 leading-none">{C.coordinationTax.individual.stats[0].value}</span>
+              <p className="text-sm text-neutral-500 mt-2 leading-snug">{C.coordinationTax.individual.stats[0].description}</p>
             </div>
             <div>
-              <span className="text-4xl md:text-5xl font-bold text-rose-400 leading-none">33%</span>
-              <p className="text-sm text-neutral-500 mt-2 leading-snug">Revenue lost to missing delivery capacity</p>
+              <span className="text-4xl md:text-5xl font-bold text-rose-400 leading-none">{C.coordinationTax.individual.stats[1].value}</span>
+              <p className="text-sm text-neutral-500 mt-2 leading-snug">{C.coordinationTax.individual.stats[1].description}</p>
             </div>
           </div>
           {/* Survey chart */}
-          <p className="text-xs text-neutral-600 mb-2 font-medium">Last time had capacity for new initiatives:</p>
+          <p className="text-sm text-neutral-600 mb-3 font-medium">{C.coordinationTax.individual.surveyLabel}</p>
           <div className="flex items-end gap-2 flex-1 min-h-[6rem]">
             {survey.map((s, i) => (
               <motion.div key={i} className="flex-1 flex flex-col items-center justify-end h-full"
@@ -531,7 +487,7 @@ function LostRevenue() {
                   viewport={{ once: false, amount: 0.3 }}
                   style={{ height: `${s.pct * 1.8}%`, originY: 1 }}
                   className={`w-full rounded-md ${i <= 1 ? "bg-amber-500/40" : "bg-rose-500/50"}`} />
-                <span className="text-[9px] text-neutral-600 mt-1.5 text-center leading-tight">{s.label}</span>
+                <span className="text-[11px] text-neutral-600 mt-1.5 text-center leading-tight">{s.label}</span>
               </motion.div>
             ))}
           </div>
@@ -539,21 +495,21 @@ function LostRevenue() {
 
         {/* RIGHT: The Organization — growing cost + waterfall */}
         <FadeUp delay={0.16} className="flex flex-col">
-          <p className="text-xs text-rose-500/80 uppercase tracking-[0.14em] font-bold mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-rose-500/60" />The Organization — Growing Cost
+          <p className="text-sm text-rose-500/80 uppercase tracking-[0.14em] font-bold mb-5 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500/60" />{C.coordinationTax.organization.label}
           </p>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <span className="text-4xl md:text-5xl font-bold text-rose-400 leading-none">1 : 4</span>
-              <p className="text-sm text-neutral-500 mt-2 leading-snug">Coordination-to-maker ratio at scale</p>
+              <span className="text-4xl md:text-5xl font-bold text-rose-400 leading-none">{C.coordinationTax.organization.stats[0].value}</span>
+              <p className="text-sm text-neutral-500 mt-2 leading-snug">{C.coordinationTax.organization.stats[0].description}</p>
             </div>
             <div>
-              <span className="text-4xl md:text-5xl font-bold text-rose-400 leading-none">25%</span>
-              <p className="text-sm text-neutral-500 mt-2 leading-snug">Increased rotation from coordination burnout</p>
+              <span className="text-4xl md:text-5xl font-bold text-rose-400 leading-none">{C.coordinationTax.organization.stats[1].value}</span>
+              <p className="text-sm text-neutral-500 mt-2 leading-snug">{C.coordinationTax.organization.stats[1].description}</p>
             </div>
           </div>
           {/* Waterfall chart */}
-          <p className="text-xs text-neutral-600 mb-2 font-medium">Where team capacity goes:</p>
+          <p className="text-sm text-neutral-600 mb-3 font-medium">{C.coordinationTax.organization.waterfallLabel}</p>
           <div className="flex items-start gap-1.5 md:gap-2 flex-1 min-h-[6rem]">
             {waterfall.map((seg, i) => (
               <motion.div key={i} className="flex-1 flex flex-col items-center h-full relative"
@@ -577,7 +533,7 @@ function LostRevenue() {
                     </span>
                   </motion.div>
                 </div>
-                <span className="text-[8px] md:text-[9px] text-neutral-600 mt-1.5 text-center whitespace-pre-line leading-tight font-medium">{seg.label}</span>
+                <span className="text-[10px] md:text-[11px] text-neutral-600 mt-1.5 text-center whitespace-pre-line leading-tight font-medium">{seg.label}</span>
               </motion.div>
             ))}
           </div>
@@ -588,11 +544,11 @@ function LostRevenue() {
       <FadeUp delay={0.3}>
         <div className="mt-3 p-3 md:p-4 rounded-xl border border-neutral-800/60 bg-neutral-950/60">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-neutral-600 uppercase tracking-[0.14em] font-bold">Typical project lifecycle</span>
+            <span className="text-sm text-neutral-600 uppercase tracking-[0.14em] font-bold">{C.coordinationTax.timelineLabel}</span>
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1.5 text-[10px] text-rose-400/60"><span className="w-2 h-2 rounded-sm bg-rose-500/40" /> Coordination</span>
-              <span className="flex items-center gap-1.5 text-[10px] text-emerald-400/60"><span className="w-2 h-2 rounded-sm bg-emerald-500/40" /> Work</span>
-              <span className="flex items-center gap-1.5 text-[10px] text-amber-400/60"><span className="w-2 h-2 rounded-sm bg-amber-500/40" /> End Value</span>
+              <span className="flex items-center gap-1.5 text-xs text-rose-400/60"><span className="w-2.5 h-2.5 rounded-sm bg-rose-500/40" /> Coordination</span>
+              <span className="flex items-center gap-1.5 text-xs text-emerald-400/60"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/40" /> Work</span>
+              <span className="flex items-center gap-1.5 text-xs text-amber-400/60"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500/40" /> End Value</span>
             </div>
           </div>
           <div className="flex h-8 md:h-9 rounded-lg overflow-hidden gap-px w-full">
@@ -624,21 +580,21 @@ function LostRevenue() {
 /* ══ SLIDE 4 - WHAT OPENPING DOES ══ */
 function WhatWeDo() {
   const steps = [
-    { icon: <Radio className="w-6 h-6" />, title: "Listens", desc: "Connects to all communication - in real-time.", color: "text-indigo-400", border: "border-indigo-800/40", bg: "bg-indigo-950/15" },
-    { icon: <Brain className="w-6 h-6" />, title: "Understands", desc: "Classifies signals with actor and confidence.", color: "text-violet-400", border: "border-violet-800/40", bg: "bg-violet-950/15" },
-    { icon: <Route className="w-6 h-6" />, title: "Routes", desc: "No thread pollution, no group pings.", color: "text-purple-400", border: "border-purple-800/40", bg: "bg-purple-950/15" },
-    { icon: <Eye className="w-6 h-6" />, title: "Surfaces", desc: "Escalates only what needs human judgment.", color: "text-indigo-400", border: "border-indigo-800/40", bg: "bg-indigo-950/15" },
-    { icon: <CheckCircle className="w-6 h-6" />, title: "Acts", desc: "Acts autonomously.", color: "text-emerald-400", border: "border-emerald-800/40", bg: "bg-emerald-950/15" },
-  ];
+    { icon: <Radio className="w-6 h-6" />, color: "text-indigo-400", border: "border-indigo-800/40", bg: "bg-indigo-950/15" },
+    { icon: <Brain className="w-6 h-6" />, color: "text-violet-400", border: "border-violet-800/40", bg: "bg-violet-950/15" },
+    { icon: <Route className="w-6 h-6" />, color: "text-purple-400", border: "border-purple-800/40", bg: "bg-purple-950/15" },
+    { icon: <Eye className="w-6 h-6" />, color: "text-indigo-400", border: "border-indigo-800/40", bg: "bg-indigo-950/15" },
+    { icon: <CheckCircle className="w-6 h-6" />, color: "text-emerald-400", border: "border-emerald-800/40", bg: "bg-emerald-950/15" },
+  ].map((s, i) => ({ ...s, title: C.whatWeDo.steps[i].title, desc: C.whatWeDo.steps[i].desc }));
   return (
     <S id="s4" idx={4} wide>
       <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10">
         <div className="absolute top-[20%] right-[-10%] w-[700px] h-[700px] bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.05),transparent_60%)]" />
       </div>
       <FadeUp>
-        <Tag color="indigo">What OpenPing Does</Tag>
+        <Tag color="indigo">{C.whatWeDo.tag}</Tag>
         <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white">
-          From noise to decisions and results.<br /><span className="text-indigo-400">Fully automated.</span>
+          {C.whatWeDo.heading}<br /><span className="text-indigo-400">{C.whatWeDo.headingAccent}</span>
         </h2>
       </FadeUp>
       <div className="flex-1 flex items-center justify-center min-h-0 w-full overflow-hidden">
@@ -680,12 +636,12 @@ function HowWeDeliver() {
         <div className="absolute bottom-[-10%] left-[10%] w-[600px] h-[600px] bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.06),transparent_60%)]" />
       </div>
       <FadeUp>
-        <Tag color="indigo">The Moat</Tag>
+        <Tag color="indigo">{C.moat.tag}</Tag>
         <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white mb-2">
-          Every decision makes the system<br /><span className="text-indigo-400">harder to replace.</span>
+          {C.moat.heading}<br /><span className="text-indigo-400">{C.moat.headingAccent}</span>
         </h2>
         <p className="text-neutral-400 text-base leading-relaxed max-w-5xl mb-6">
-          Open-source interface gets adoption. Proprietary intelligence layers get built with every customer&apos;s data. The moat compounds&nbsp;&mdash;&nbsp;it can&apos;t be forked.
+          {C.moat.body}
         </p>
       </FadeUp>
 
@@ -695,35 +651,26 @@ function HowWeDeliver() {
           <div className="absolute top-0 right-0 w-48 h-48 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.1),transparent_70%)]" />
           <div className="flex items-center gap-2.5 mb-5">
             <ShieldCheck className="w-6 h-6 text-indigo-400" />
-            <span className="text-sm text-indigo-400 uppercase tracking-[0.14em] font-bold">Unforkable Data Moat</span>
+            <span className="text-sm text-indigo-400 uppercase tracking-[0.14em] font-bold">{C.moat.foundation.label}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-            <div>
-              <h3 className="text-xl font-semibold text-white mb-3">Proprietary Decision Graph</h3>
-              <ul className="text-base text-neutral-400 leading-relaxed space-y-2">
-                <li className="flex gap-2.5 items-start"><span className="text-indigo-500 shrink-0 mt-1">&bull;</span>Every decision, commitment, and outcome mapped in a temporal graph unique to each org</li>
-                <li className="flex gap-2.5 items-start"><span className="text-indigo-500 shrink-0 mt-1">&bull;</span>More data = better predictions. Competitors start from zero</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-white mb-3">Proactive Signal Layer</h3>
-              <ul className="text-base text-neutral-400 leading-relaxed space-y-2">
-                <li className="flex gap-2.5 items-start"><span className="text-indigo-500 shrink-0 mt-1">&bull;</span>Captures intent, blockers, and commitments before they&apos;re formally stated</li>
-                <li className="flex gap-2.5 items-start"><span className="text-indigo-500 shrink-0 mt-1">&bull;</span>Per-org classifiers fine-tune continuously. This data doesn&apos;t exist anywhere else</li>
-              </ul>
-            </div>
+            {C.moat.foundation.columns.map((col, ci) => (
+              <div key={ci}>
+                <h3 className="text-xl font-semibold text-white mb-3">{col.title}</h3>
+                <ul className="text-base text-neutral-400 leading-relaxed space-y-2">
+                  {col.points.map((p, pi) => (
+                    <li key={pi} className="flex gap-2.5 items-start"><span className="text-indigo-500 shrink-0 mt-1">&bull;</span>{p}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
       </FadeUp>
 
       {/* ── Execution layers ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 content-start">
-        {[
-          { title: "Closed-Loop Learning", points: ["Every human decision feeds training data", "System improves with usage", "Outcomes validate predictions automatically"], badge: "RESEARCH" },
-          { title: "Real-Time Context Engine", points: ["All inputs embedded under 80ms", "Hybrid retrieval, per-org namespace", "Streaming incremental - no batch reprocessing"], badge: "BUILT" },
-          { title: "Open Data Model", points: ["Open schema, full export, no lock-in", "Customers own data - trust drives adoption", "Air-gapped deployments supported"], badge: "BUILT" },
-          { title: "Offline-First Mobile", points: ["Native app with on-device inference via ppmlx", "Personal temporal context graphs", "CRDT sync for intermittent connectivity"], badge: "BUILDING" },
-        ].map((e, i) => (
+        {C.moat.layers.map((e, i) => (
           <FadeUp key={i} delay={0.15 + i * 0.06}>
             <div className="rounded-xl border border-neutral-800/60 bg-neutral-950/60 p-5 md:p-6 h-full flex flex-col">
               <div className="flex items-start justify-between mb-3">
@@ -754,13 +701,13 @@ function VsStatusQuo() {
         <div className="absolute top-[30%] left-[50%] -translate-x-1/2 w-[800px] h-[400px] bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.04),transparent_60%)]" />
       </div>
       <FadeUp>
-        <Tag color="amber">Why Not Slack + AI?</Tag>
+        <Tag color="amber">{C.vsSlack.tag}</Tag>
         <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white mb-4">
-          Slack is a copilot.<br /><span className="text-amber-400">OpenPing is the autopilot.</span>
+          {C.vsSlack.heading}<br /><span className="text-amber-400">{C.vsSlack.headingAccent}</span>
         </h2>
         <p className="text-base text-neutral-400 leading-relaxed max-w-4xl mb-6">
-          Copilots help individuals go faster. Autopilots close decisions, route context, and follow through without human overhead.{" "}
-          <span className="text-white font-medium">No product owns the coordination control plane.</span> That&apos;s the gap.
+          {C.vsSlack.body}{" "}
+          <span className="text-white font-medium">{C.vsSlack.bodyAccent}</span> {C.vsSlack.bodyEnd}
         </p>
       </FadeUp>
       <FadeUp delay={0.12} className="flex-1 flex items-center">
@@ -768,16 +715,11 @@ function VsStatusQuo() {
           {/* Slack column */}
           <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5 md:p-7 flex flex-col justify-between">
             <div className="mb-5">
-              <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium mb-2">Copilot</p>
-              <p className="text-2xl md:text-3xl font-bold text-neutral-400">Slack + AI</p>
+              <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium mb-2">{C.vsSlack.slack.label}</p>
+              <p className="text-2xl md:text-3xl font-bold text-neutral-400">{C.vsSlack.slack.name}</p>
             </div>
             <div className="space-y-5">
-              {[
-                { dim: "Core unit", val: "Message", icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>, wavy: true },
-                { dim: "AI role", val: "Reactive feature", icon: <Cog className="w-5 h-5" />, wavy: false },
-                { dim: "Follow-through", val: "Manual", icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>, wavy: false },
-                { dim: "Success metric", val: "Summarized", icon: <Search className="w-5 h-5" />, wavy: false },
-              ].map((row, i) => (
+              {C.vsSlack.slack.rows.map((row, i) => ({ ...row, icon: [<svg key="i" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>, <Cog key="c" className="w-5 h-5" />, <svg key="p" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>, <Search key="s" className="w-5 h-5" />][i], wavy: i === 0 })).map((row, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <span className="text-neutral-600 shrink-0">{row.icon}</span>
                   <div>
@@ -792,16 +734,11 @@ function VsStatusQuo() {
           <div className="rounded-2xl border border-amber-700/40 bg-amber-950/10 ring-1 ring-amber-500/20 p-5 md:p-7 flex flex-col justify-between relative overflow-hidden">
             <div className="absolute top-0 right-0 w-40 h-40 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.1),transparent_70%)]" />
             <div className="mb-5 relative">
-              <p className="text-xs text-amber-500 uppercase tracking-widest font-medium mb-2">Autopilot</p>
-              <p className="text-2xl md:text-3xl font-bold text-amber-400">OpenPing</p>
+              <p className="text-xs text-amber-500 uppercase tracking-widest font-medium mb-2">{C.vsSlack.openping.label}</p>
+              <p className="text-2xl md:text-3xl font-bold text-amber-400">{C.vsSlack.openping.name}</p>
             </div>
             <div className="space-y-5 relative">
-              {[
-                { dim: "Core unit", val: "Decision", icon: <CheckCircle className="w-5 h-5" />, wavy: true },
-                { dim: "AI role", val: "Proactive orchestrator", icon: <Brain className="w-5 h-5" />, wavy: false },
-                { dim: "Follow-through", val: "Autonomous", icon: <Zap className="w-5 h-5" />, wavy: false },
-                { dim: "Success metric", val: "Decisions closed", icon: <Target className="w-5 h-5" />, wavy: false },
-              ].map((row, i) => (
+              {C.vsSlack.openping.rows.map((row, i) => ({ ...row, icon: [<CheckCircle key="ch" className="w-5 h-5" />, <Brain key="b" className="w-5 h-5" />, <Zap key="z" className="w-5 h-5" />, <Target key="t" className="w-5 h-5" />][i], wavy: i === 0 })).map((row, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <span className="text-amber-500/70 shrink-0">{row.icon}</span>
                   <div>
@@ -826,46 +763,25 @@ function Pricing() {
         <div className="absolute top-0 right-0 w-[600px] h-[800px] bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.05),transparent_60%)]" />
       </div>
       <FadeUp className="mb-6">
-        <Tag color="amber">Business Model</Tag>
+        <Tag color="amber">{C.businessModel.tag}</Tag>
         <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white">
-          Three revenue engines.<br /><span className="text-amber-400">Open core. Success-based. Proprietary data.</span>
+          {C.businessModel.heading}<br /><span className="text-amber-400">{C.businessModel.headingAccent}</span>
         </h2>
         <p className="mt-3 text-neutral-500 text-base max-w-3xl leading-relaxed">
-          We don't sell seats. We capture value at every layer - from free adoption to outcomes customers pay to keep.
+          {C.businessModel.body}
         </p>
       </FadeUp>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-5 flex-1">
-        {[
-          { tier: "Open Core", label: "Adoption engine",
-            icon: <svg className="w-6 h-6 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>,
-            features: [
-              "Open-source workspace interface",
-              "Community-driven adoption, zero CAC",
-              "Users own their data",
-            ],
-            trigger: "Conversion trigger: teams hit coordination limits",
-            accent: "border-neutral-700", highlight: false },
-          { tier: "Success-Based", label: "Revenue engine",
-            icon: <Zap className="w-6 h-6 text-amber-400" />,
-            features: [
-              "Priced on outcomes",
-              "Decisions tracked to resolution",
-              "Pay because it works, not because of a lock-in",
-              "Compared against headcount, not software",
-            ],
-            trigger: null,
-            accent: "border-amber-700/60", highlight: true },
-          { tier: "Proprietary Data", label: "Moat engine",
-            icon: <ShieldCheck className="w-6 h-6 text-emerald-400" />,
-            features: [
-              "Every conversation builds the org context graph",
-              "Classifiers improve with usage",
-              "Data compounds into an unforkable moat",
-              "Differential Privacy deep model training",
-            ],
-            trigger: null,
-            accent: "border-emerald-700/60", highlight: false },
-        ].map((t, i) => (
+        {C.businessModel.tiers.map((t, i) => ({
+          ...t,
+          icon: [
+            <svg key="o" className="w-6 h-6 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>,
+            <Zap key="z" className="w-6 h-6 text-amber-400" />,
+            <ShieldCheck key="s" className="w-6 h-6 text-emerald-400" />,
+          ][i],
+          accent: ["border-neutral-700", "border-amber-700/60", "border-emerald-700/60"][i],
+          highlight: t.highlight ?? false,
+        })).map((t, i) => (
           <FadeUp key={i} delay={i * 0.08}>
             <div className={`rounded-2xl border p-5 md:p-6 h-full flex flex-col ${t.accent} ${t.highlight ? "bg-amber-950/10 ring-1 ring-amber-600/20" : "bg-neutral-950"}`}>
               <div className="mb-4">
@@ -877,7 +793,7 @@ function Pricing() {
               </div>
               <ul className="space-y-1.5 flex-1 mt-2">
                 {t.features.map((f, j) => (
-                  <li key={j} className="text-sm text-neutral-500 flex gap-2 items-start"><span className="text-emerald-600 shrink-0 mt-0.5">+</span><span className="leading-snug">{f}</span></li>
+                  <li key={j} className="text-base text-neutral-500 flex gap-2 items-start"><span className="text-emerald-600 shrink-0 mt-0.5">+</span><span className="leading-snug">{f}</span></li>
                 ))}
               </ul>
               {t.trigger && (
@@ -891,14 +807,12 @@ function Pricing() {
       </div>
       <FadeUp delay={0.28}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950">
-            <p className="text-base font-semibold text-white mb-1.5">Services are the new software</p>
-            <p className="text-sm text-neutral-500 leading-relaxed">AI lets us deliver outcomes directly — not tools for professionals to use. OpenPing replaces coordination labor, not just coordination software.</p>
-          </div>
-          <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950">
-            <p className="text-base font-semibold text-white mb-1.5">Path to software margins</p>
-            <p className="text-sm text-neutral-500 leading-relaxed">Start with high-touch onboarding (services revenue). As the model learns each org, automation increases and margins converge to 70%+ at scale.</p>
-          </div>
+          {C.businessModel.bottomCards.map((card, i) => (
+            <div key={i} className="p-4 rounded-xl border border-neutral-800 bg-neutral-950">
+              <p className="text-base font-semibold text-white mb-1.5">{card.title}</p>
+              <p className="text-sm text-neutral-500 leading-relaxed">{card.body}</p>
+            </div>
+          ))}
         </div>
       </FadeUp>
     </S>
@@ -914,9 +828,9 @@ function Market() {
       </div>
 
       <FadeUp>
-        <Tag color="emerald">Market</Tag>
+        <Tag color="emerald">{C.market.tag}</Tag>
         <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white mb-2">
-          Not a SaaS seat. <span className="text-emerald-400">A coordination FTE — or lost revenue.</span>
+          {C.market.heading} <span className="text-emerald-400">{C.market.headingAccent}</span>
         </h2>
       </FadeUp>
 
@@ -925,12 +839,12 @@ function Market() {
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8 w-full">
           <div className="p-5 md:p-6 rounded-xl border border-neutral-800/60 bg-neutral-950/60 text-center">
             <p className="text-neutral-600 text-xs uppercase tracking-widest mb-2">SaaS seat</p>
-            <p className="text-3xl md:text-4xl font-bold text-neutral-600 line-through decoration-neutral-700">$12/mo</p>
+            <p className="text-3xl md:text-4xl font-bold text-neutral-600 line-through decoration-neutral-700">{C.market.saasPrice}</p>
           </div>
           <ArrowRight className="w-6 h-6 text-emerald-500 shrink-0" />
           <div className="p-5 md:p-6 rounded-xl border border-emerald-700/40 bg-emerald-950/15 ring-1 ring-emerald-500/20 text-center">
             <p className="text-emerald-500 text-xs uppercase tracking-widest mb-2">Coordination FTE or lost revenue</p>
-            <p className="text-3xl md:text-4xl font-bold text-emerald-400">$180k+/yr</p>
+            <p className="text-3xl md:text-4xl font-bold text-emerald-400">{C.market.coordPrice}</p>
           </div>
         </div>
       </FadeUp>
@@ -941,14 +855,10 @@ function Market() {
         <FadeUp delay={0.12}>
           <div className="rounded-2xl border border-emerald-800/30 bg-emerald-950/10 p-5 h-full flex flex-col">
             <p className="text-xs text-emerald-500/80 uppercase tracking-[0.14em] font-bold mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500/60" />United States
+              <span className="w-2 h-2 rounded-full bg-emerald-500/60" />{C.market.us.label}
             </p>
             <div className="space-y-4 flex-1">
-              {[
-                { label: "Beachhead", value: "$1.2B", sub: "~50k agencies, SW houses, consultancies" },
-                { label: "5-Year SAM", value: "$12-15B", sub: "Expanding to all professional services" },
-                { label: "Platform TAM", value: "$100B+", sub: "Full coordination headcount budget" },
-              ].map((m, i) => (
+              {C.market.us.tiers.map((m, i) => (
                 <motion.div key={i} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.4, delay: 0.15 + i * 0.08 }} viewport={{ once: false, amount: 0.3 }}>
                   <div className="flex justify-between items-baseline">
@@ -960,14 +870,12 @@ function Market() {
               ))}
             </div>
             <div className="mt-4 pt-3 border-t border-emerald-800/20 grid grid-cols-2 gap-3">
-              <div>
-                <span className="text-2xl font-bold text-emerald-400">$12M</span>
-                <p className="text-xs text-neutral-600">ARR at 1% beachhead</p>
-              </div>
-              <div>
-                <span className="text-2xl font-bold text-emerald-300">$60M</span>
-                <p className="text-xs text-neutral-600">ARR at 5% penetration</p>
-              </div>
+              {C.market.us.bottomStats.map((s, i) => (
+                <div key={i}>
+                  <span className={`text-2xl font-bold ${i === 0 ? "text-emerald-400" : "text-emerald-300"}`}>{s.value}</span>
+                  <p className="text-xs text-neutral-600">{s.sub}</p>
+                </div>
+              ))}
             </div>
           </div>
         </FadeUp>
@@ -976,14 +884,10 @@ function Market() {
         <FadeUp delay={0.2}>
           <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5 h-full flex flex-col">
             <p className="text-xs text-sky-500/80 uppercase tracking-[0.14em] font-bold mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-sky-500/60" />European Union
+              <span className="w-2 h-2 rounded-full bg-sky-500/60" />{C.market.eu.label}
             </p>
             <div className="space-y-4 flex-1">
-              {[
-                { label: "Beachhead", value: "$0.8B", sub: "~35k agencies across DE, NL, Nordics, UK, PL" },
-                { label: "5-Year SAM", value: "$8-10B", sub: "Professional services, compliance-driven orgs" },
-                { label: "Platform TAM", value: "$70B+", sub: "EU coordination + data sovereignty premium" },
-              ].map((m, i) => (
+              {C.market.eu.tiers.map((m, i) => (
                 <motion.div key={i} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.4, delay: 0.2 + i * 0.08 }} viewport={{ once: false, amount: 0.3 }}>
                   <div className="flex justify-between items-baseline">
@@ -995,7 +899,7 @@ function Market() {
               ))}
             </div>
             <div className="mt-4 pt-3 border-t border-neutral-800/60">
-              <p className="text-xs text-neutral-500 leading-relaxed">Self-hosted open-source model removes data sovereignty objections. GDPR-first architecture is a competitive advantage vs US-only vendors.</p>
+              <p className="text-xs text-neutral-500 leading-relaxed">{C.market.eu.footer}</p>
             </div>
           </div>
         </FadeUp>
@@ -1004,12 +908,7 @@ function Market() {
       {/* ── ICP strip at bottom ── */}
       <FadeUp delay={0.3}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
-          {[
-            { label: "ICP", icon: Target, line: "Founder / COO / Head of Delivery", sub: "50-300 people" },
-            { label: "Beachhead", icon: Radio, line: "~85k agencies globally", sub: "US + EU combined" },
-            { label: "ACV", icon: Zap, line: "$24k - $150k", sub: "vs headcount, not SaaS" },
-            { label: "Verticals", icon: Route, line: "Agencies · SW houses", sub: "Consultancies · Managed svc" },
-          ].map((c, i) => {
+          {C.market.icp.map((c, i) => ({ ...c, icon: [Target, Radio, Zap, Route][i] })).map((c, i) => {
             const Icon = c.icon;
             return (
               <motion.div key={i}
@@ -1033,26 +932,18 @@ function Market() {
 
 /* ══ SLIDE 9 - PLANNED GTM MOTION ══ */
 function PlannedGTM() {
-  const phases = [
-    { n: "01", title: "Design Partners (now)",
-      body: "Deploying hands-on with 3-5 agencies. Sitting alongside delivery leads, iterating weekly. Proving coordination saves senior time measurably.",
-      status: "Active", statusColor: "text-emerald-400 border-emerald-800" },
-    { n: "02", title: "Open-source + community (Q3 2026)",
-      body: "Open-source workspace drives developer adoption. Self-hosted free tier creates awareness. Teams hit the coordination ceiling and convert to paid.",
-      status: "Next", statusColor: "text-amber-400 border-amber-800" },
-    { n: "03", title: "Founder-led sales (Q4 2026)",
-      body: "Design partner results become case studies. Direct outreach to Heads of Delivery and COOs at 50-300 person agencies. Founders close every deal.",
-      status: "Planned", statusColor: "text-neutral-500 border-neutral-700" },
-    { n: "04", title: "Channel partnerships (2027)",
-      body: "Consultancy networks and implementation partners become distribution. Every deployment generates referral signal from adjacent firms.",
-      status: "Planned", statusColor: "text-neutral-500 border-neutral-700" },
-  ];
+  const statusColors: Record<string, string> = {
+    Active: "text-emerald-400 border-emerald-800",
+    Next: "text-amber-400 border-amber-800",
+    Planned: "text-neutral-500 border-neutral-700",
+  };
+  const phases = C.gtm.phases.map((p) => ({ ...p, statusColor: statusColors[p.status] ?? statusColors.Planned }));
   return (
     <S id="s9" idx={9} wide>
       <FadeUp className="mb-6">
-        <Tag color="emerald">Planned GTM Motion</Tag>
+        <Tag color="emerald">{C.gtm.tag}</Tag>
         <h2 className="mt-4 text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] font-semibold tracking-tight leading-[1.02] text-white">
-          Earn trust with 5 teams.<br /><span className="text-emerald-400">Then let results compound.</span>
+          {C.gtm.heading}<br /><span className="text-emerald-400">{C.gtm.headingAccent}</span>
         </h2>
       </FadeUp>
       <div className="space-y-3 w-full flex-1">
@@ -1089,33 +980,30 @@ function Contact() {
         </FadeUp>
         <FadeUp delay={0.1}>
           <h2 className="text-[2.6rem] md:text-[3.5rem] lg:text-[4.5rem] font-semibold text-white tracking-tight leading-[1.05] mb-4">
-            A new decision layer is forming.
+            {C.contact.heading}
           </h2>
           <h2 className="text-[2.6rem] md:text-[3.5rem] lg:text-[4.5rem] font-semibold tracking-tight leading-[1.05] mb-8">
-            <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">OpenPing is the foundation.</span>
+            <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">{C.contact.headingAccent}</span>
           </h2>
         </FadeUp>
 
         <FadeUp delay={0.2}>
           <p className="text-lg md:text-xl text-neutral-500 leading-relaxed mb-12 max-w-3xl">
-            The product that controls context and coordination data for professional services will be infrastructure for how expert work gets delivered at scale.
+            {C.contact.body}
           </p>
         </FadeUp>
 
         <FadeUp delay={0.3} className="w-full flex justify-center mb-12">
-          <a href="mailto:rafal@openping.app"
+          <a href={`mailto:${C.contact.email}`}
             className="px-8 py-4 rounded-full bg-white text-black text-base font-semibold hover:bg-neutral-200 transition-colors text-center shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center justify-center gap-2">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-            rafal@openping.app
+            {C.contact.email}
           </a>
         </FadeUp>
 
         <FadeUp delay={0.4} className="flex justify-center">
           <div className="flex items-center gap-8 text-center">
-            {[
-              { label: "Founded", value: "2026" },
-              { label: "Stage", value: "Pre-seed" },
-            ].map((item, i) => (
+            {C.contact.stats.map((item, i) => (
               <div key={i} className="flex flex-col items-center">
                 <div className="text-xs text-neutral-600 uppercase tracking-widest font-medium mb-1.5">{item.label}</div>
                 <div className="text-base text-neutral-300 font-medium">{item.value}</div>
