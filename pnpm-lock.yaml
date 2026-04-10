@@ -51,6 +51,9 @@ importers:
       framer-motion:
         specifier: ^12.6.3
         version: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      lucide-react:
+        specifier: ^1.8.0
+        version: 1.8.0(react@19.2.4)
       react:
         specifier: ^19.0.0
         version: 19.2.4
@@ -6853,6 +6856,11 @@ packages:
 
   lucide-react@0.577.0:
     resolution: {integrity: sha512-4LjoFv2eEPwYDPg/CUdBJQSDfPyzXCRrVW1X7jrx/trgxnxkHFjnVZINbzvzxjN70dxychOfg+FTYwBiS3pQ5A==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  lucide-react@1.8.0:
+    resolution: {integrity: sha512-WuvlsjngSk7TnTBJ1hsCy3ql9V9VOdcPkd3PKcSmM34vJD8KG6molxz7m7zbYFgICwsanQWmJ13JlYs4Zp7Arw==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -16907,6 +16915,10 @@ snapshots:
       react: 19.2.4
 
   lucide-react@0.577.0(react@19.2.4):
+    dependencies:
+      react: 19.2.4
+
+  lucide-react@1.8.0(react@19.2.4):
     dependencies:
       react: 19.2.4
 

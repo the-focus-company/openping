@@ -6,23 +6,7 @@ import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { navigateToWorkspace } from "@/lib/workspace-url";
 import { Loader2 } from "lucide-react";
-import {
-  Navigation,
-  HeroSection,
-  PainSection,
-  SolutionSection,
-  FeaturesShowcase,
-  ValueProps,
-  ComparisonSection,
-  ICPCallout,
-  PricingSignal,
-  DeveloperSection,
-  FinalCTA,
-  Footer,
-} from "@/components/landing-v2";
-import { Divider } from "@/components/landing-v2/primitives";
-
-/* ── Authenticated redirect ── */
+import LandingDeck from "@/components/LandingDeck";
 
 function WorkspaceRedirect() {
   const workspaces = useQuery(api.workspaceMembers.listMyWorkspaces);
@@ -108,40 +92,14 @@ function WorkspaceRedirect() {
 /* ── Landing Page ── */
 
 function LandingPage() {
-  return (
-    <div className="min-h-screen bg-surface-0 text-foreground dark">
-      <Navigation />
-      <HeroSection />
-      <Divider />
-      <PainSection />
-      <Divider />
-      <SolutionSection />
-      <Divider />
-      <FeaturesShowcase />
-      <Divider />
-      <ValueProps />
-      <Divider />
-      <ComparisonSection />
-      <Divider />
-      <ICPCallout />
-      <Divider />
-      <PricingSignal />
-      <Divider />
-      <DeveloperSection />
-      <Divider />
-      <FinalCTA />
-      <Footer />
-    </div>
-  );
+  return <LandingDeck />;
 }
 
 export default function Home() {
   return (
     <>
       <AuthLoading>
-        <div className="flex h-screen items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-transparent" />
-        </div>
+        <LandingPage />
       </AuthLoading>
       <Unauthenticated>
         <LandingPage />
