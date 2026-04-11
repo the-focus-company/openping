@@ -27,11 +27,18 @@ convex/_generated/
 .augment/
 .cursor/
 .goose/
+.jules/
 .junie/
 .kilocode/
 .kiro/
 .pi/
 .windsurf/
+
+# Dev logs
+.logs/
+
+# Eval workspaces
+convex-swagger-workspace/
 
 # Vercel
 .vercel/
