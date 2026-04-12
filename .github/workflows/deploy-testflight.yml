@@ -47,16 +47,42 @@ jobs:
 
       - name: Patch Podfile for Swift 5 concurrency
         run: |
-          cat >> ios/Podfile << 'RUBY'
-
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              target.build_configurations.each do |config|
-                config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'minimal'
-              end
-            end
-          end
-          RUBY
+          python3 << 'EOF'
+          with open('ios/Podfile', 'r') as f:
+              lines = f.readlines()
+          inject = [
+              "\n",
+              "  installer.pods_project.targets.each do |target|\n",
+              "    target.build_configurations.each do |config|\n",
+              "      config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'minimal'\n",
+              "    end\n",
+              "  end\n",
+          ]
+          in_post_install = False
+          depth = 0
+          insert_at = None
+          for i, line in enumerate(lines):
+              stripped = line.strip()
+              if 'post_install do' in line:
+                  in_post_install = True
+                  depth = 1
+                  continue
+              if in_post_install:
+                  depth += stripped.count(' do') + (1 if stripped == 'do' else 0)
+                  if stripped == 'end' or stripped.startswith('end '):
+                      depth -= 1
+                      if depth == 0:
+                          insert_at = i
+                          break
+          if insert_at:
+              for j, inject_line in enumerate(inject):
+                  lines.insert(insert_at + j, inject_line)
+              with open('ios/Podfile', 'w') as f:
+                  f.writelines(lines)
+              print(f"Patched Podfile at line {insert_at}")
+          else:
+              print("WARNING: post_install block not found in Podfile")
+          EOF
 
       - name: Bundle JS
         run: npx expo export --platform ios
