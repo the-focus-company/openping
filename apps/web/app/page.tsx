@@ -53,6 +53,7 @@ function WorkspaceRedirect() {
     if (workspaces === undefined || workspaces === null) return;
     if (workspaces.length === 1) {
       redirected.current = true;
+      console.log("[WorkspaceRedirect] navigating to workspace:", workspaces[0].slug);
       navigateToWorkspace(workspaces[0].slug);
     }
   }, [workspaces]);

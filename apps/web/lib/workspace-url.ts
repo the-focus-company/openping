@@ -12,13 +12,18 @@ export function navigateToWorkspace(slug: string, path = "/inbox") {
   if (typeof window === "undefined") return;
 
   // Validate slug to prevent open redirect
-  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) return;
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) {
+    console.error("[navigateToWorkspace] invalid slug, falling back to path-based:", slug);
+    // Fall back to path-based routing instead of silently failing
+    window.location.href = `/app/${encodeURIComponent(slug)}${path}`;
+    return;
+  }
 
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "";
   const rootHost = rootDomain.split(":")[0];
 
-  // Localhost — use path-based routing
-  if (rootHost === "localhost") {
+  // No root domain configured or localhost — use path-based routing
+  if (!rootHost || rootHost === "localhost") {
     window.location.href = `/app/${slug}${path}`;
     return;
   }
