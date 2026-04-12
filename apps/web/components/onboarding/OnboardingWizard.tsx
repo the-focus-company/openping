@@ -92,9 +92,7 @@ export function OnboardingWizard({
   const isAdmin = state.role === "admin";
   const hasPendingInvitations = isAdmin && (state.pendingInvitations?.length ?? 0) > 0;
   const labels = isAdmin
-    ? hasPendingInvitations
-      ? ["Join or create", ...ADMIN_LABELS]
-      : ADMIN_LABELS
+    ? ["Join or create", ...ADMIN_LABELS]
     : MEMBER_LABELS;
   const totalSteps = labels.length;
 
@@ -117,14 +115,12 @@ export function OnboardingWizard({
 
     if (isAdmin) {
       const steps = [
-        ...(hasPendingInvitations
-          ? [() => (
-              <JoinWorkspaceStep
-                pendingInvitations={state.pendingInvitations ?? []}
-                onCreateOwn={handleNext}
-              />
-            )]
-          : []),
+        () => (
+          <JoinWorkspaceStep
+            pendingInvitations={state.pendingInvitations ?? []}
+            onCreateOwn={handleNext}
+          />
+        ),
         () => (
           <PersonalContextStep
             userName={state.userName ?? ""}
@@ -170,11 +166,11 @@ export function OnboardingWizard({
   return (
     <OnboardingLayout>
       <OnboardingProgress currentStep={step} labels={labels} onStepClick={setStep} />
-      <div className="relative">
+      <div>
         {step > 0 && (
           <button
             onClick={handlePrev}
-            className="absolute -top-1 left-0 flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="mb-4 flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             ← Back
           </button>
