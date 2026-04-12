@@ -164,7 +164,7 @@ export default function Home() {
   return (
     <>
       <AuthLoading>
-        <LandingPage />
+        <LoadingState isLoading message="Ładowanie…" />
       </AuthLoading>
       <Unauthenticated>
         <LandingPage />
