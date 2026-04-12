@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
-import { SPRING, DOCS_URL } from "./constants";
+import { SPRING } from "./constants";
 import { InboxMockup } from "./InboxMockup";
 import { Parallax } from "./primitives";
 

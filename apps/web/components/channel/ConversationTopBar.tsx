@@ -86,7 +86,6 @@ export function ConversationTopBar({
   onAttachments,
   onStartMeeting,
   hasActiveMeeting,
-  onShareLink,
   isGuest,
   workspaceMembers,
   onInviteMembers,

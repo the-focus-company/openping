@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Inbox, GitCommitHorizontal, Zap, Shield } from "lucide-react";
 import { FEATURES, SPRING, type FeatureId } from "./constants";
-import { Section, SectionHeader, GlowCard, Reveal } from "./primitives";
+import { Section, SectionHeader, Reveal } from "./primitives";
 import { InboxMockup } from "./InboxMockup";
 import { DecisionTrailMockup } from "./DecisionTrailMockup";
 import { WorkspaceMockup } from "./WorkspaceMockup";

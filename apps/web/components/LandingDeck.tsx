@@ -15,7 +15,7 @@ const LIGHT_P = { idle: [148, 163, 184], active: [124, 58, 237], idleEdge: [203,
 
 function NeuralBg({ theme }: { theme: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const stateRef = useRef<any>(null);
+  const stateRef = useRef<Record<string, unknown>>(null);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -30,11 +30,11 @@ function NeuralBg({ theme }: { theme: string }) {
       if (stateRef.current) { stateRef.current.w = w; stateRef.current.h = h; }
     }
     resize(); window.addEventListener("resize", resize);
-    const ns: any[] = [];
+    const ns: { x: number; y: number; vx: number; vy: number; r: number; br: number; a: number }[] = [];
     for (let i = 0; i < N; i++) { const r = Math.random() * 1.5 + 1; ns.push({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .12, vy: (Math.random() - .5) * .12, r, br: r, a: 0 }); }
     stateRef.current = { ns, p: DARK_P, ma: 0, mx: 0, my: 0, mt: 0, lf: performance.now(), pt: 0, aid: 0, w, h };
     const s = stateRef.current;
-    function pulse() { const idle = s.ns.filter((n: any) => n.a < .2); if (!idle.length) return; const st = idle[~~(Math.random() * idle.length)]; st.a = 1; setTimeout(() => { for (const n of s.ns) if (n !== st && n.a < .5) { const dx = st.x - n.x, dy = st.y - n.y; if (dx * dx + dy * dy < MD2) n.a = .8; } }, 800); }
+    function pulse() { const idle = s.ns.filter((n: { a: number }) => n.a < .2); if (!idle.length) return; const st = idle[~~(Math.random() * idle.length)]; st.a = 1; setTimeout(() => { for (const n of s.ns) if (n !== st && n.a < .5) { const dx = st.x - n.x, dy = st.y - n.y; if (dx * dx + dy * dy < MD2) n.a = .8; } }, 800); }
     pulse();
     function mm(e: MouseEvent) { const now = performance.now(); if (s.mt > 0) { const dt = now - s.mt, dx = e.clientX - s.mx, dy = e.clientY - s.my; s.ma = Math.min(1, s.ma + Math.sqrt(dx * dx + dy * dy) / Math.max(1, dt) / 5 * .4); } s.mx = e.clientX; s.my = e.clientY; s.mt = now; }
     window.addEventListener("mousemove", mm);
@@ -295,7 +295,7 @@ export default function LandingDeck() {
               <p style={eyebrow}>How it works</p>
               <h2 style={h2Style}>Replace coordination overhead with orchestrated flow</h2>
               <p style={{ ...body, maxWidth: "38rem", marginBottom: 48 }}>
-                OpenPing sits between your team's communication and their work. It assembles context, helps decisions happen faster, and makes sure action follows.
+                OpenPing sits between your team&apos;s communication and their work. It assembles context, helps decisions happen faster, and makes sure action follows.
               </p>
             </Reveal>
 
