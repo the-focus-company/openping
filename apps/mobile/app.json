@@ -15,7 +15,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.thefocuscompany.openpingmobileapp"
+      "bundleIdentifier": "com.thefocuscompany.openpingmobileapp",
+      "appleTeamId": "YAL977BPB2"
     },
     "android": {
       "adaptiveIcon": {
