@@ -11,6 +11,38 @@ export const getOnboardingState = query({
     const user = await requireAuth(ctx, args.workspaceId);
     const workspace = await ctx.db.get(args.workspaceId);
 
+    let pendingInvitations: Array<{ token: string; workspaceName: string }> = [];
+
+    if (user.email && user.role === "admin" && user.onboardingStatus === "pending") {
+      const now = Date.now();
+      const invitations = await ctx.db
+        .query("invitations")
+        .withIndex("by_email", (q) => q.eq("email", user.email!))
+        .take(10);
+
+      const validInvites = await Promise.all(
+        invitations
+          .filter((inv) => inv.status === "pending" && inv.expiresAt > now)
+          .map(async (inv) => {
+            const membership = await ctx.db
+              .query("workspaceMembers")
+              .withIndex("by_user_workspace", (q) =>
+                q.eq("userId", user._id).eq("workspaceId", inv.workspaceId),
+              )
+              .unique();
+            if (membership) return null;
+
+            const ws = await ctx.db.get(inv.workspaceId);
+            if (!ws) return null;
+            return { token: inv.token, workspaceName: ws.name };
+          }),
+      );
+
+      pendingInvitations = validInvites.filter(
+        (inv): inv is NonNullable<typeof inv> => inv !== null,
+      );
+    }
+
     return {
       onboardingStatus: user.onboardingStatus,
       role: user.role,
@@ -18,6 +50,7 @@ export const getOnboardingState = query({
       userEmail: user.email,
       workspaceName: workspace?.name,
       workspaceId: args.workspaceId,
+      pendingInvitations,
     };
   },
 });

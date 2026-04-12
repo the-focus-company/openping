@@ -15,6 +15,7 @@ import { IntegrationsStep } from "./steps/IntegrationsStep";
 import { InviteTeamStep } from "./steps/InviteTeamStep";
 import { ChannelSelectionStep } from "./steps/ChannelSelectionStep";
 import { CommunicationPrefsStep } from "./steps/CommunicationPrefsStep";
+import { JoinWorkspaceStep } from "./steps/JoinWorkspaceStep";
 
 const ADMIN_LABELS = [
   "Personal context",
@@ -78,7 +79,12 @@ export function OnboardingWizard({
   }
 
   const isAdmin = state.role === "admin";
-  const labels = isAdmin ? ADMIN_LABELS : MEMBER_LABELS;
+  const hasPendingInvitations = isAdmin && (state.pendingInvitations?.length ?? 0) > 0;
+  const labels = isAdmin
+    ? hasPendingInvitations
+      ? [ADMIN_LABELS[0], "Join or create", ...ADMIN_LABELS.slice(1)]
+      : ADMIN_LABELS
+    : MEMBER_LABELS;
   const totalSteps = labels.length;
 
   const handleNext = async () => {
@@ -93,35 +99,37 @@ export function OnboardingWizard({
 
   function renderStep() {
     if (!state || !workspaceId) return null;
+
     if (isAdmin) {
-      switch (step) {
-        case 0:
-          return (
-            <PersonalContextStep
-              userName={state.userName ?? ""}
-              role="admin"
-              onNext={handleNext}
-            />
-          );
-        case 1:
-          return (
-            <CompanyContextStep
-              workspaceName={state.workspaceName ?? ""}
-              workspaceId={workspaceId}
-              onNext={handleNext}
-            />
-          );
-        case 2:
-          return <WorkspaceSetupStep workspaceId={workspaceId} onNext={handleNext} />;
-        case 3:
-          return <AiPrefsStep onNext={handleNext} />;
-        case 4:
-          return <IntegrationsStep onNext={handleNext} />;
-        case 5:
-          return <InviteTeamStep workspaceId={workspaceId} onNext={handleNext} />;
-        default:
-          return null;
-      }
+      const steps = [
+        () => (
+          <PersonalContextStep
+            userName={state.userName ?? ""}
+            role="admin"
+            onNext={handleNext}
+          />
+        ),
+        ...(hasPendingInvitations
+          ? [() => (
+              <JoinWorkspaceStep
+                pendingInvitations={state.pendingInvitations ?? []}
+                onCreateOwn={handleNext}
+              />
+            )]
+          : []),
+        () => (
+          <CompanyContextStep
+            workspaceName={state.workspaceName ?? ""}
+            workspaceId={workspaceId}
+            onNext={handleNext}
+          />
+        ),
+        () => <WorkspaceSetupStep workspaceId={workspaceId} onNext={handleNext} />,
+        () => <AiPrefsStep onNext={handleNext} />,
+        () => <IntegrationsStep onNext={handleNext} />,
+        () => <InviteTeamStep workspaceId={workspaceId} onNext={handleNext} />,
+      ];
+      return steps[step]?.() ?? null;
     }
 
     switch (step) {
