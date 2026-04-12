@@ -656,6 +656,7 @@ function VirtualConversationList({
   currentUserId,
   onNavigate,
 }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   conversations: any[];
   currentUserId?: string;
   onNavigate: (id: string) => void;

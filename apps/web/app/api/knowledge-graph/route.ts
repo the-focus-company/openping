@@ -8,7 +8,7 @@ const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD ?? "";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export async function GET() {
   // Auth check - require valid session
   const { withAuth } = await import("@workos-inc/authkit-nextjs");
   try {

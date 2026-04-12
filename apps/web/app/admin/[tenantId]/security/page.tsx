@@ -46,13 +46,14 @@ interface Props {
 }
 
 export default function SecurityPage({ params }: Props) {
-  // Auth gate: only admins can access
   const adminWorkspaces = useQuery(api.admin.listWorkspaces);
-  if (!adminWorkspaces) return <div className="flex h-screen items-center justify-center text-muted-foreground">Loading...</div>;
-  if (adminWorkspaces.length === 0) return <div className="flex h-screen items-center justify-center text-red-500">Access denied. Admin privileges required.</div>;
   const { tenantId } = use(params);
   const [killSwitchOpen, setKillSwitchOpen] = useState(false);
   const [killed, setKilled] = useState(false);
+
+  // Auth gate: only admins can access
+  if (!adminWorkspaces) return <div className="flex h-screen items-center justify-center text-muted-foreground">Loading...</div>;
+  if (adminWorkspaces.length === 0) return <div className="flex h-screen items-center justify-center text-red-500">Access denied. Admin privileges required.</div>;
 
   const anomalyCount = MOCK_AUDIT.filter((e) => e.status === "denied" || e.status === "flagged").length;
 
