@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { requireAuth, requireUser } from "./auth";
 import { roleValidator } from "./schema";
+import { internal } from "./_generated/api";
 
 export const send = mutation({
   args: {
@@ -65,7 +66,54 @@ export const send = mutation({
       expiresAt: Date.now() + sevenDays,
     });
 
+    const workspace = await ctx.db.get(args.workspaceId);
+    const inviterName = user.name ?? user.email ?? "Someone";
+    const workspaceName = workspace?.name ?? "a workspace";
+
+    await ctx.scheduler.runAfter(0, internal.emailTransactional.sendInvitationEmail, {
+      to: args.email,
+      inviterName,
+      workspaceName,
+      inviteToken: token,
+    });
+
     return invitationId;
+  },
+});
+
+export const resend = mutation({
+  args: {
+    invitationId: v.id("invitations"),
+    workspaceId: v.id("workspaces"),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAuth(ctx, args.workspaceId);
+    if (user.role !== "admin") {
+      throw new Error("Only admins can resend invitations");
+    }
+
+    const invitation = await ctx.db.get(args.invitationId);
+    if (!invitation || invitation.workspaceId !== args.workspaceId) {
+      throw new Error("Invitation not found");
+    }
+    if (invitation.status !== "pending") {
+      throw new Error("Invitation is no longer pending");
+    }
+
+    // Extend expiry by 7 days from now
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    await ctx.db.patch(args.invitationId, { expiresAt: Date.now() + sevenDays });
+
+    const workspace = await ctx.db.get(args.workspaceId);
+    const inviterName = user.name ?? user.email ?? "Someone";
+    const workspaceName = workspace?.name ?? "a workspace";
+
+    await ctx.scheduler.runAfter(0, internal.emailTransactional.sendInvitationEmail, {
+      to: invitation.email,
+      inviterName,
+      workspaceName,
+      inviteToken: invitation.token,
+    });
   },
 });
 

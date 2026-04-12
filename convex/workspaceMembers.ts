@@ -229,6 +229,17 @@ export const inviteByEmail = mutation({
       expiresAt,
     });
 
+    const inviteWorkspace = await ctx.db.get(args.workspaceId);
+    const inviterName = currentUser.name ?? currentUser.email ?? "Someone";
+    const workspaceName = inviteWorkspace?.name ?? "a workspace";
+
+    await ctx.scheduler.runAfter(0, internal.emailTransactional.sendInvitationEmail, {
+      to: email,
+      inviterName,
+      workspaceName,
+      inviteToken: token,
+    });
+
     return { token };
   },
 });

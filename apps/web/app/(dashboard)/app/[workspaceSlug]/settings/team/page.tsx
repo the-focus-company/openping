@@ -84,9 +84,11 @@ function TeamPageContent() {
   const { workspaceId, workspaceSlug } = useWorkspace();
   const rawUsers = useQuery(api.users.listAll, { workspaceId });
   const workspace = useQuery(api.workspaces.get, { workspaceId });
+  const pendingInvitations = useQuery(api.invitations.list, { workspaceId });
   const updateRoleMutation = useMutation(api.users.updateRole);
   const deactivateMutation = useMutation(api.users.deactivate);
   const inviteByEmailMutation = useMutation(api.workspaceMembers.inviteByEmail);
+  const resendInviteMutation = useMutation(api.invitations.resend);
   const togglePublicInviteMutation = useMutation(api.workspaces.togglePublicInvite);
   const pendingRequestCount = useQuery(api.accessRequests.countPending, { workspaceId });
   const accessRequests = useQuery(api.accessRequests.list, { workspaceId });
@@ -517,6 +519,44 @@ function TeamPageContent() {
       <p className="mt-3 text-2xs text-foreground/40">
         {members.length} total members · Real-time sync via Convex
       </p>
+
+      {/* Pending Invitations */}
+      {pendingInvitations && pendingInvitations.length > 0 && (
+        <div className="mt-6 overflow-hidden rounded border border-subtle">
+          <div className="border-b border-subtle bg-surface-1 px-4 py-2">
+            <span className="text-2xs font-medium uppercase tracking-widest text-foreground/45">
+              Pending Invitations ({pendingInvitations.length})
+            </span>
+          </div>
+          {pendingInvitations.map((inv) => (
+            <div
+              key={inv._id}
+              className="grid grid-cols-[1fr_80px_80px] items-center gap-4 border-b border-subtle px-4 py-2.5 last:border-0"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-2xs font-medium text-foreground/50">
+                  {inv.email[0].toUpperCase()}
+                </div>
+                <span className="truncate text-xs text-muted-foreground">{inv.email}</span>
+              </div>
+              <span className="text-2xs capitalize text-muted-foreground">{inv.role}</span>
+              <button
+                className="rounded border border-subtle px-2 py-1 text-2xs text-muted-foreground transition-colors hover:border-foreground/10 hover:text-foreground"
+                onClick={async () => {
+                  try {
+                    await resendInviteMutation({ invitationId: inv._id, workspaceId });
+                    toast("Invitation resent", "success");
+                  } catch (err) {
+                    toast(err instanceof Error ? err.message : "Failed to resend", "error");
+                  }
+                }}
+              >
+                Resend
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       </>
       )}
 
