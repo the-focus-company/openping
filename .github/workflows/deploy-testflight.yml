@@ -55,6 +55,8 @@ jobs:
               "  installer.pods_project.targets.each do |target|\n",
               "    target.build_configurations.each do |config|\n",
               "      config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'minimal'\n",
+              "      flags = config.build_settings['OTHER_SWIFT_FLAGS'] || '$(inherited)'\n",
+              "      config.build_settings['OTHER_SWIFT_FLAGS'] = flags + ' -strict-concurrency=minimal'\n",
               "    end\n",
               "  end\n",
           ]
