@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { avatarGradient } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { useLoadingTimeout } from "@/hooks/useLoadingTimeout";
 
 export default function ProfilePage() {
   const { toast } = useToast();
@@ -78,10 +79,18 @@ export default function ProfilePage() {
     }
   };
 
+  const profileTimedOut = useLoadingTimeout(user === undefined, 12_000);
   if (user === undefined) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-foreground/40" />
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        {profileTimedOut ? (
+          <>
+            <p className="text-sm text-muted-foreground">Could not load profile.</p>
+            <button onClick={() => window.location.reload()} className="text-xs text-foreground/60 underline hover:text-foreground">Retry</button>
+          </>
+        ) : (
+          <Loader2 className="h-5 w-5 animate-spin text-foreground/40" />
+        )}
       </div>
     );
   }

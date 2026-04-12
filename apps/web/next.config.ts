@@ -40,8 +40,15 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline' https://us.i.posthog.com; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://us.i.posthog.com; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' https://us.i.posthog.com",
+              "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://us.i.posthog.com https://api.workos.com https://docs.openping.app https://*.sentry.io",
+              "img-src 'self' data: blob: https:",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "frame-ancestors 'none'",
+            ].join("; "),
           },
         ],
       },

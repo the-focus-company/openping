@@ -15,6 +15,7 @@ import { DraftReminderCard } from "@/components/inbox/DraftReminderCard";
 import { type InboxCategory, type PriorityLevel, CATEGORY_ORDER, CATEGORY_TO_PRIORITY } from "@/components/inbox/InboxCard";
 import { CheckCircle2, Loader2, FlaskConical, Sparkles, ChevronDown, Check, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLoadingTimeout } from "@/hooks/useLoadingTimeout";
 
 // ── Section labels ──
 const SECTION_LABELS: Record<InboxCategory, string> = {
@@ -225,10 +226,18 @@ export default function InboxPage() {
   };
 
   const isLoading = inboxItems === undefined || drafts === undefined;
+  const loadingTimedOut = useLoadingTimeout(isLoading, 15_000);
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-foreground/40" />
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        {loadingTimedOut ? (
+          <>
+            <p className="text-sm text-muted-foreground">Could not load inbox.</p>
+            <button onClick={() => window.location.reload()} className="text-xs text-foreground/60 underline hover:text-foreground">Retry</button>
+          </>
+        ) : (
+          <Loader2 className="h-5 w-5 animate-spin text-foreground/40" />
+        )}
       </div>
     );
   }
@@ -514,10 +523,18 @@ function ArchiveView() {
     isAuthenticated ? { paginationOpts: { numItems: 50, cursor: null } } : "skip",
   );
 
+  const archiveTimedOut = useLoadingTimeout(!archived, 15_000);
   if (!archived) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-5 w-5 animate-spin text-foreground/20" />
+      <div className="flex flex-col items-center justify-center gap-3 py-16">
+        {archiveTimedOut ? (
+          <>
+            <p className="text-sm text-muted-foreground">Could not load archive.</p>
+            <button onClick={() => window.location.reload()} className="text-xs text-foreground/60 underline hover:text-foreground">Retry</button>
+          </>
+        ) : (
+          <Loader2 className="h-5 w-5 animate-spin text-foreground/20" />
+        )}
       </div>
     );
   }

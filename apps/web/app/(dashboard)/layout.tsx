@@ -7,6 +7,22 @@ import { useRouter, usePathname } from "next/navigation";
 import { api } from "@convex/_generated/api";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { ToastProvider } from "@/components/ui/toast-provider";
+import { LoadingState } from "@/components/ui/loading-state";
+
+function RedirectToSignIn() {
+  useEffect(() => {
+    window.location.href = "/sign-in";
+  }, []);
+  return (
+    <LoadingState
+      isLoading
+      message="Redirecting to sign in\u2026"
+      timeoutMs={5_000}
+      timeoutMessage="Redirect is taking too long."
+      onRetry={() => { window.location.href = "/sign-in"; }}
+    />
+  );
+}
 
 function WaitForUser({ children }: { children: React.ReactNode }) {
   const user = useQuery(api.users.getMe);
@@ -24,18 +40,26 @@ function WaitForUser({ children }: { children: React.ReactNode }) {
 
   if (user === undefined || user === null) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-ping-purple border-t-transparent" />
-        <p className="text-sm text-muted-foreground">Setting up your account…</p>
-      </div>
+      <LoadingState
+        isLoading
+        message={user === null ? "Setting up your account\u2026" : "Loading your profile\u2026"}
+        timeoutMs={12_000}
+        timeoutMessage="Could not load your account."
+        onRetry={() => window.location.reload()}
+        onSignOut={() => { window.location.href = "/sign-out"; }}
+      />
     );
   }
 
   if (needsOnboarding) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-ping-purple border-t-transparent" />
-      </div>
+      <LoadingState
+        isLoading
+        message="Preparing onboarding\u2026"
+        timeoutMs={8_000}
+        timeoutMessage="Redirect is taking too long."
+        onRetry={() => router.replace("/onboarding")}
+      />
     );
   }
 
@@ -55,14 +79,17 @@ export default function DashboardLayout({
   return (
     <ToastProvider>
       <AuthLoading>
-        <div className="flex h-screen items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-ping-purple border-t-transparent" />
-        </div>
+        <LoadingState
+          isLoading
+          message="Authenticating\u2026"
+          timeoutMs={10_000}
+          timeoutMessage="Authentication is taking too long."
+          onRetry={() => window.location.reload()}
+          onSignOut={() => { window.location.href = "/sign-out"; }}
+        />
       </AuthLoading>
       <Unauthenticated>
-        <div className="flex h-screen items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-ping-purple border-t-transparent" />
-        </div>
+        <RedirectToSignIn />
       </Unauthenticated>
       <Authenticated>
         <WaitForUser>

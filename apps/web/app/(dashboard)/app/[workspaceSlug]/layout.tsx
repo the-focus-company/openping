@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { WorkspaceProvider } from "@/components/workspace/WorkspaceProvider";
-import { Loader2 } from "lucide-react";
+import { LoadingState } from "@/components/ui/loading-state";
 
 interface Props {
   children: React.ReactNode;
@@ -30,9 +30,15 @@ export default function WorkspaceLayout({ children, params }: Props) {
   // Loading state
   if (workspace === undefined || myWorkspaces === undefined || myWorkspaces === null) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-foreground/40" />
-      </div>
+      <LoadingState
+        isLoading
+        variant="inline"
+        message="Loading workspace\u2026"
+        timeoutMs={12_000}
+        timeoutMessage="Could not load this workspace."
+        onRetry={() => window.location.reload()}
+        onSignOut={() => { window.location.href = "/sign-out"; }}
+      />
     );
   }
 

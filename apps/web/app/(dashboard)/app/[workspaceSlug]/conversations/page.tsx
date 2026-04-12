@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useLoadingTimeout } from "@/hooks/useLoadingTimeout";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
@@ -288,10 +289,18 @@ export default function ConversationsPage() {
     return filtered;
   }, [conversations, filter, sort]);
 
+  const convsTimedOut = useLoadingTimeout(conversations === undefined, 12_000);
   if (conversations === undefined) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-foreground/40" />
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        {convsTimedOut ? (
+          <>
+            <p className="text-sm text-muted-foreground">Could not load conversations.</p>
+            <button onClick={() => window.location.reload()} className="text-xs text-foreground/60 underline hover:text-foreground">Retry</button>
+          </>
+        ) : (
+          <Loader2 className="h-5 w-5 animate-spin text-foreground/40" />
+        )}
       </div>
     );
   }

@@ -5,6 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { UserPlus, MoreHorizontal, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Copy, Check, Link } from "lucide-react";
+import { useLoadingTimeout } from "@/hooks/useLoadingTimeout";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { avatarGradient, cn, formatRelativeTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -198,11 +199,19 @@ function TeamPageContent() {
     }
   };
 
+  const teamTimedOut = useLoadingTimeout(rawUsers === undefined, 12_000);
   if (rawUsers === undefined) {
     return (
       <div className="mx-auto max-w-4xl animate-fade-in px-6 py-6">
         <h1 className="text-md font-semibold text-foreground">Team</h1>
-        <p className="mt-2 text-xs text-muted-foreground">Loading team members...</p>
+        {teamTimedOut ? (
+          <div className="mt-4 flex flex-col items-start gap-2">
+            <p className="text-xs text-muted-foreground">Could not load team members.</p>
+            <button onClick={() => window.location.reload()} className="text-xs text-foreground/60 underline hover:text-foreground">Retry</button>
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-muted-foreground">Loading team members...</p>
+        )}
       </div>
     );
   }

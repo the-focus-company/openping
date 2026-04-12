@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Loader2 } from "lucide-react";
+import { useLoadingTimeout } from "@/hooks/useLoadingTimeout";
 import { OnboardingLayout } from "./OnboardingLayout";
 import { OnboardingProgress } from "./OnboardingProgress";
 import { PersonalContextStep } from "./steps/PersonalContextStep";
@@ -64,11 +65,21 @@ export function OnboardingWizard({
     }
   }, [shouldRedirect, router, workspaceSlug]);
 
-  if (state === undefined || workspaces === undefined) {
+  const onboardingLoading = state === undefined || workspaces === undefined;
+  const onboardingTimedOut = useLoadingTimeout(onboardingLoading, 12_000);
+  if (onboardingLoading) {
     return (
       <OnboardingLayout>
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="h-5 w-5 animate-spin text-ping-purple" />
+        <div className="flex flex-col items-center justify-center gap-3 py-24">
+          {onboardingTimedOut ? (
+            <>
+              <p className="text-sm text-muted-foreground">Could not load onboarding.</p>
+              <button onClick={() => window.location.reload()} className="text-xs text-foreground/60 underline hover:text-foreground">Retry</button>
+              <button onClick={() => { window.location.href = "/sign-out"; }} className="text-xs text-muted-foreground/60 underline hover:text-muted-foreground">Sign out</button>
+            </>
+          ) : (
+            <Loader2 className="h-5 w-5 animate-spin text-ping-purple" />
+          )}
         </div>
       </OnboardingLayout>
     );

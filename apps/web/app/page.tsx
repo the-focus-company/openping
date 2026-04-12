@@ -1,30 +1,52 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { navigateToWorkspace } from "@/lib/workspace-url";
-import { Loader2 } from "lucide-react";
+import { LoadingState } from "@/components/ui/loading-state";
+import { AlertTriangle } from "lucide-react";
 import LandingDeck from "@/components/LandingDeck";
+
+const MAX_ENSURE_RETRIES = 3;
+const RETRY_DELAY_MS = 2_000;
 
 function WorkspaceRedirect() {
   const workspaces = useQuery(api.workspaceMembers.listMyWorkspaces);
   const ensureUser = useMutation(api.users.ensureUser);
   const redirected = useRef(false);
-  const ensured = useRef(false);
+  const retryCount = useRef(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const isLoading = workspaces === undefined;
+  const needsProvisioning = workspaces === null;
 
   // If authenticated but no user record found, provision one from JWT claims
   useEffect(() => {
-    if (ensured.current) return;
-    if (workspaces === null) {
-      ensured.current = true;
-      ensureUser().catch(() => {
-        // Reset so it can retry on next render cycle
-        ensured.current = false;
-      });
-    }
-  }, [workspaces, ensureUser]);
+    if (!needsProvisioning || error) return;
+
+    let cancelled = false;
+    const attempt = () => {
+      ensureUser()
+        .then(() => {
+          retryCount.current = 0;
+        })
+        .catch(() => {
+          if (cancelled) return;
+          retryCount.current += 1;
+          if (retryCount.current < MAX_ENSURE_RETRIES) {
+            setTimeout(() => {
+              if (!cancelled) attempt();
+            }, RETRY_DELAY_MS);
+          } else {
+            setError("Could not set up your account. Please sign out and try again.");
+          }
+        });
+    };
+    attempt();
+    return () => { cancelled = true; };
+  }, [needsProvisioning, ensureUser, error]);
 
   useEffect(() => {
     if (redirected.current) return;
@@ -35,22 +57,65 @@ function WorkspaceRedirect() {
     }
   }, [workspaces]);
 
-  if (workspaces === undefined || workspaces === null) {
+  const handleSignOut = useCallback(() => {
+    window.location.href = "/sign-out";
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    setError(null);
+    retryCount.current = 0;
+  }, []);
+
+  if (error) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3">
-        <Loader2 className="h-5 w-5 animate-spin text-white/20" />
-        <p className="text-sm text-muted-foreground">
-          {workspaces === null ? "Setting up your workspace\u2026" : "Loading\u2026"}
-        </p>
+      <div className="flex h-screen flex-col items-center justify-center gap-4 px-4">
+        <AlertTriangle className="h-8 w-8 text-yellow-500/80" />
+        <div className="text-center">
+          <p className="text-sm font-medium text-foreground">{error}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Check your connection or try again.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleRetry}
+            className="inline-flex items-center gap-1.5 rounded-md border border-subtle bg-surface-1 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-2"
+          >
+            Retry
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="inline-flex items-center gap-1.5 rounded-md border border-subtle bg-surface-1 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-surface-2"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
+    );
+  }
+
+  if (isLoading || needsProvisioning) {
+    return (
+      <LoadingState
+        isLoading
+        message={needsProvisioning ? "Setting up your workspace\u2026" : "Loading\u2026"}
+        timeoutMs={15_000}
+        timeoutMessage="We couldn\u2019t load your workspaces."
+        onRetry={() => window.location.reload()}
+        onSignOut={handleSignOut}
+      />
     );
   }
 
   if (workspaces.length === 1) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-white/20" />
-      </div>
+      <LoadingState
+        isLoading
+        message="Redirecting\u2026"
+        timeoutMs={8_000}
+        timeoutMessage="Redirect is taking too long."
+        onRetry={() => navigateToWorkspace(workspaces[0].slug)}
+      />
     );
   }
 
